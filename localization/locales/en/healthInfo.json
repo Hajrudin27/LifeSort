@@ -1,0 +1,104 @@
+{
+    "title": "Health info",
+    "conditionsTab": "Conditions",
+    "symptomsTab": "Symptoms",
+    "disclaimerTitle": "Important to know",
+    "disclaimerBody": "This app is not a substitute for medical advice. We are not doctors, and this content is for general information only. Always contact your own doctor if you're concerned about symptoms or think you may have one of these conditions.",
+    "whatItIsLabel": "What is it?",
+    "commonSymptomsLabel": "Common symptoms",
+    "whatHelpsLabel": "What can help",
+    "whenToSeeDoctorLabel": "When to see a doctor",
+    "relatedSymptomsLabel": "Related symptoms",
+    "relatedConditionsLabel": "Often mentioned in connection with",
+    "searchPlaceholder": "Search condition or symptom",
+    "conditions": {
+       "thyroidDisorders": {
+        "name": "Thyroid disorders",
+        "summary": "Overactive or underactive thyroid can affect your cycle.",
+        "whatItIs": "The thyroid produces hormones that regulate metabolism and also influence the menstrual cycle. Both overactive (hyperthyroidism) and underactive (hypothyroidism) thyroid function can cause irregular, absent, or heavier periods, and affect energy levels and mood.",
+        "whatHelps": "Treatment depends on whether the thyroid is over- or underactive, and typically involves medication determined by a doctor after blood tests.",
+        "whenToSeeDoctor": "See your doctor if you experience persistent fatigue, unexplained weight changes, or significant changes to your cycle you can't explain."
+        },
+        "anemia": {
+        "name": "Iron-deficiency anemia",
+        "summary": "Low iron levels, often linked to heavy menstrual bleeding.",
+        "whatItIs": "Iron-deficiency anemia occurs when the body doesn't have enough iron to produce red blood cells. Heavy or prolonged menstrual bleeding is a common cause in women, as the ongoing blood loss can deplete the body's iron stores over time.",
+        "whatHelps": "Treatment may include iron supplements and, where relevant, addressing the underlying cause of blood loss — both should be assessed by a doctor.",
+        "whenToSeeDoctor": "See your doctor if you experience persistent fatigue, paleness, shortness of breath during normal activity, or heavy menstrual bleeding."
+        },
+        "ovarianCysts": {
+        "name": "Ovarian cysts",
+        "summary": "Fluid-filled sacs on the ovary, often without symptoms.",
+        "whatItIs": "Ovarian cysts are fluid-filled sacs that can form as a natural part of ovulation. Most are benign and resolve on their own, but some can cause pain, bloating, or irregular cycles, particularly if they grow large.",
+        "whatHelps": "Most cysts require no treatment and are simply monitored. For persistent or large cysts, treatment may include hormonal regulation or, in rarer cases, surgery.",
+        "whenToSeeDoctor": "See your doctor for sudden, severe pelvic pain, or if you experience persistent bloating or an irregular cycle."
+        },
+      "endometriosis": {
+        "name": "Endometriosis",
+        "summary": "A chronic condition where tissue similar to the uterine lining grows outside the uterus.",
+        "whatItIs": "Endometriosis is a chronic condition where tissue similar to the lining of the uterus grows elsewhere in the body — typically on the ovaries, fallopian tubes, or pelvic connective tissue. This tissue responds to the menstrual cycle the same way the uterine lining does, which can cause inflammation, pain, and scar tissue over time. It affects a significant number of women of reproductive age.",
+        "whatHelps": "Treatment depends on severity and pregnancy goals, ranging from pain relief and hormonal treatment to surgery. Heat, regular movement, and stress management are often mentioned as helpful for some, but do not replace medical treatment.",
+        "whenToSeeDoctor": "See your doctor if you experience severe period pain that affects your daily life, pain during intercourse, or if pain worsens over time."
+      },
+      "pcos": {
+        "name": "PCOS (Polycystic Ovary Syndrome)",
+        "summary": "A hormonal condition that can affect the menstrual cycle, skin, and fertility.",
+        "whatItIs": "PCOS is a hormonal condition where the ovaries may produce higher levels of male hormones than usual. It can cause irregular or absent periods, cysts on the ovaries, and affect skin and hair growth. PCOS is one of the most common hormonal conditions in women of reproductive age.",
+        "whatHelps": "Treatment may include lifestyle changes (diet, exercise), hormonal contraception to regulate the cycle, or specific medication depending on symptoms and pregnancy goals.",
+        "whenToSeeDoctor": "See your doctor if your period is very irregular or absent for several months, or if you notice unexpected hair growth, weight changes, or skin changes that concern you."
+      },
+      "pms": {
+        "name": "PMS (Premenstrual Syndrome)",
+        "summary": "Physical and emotional symptoms in the week(s) before your period.",
+        "whatItIs": "PMS covers a wide range of physical and emotional symptoms that typically appear in the luteal phase (after ovulation, before your period) and resolve once your period starts. It's thought to be linked to hormonal fluctuations during this part of the cycle.",
+        "whatHelps": "Regular sleep, exercise, a balanced diet, and stress management are often mentioned as supportive. Some find relief from over-the-counter pain relief for physical symptoms.",
+        "whenToSeeDoctor": "See your doctor if symptoms are severe enough to disrupt your daily life, work, or relationships."
+      },
+      "pmdd": {
+        "name": "PMDD (Premenstrual Dysphoric Disorder)",
+        "summary": "A more severe form of PMS with pronounced emotional symptoms.",
+        "whatItIs": "PMDD is a more severe variant of PMS, marked by significant mood swings, irritability, anxiety, or low mood in the weeks before your period. Symptoms are severe enough to noticeably affect daily functioning, differing from typical PMS in intensity.",
+        "whatHelps": "Treatment may include therapy, hormonal treatment, or other medication depending on the individual situation — this should always be assessed by a doctor.",
+        "whenToSeeDoctor": "See your doctor if you experience severe mood-related symptoms month after month that affect your work, relationships, or wellbeing."
+      },
+      "dysmenorrhea": {
+        "name": "Dysmenorrhea (painful periods)",
+        "summary": "Severe cramps or pain associated with menstruation.",
+        "whatItIs": "Dysmenorrhea means painful periods and covers cramping in the lower abdomen, often accompanied by pain in the lower back and thighs. It can be either 'primary' (without an underlying cause) or 'secondary' (caused by another condition, e.g. endometriosis).",
+        "whatHelps": "Heat (a heating pad), over-the-counter pain relief, and light movement are often mentioned as soothing for mild to moderate pain.",
+        "whenToSeeDoctor": "See your doctor if pain is severe enough to prevent daily activities, or if it suddenly becomes worse than usual."
+      },
+      "menorrhagia": {
+        "name": "Menorrhagia (heavy menstrual bleeding)",
+        "summary": "Abnormally heavy or prolonged menstrual bleeding.",
+        "whatItIs": "Menorrhagia refers to a period that is significantly heavier or lasts longer than normal, and can significantly affect daily life. It can have several different underlying causes and should always be investigated.",
+        "whatHelps": "Treatment depends on the cause and may include medication or other interventions — this should be assessed by a doctor.",
+        "whenToSeeDoctor": "See your doctor if you need to change your pad/tampon every hour for several hours in a row, experience large blood clots, or feel unusually tired or dizzy."
+      },
+      "amenorrhea": {
+        "name": "Amenorrhea (absent periods)",
+        "summary": "Absence of menstruation during a period when it's expected.",
+        "whatItIs": "Amenorrhea means your period is absent. It can be caused by pregnancy, hormonal changes, significant weight loss or gain, stress, intensive exercise, or other underlying conditions.",
+        "whatHelps": "It depends entirely on the underlying cause, and should always be clarified with a doctor first.",
+        "whenToSeeDoctor": "See your doctor if your period is absent for three months or more and pregnancy is ruled out."
+      },
+      "fibroids": {
+        "name": "Fibroids (benign growths in the uterus)",
+        "summary": "Benign growths in or around the uterus.",
+        "whatItIs": "Fibroids are benign (non-cancerous) growths of muscle and connective tissue that grow in or around the uterus. Many women have fibroids without noticing anything, but for some they can cause heavy bleeding, pain, or pressure symptoms.",
+        "whatHelps": "Treatment depends on size, location, and symptoms, and ranges from no treatment to medication or surgery.",
+        "whenToSeeDoctor": "See your doctor if you experience heavy or prolonged bleeding, pelvic pain, or pressure on your bladder."
+      }
+    },
+    "symptomInfo": {
+      "cramps": "Abdominal cramps are typically caused by uterine contractions during menstruation, driven by hormone-like substances called prostaglandins. Mild to moderate cramps are common, but severe, debilitating cramps should be evaluated.",
+      "headache": "Headaches around menstruation can be linked to hormonal fluctuations, particularly a drop in estrogen. For some, it's a consistent, predictable pattern in the cycle.",
+      "bloating": "Bloating is often caused by fluid retention influenced by hormonal changes in the week before your period, and typically eases once your period starts.",
+      "fatigue": "Fatigue around menstruation can result from a combination of hormonal fluctuations, sleep disruption, and — with heavy bleeding — lower iron levels.",
+      "moodSwings": "Mood swings in the luteal phase are thought to be linked to fluctuations in estrogen and progesterone, which affect brain chemistry.",
+      "acne": "Skin breakouts around menstruation can be caused by hormonal fluctuations that increase skin oil production.",
+      "backache": "Back pain during menstruation is often linked to the same muscle contractions that cause abdominal pain, and can radiate to the lower back and thighs.",
+      "nausea": "Nausea around menstruation can be related to prostaglandins, which besides the uterus can also affect the digestive system in some people.",
+      "tenderBreasts": "Breast tenderness before menstruation is a common response to hormonal fluctuations and typically eases once your period starts."
+    }
+  } 

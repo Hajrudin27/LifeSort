@@ -1,0 +1,27 @@
+{
+  "screenTitle": "To-do",
+  "newScreenTitle": "Ny opgave",
+  "emptyState": "Ingen opgaver endnu",
+  "addButton": "+ Tilføj opgave",
+  "titlePlaceholder": "Titel",
+  "descriptionPlaceholder": "Beskrivelse (valgfrit)",
+  "dueDateLabel": "Deadline",
+  "importanceLabel": "Vigtighed",
+  "importance": {
+    "low": "Lav",
+    "medium": "Middel",
+    "high": "Høj"
+  },
+  "save": "Gem",
+  "delete": "Slet",
+  "deleteConfirmTitle": "Slet opgave?",
+  "deleteConfirmMessage": "Denne handling kan ikke fortrydes.",
+  "dueIn": "Om {{days}} dage",
+  "overdue": "Overskredet",
+  "dueToday": "I dag",
+  "activeLabel": "Aktive",
+  "showCompleted": "Vis fuldførte",
+  "markComplete": "Marker som fuldført",
+  "markActive": "Marker som aktiv",
+  "dueDatePhaseHint": "Denne dato falder i din forventede menstruationsperiode."
+}

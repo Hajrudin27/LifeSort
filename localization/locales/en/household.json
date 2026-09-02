@@ -1,0 +1,39 @@
+{
+    "title": "Household",
+    "cleaningLabel": "Cleaning",
+    "maintenanceLabel": "Maintenance",
+    "shoppingListLabel": "Things I'm missing",
+    "movingLabel": "Moving checklist",
+    "newTaskScreenTitle": "New task",
+    "emptyTasks": "No tasks yet",
+    "addTask": "+ Add task",
+    "titlePlaceholder": "Title (e.g. Vacuum the living room)",
+    "frequencyLabel": "How often",
+    "frequency": {
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "yearly": "Yearly"
+    },
+    "markDone": "Mark as done",
+    "lastDone": "Last done: {{date}}",
+    "neverDone": "Never done",
+    "dueIn": "In {{days}} days",
+    "dueToday": "Today",
+    "overdue": "Overdue",
+    "save": "Save",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete task?",
+    "deleteConfirmMessage": "This action cannot be undone.",
+    "newItemPlaceholder": "New item",
+    "add": "Add",
+    "shoppingEmpty": "List is empty",
+    "movingEmpty": "List is empty",
+    "movingDefaults": {
+      "addressChange": "Change address",
+      "internet": "Order internet",
+      "electricity": "Set up electricity",
+      "mailForwarding": "Mail forwarding",
+      "insurance": "Update insurance"
+    }
+  }

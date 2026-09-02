@@ -1,0 +1,21 @@
+{
+    "title": "Profile",
+    "nameLabel": "Name",
+    "namePlaceholder": "Your name",
+    "genderLabel": "Gender",
+    "genderHint": "Only used to show relevant modules in the app.",
+    "gender": {
+      "female": "Female",
+      "male": "Male",
+      "other": "Other",
+      "unspecified": "Not specified"
+    },
+    "save": "Save",
+    "ageLabel": "Age",
+    "agePlaceholder": "Your age",
+    "nameRequiredError": "Enter your name to continue",
+    "ageRequiredError": "Enter your age to continue",
+    "onboardingTitle": "Welcome to LifeSort",
+    "onboardingSubtitle": "Tell us a bit about yourself before we get started.",
+    "continueButton": "Continue"
+}

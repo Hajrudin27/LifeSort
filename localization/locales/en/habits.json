@@ -1,0 +1,22 @@
+{
+    "screenTitle": "Habits",
+    "newScreenTitle": "New habit",
+    "emptyState": "No habits yet",
+    "addButton": "+ Add habit",
+    "titlePlaceholder": "Title (e.g. Run for 20 minutes)",
+    "directionLabel": "Type",
+    "direction": {
+      "build": "Habit to build",
+      "quit": "Habit to quit"
+    },
+    "targetLabel": "Weekly target (optional)",
+    "logToday": "Log today",
+    "loggedToday": "Logged today",
+    "streakLabel": "{{count}} day streak",
+    "weekLabel": "{{count}}/{{target}} this week",
+    "save": "Save",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete habit?",
+    "deleteConfirmMessage": "This action cannot be undone.",
+    "edit": "Edit"
+  }

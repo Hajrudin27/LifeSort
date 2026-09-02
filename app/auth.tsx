@@ -1,0 +1,175 @@
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
+
+import Button from '@/components/Button';
+import Card from '@/components/Card';
+import Chip from '@/components/Chip';
+import { Text, useThemeColor, View } from '@/components/Themed';
+import { sharedStyles } from '@/constants/sharedStyles';
+import { useAuthStore } from '@/store/useAuthStore';
+import { Gender } from '@/types/profile';
+
+const GENDERS: Gender[] = ['female', 'male', 'other', 'unspecified'];
+
+export default function AuthScreen() {
+  const { t } = useTranslation();
+  const borderColor = useThemeColor({}, 'border');
+  const surface = useThemeColor({}, 'surface');
+  const backgroundColor = useThemeColor({}, 'background');
+  const textMuted = useThemeColor({}, 'textMuted');
+  const tint = useThemeColor({}, 'tint');
+  const danger = useThemeColor({}, 'danger');
+
+  const signUp = useAuthStore((s) => s.signUp);
+  const signIn = useAuthStore((s) => s.signIn);
+
+  const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState<Gender>('unspecified');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const parsedAge = parseInt(age, 10);
+
+  const submit = async () => {
+    setError(null);
+
+    if (!isValidEmail) {
+      setError(t('auth.invalidEmailError'));
+      return;
+    }
+    if (password.length < 6) {
+      setError(t('auth.shortPasswordError'));
+      return;
+    }
+    if (mode === 'signUp') {
+      if (name.trim().length === 0) {
+        setError(t('profile.nameRequiredError'));
+        return;
+      }
+      if (isNaN(parsedAge) || parsedAge <= 0) {
+        setError(t('profile.ageRequiredError'));
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (mode === 'signIn') {
+        const { error: signInError } = await signIn(email.trim(), password);
+        if (signInError) setError(signInError);
+      } else {
+        const { error: signUpError, session: signUpSession } = await signUp(
+          email.trim(),
+          password,
+          name.trim(),
+          parsedAge,
+          gender
+        );
+        if (signUpError) {
+          setError(signUpError);
+        } else if (!signUpSession) {
+          Alert.alert(t('auth.signUpSuccessTitle'), t('auth.signUpSuccessBody'));
+          setMode('signIn');
+        } else {
+          // Session findes med det samme (email-bekræftelse er slået fra) —
+          // brugeren er allerede logget ind, send dem til PIN-oprettelse.
+          router.push('/onboarding-pin');
+        }
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Text style={[styles.title, { color: tint }]}>{t('auth.welcomeTitle')}</Text>
+        <Text style={[styles.subtitle, { color: textMuted }]}>{t('auth.welcomeSubtitle')}</Text>
+
+        <Card style={sharedStyles.card}>
+          <TextInput
+            style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
+            placeholder={t('auth.emailPlaceholder')}
+            placeholderTextColor={borderColor}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextInput
+            style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
+            placeholder={t('auth.passwordPlaceholder')}
+            placeholderTextColor={borderColor}
+            secureTextEntry
+            autoCapitalize="none"
+            autoComplete="password"
+            value={password}
+            onChangeText={setPassword}
+          />
+
+          {mode === 'signUp' && (
+            <>
+              <TextInput
+                style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
+                placeholder={t('auth.namePlaceholder')}
+                placeholderTextColor={borderColor}
+                value={name}
+                onChangeText={setName}
+              />
+              <TextInput
+                style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
+                placeholder={t('auth.agePlaceholder')}
+                placeholderTextColor={borderColor}
+                keyboardType="number-pad"
+                value={age}
+                onChangeText={setAge}
+              />
+
+              <Text style={sharedStyles.fieldLabel}>{t('auth.genderLabel')}</Text>
+              <View style={sharedStyles.chipRow}>
+                {GENDERS.map((g) => (
+                  <Chip key={g} label={t(`profile.gender.${g}`)} active={gender === g} onPress={() => setGender(g)} />
+                ))}
+              </View>
+            </>
+          )}
+
+          {error && <Text style={{ color: danger, fontSize: 13 }}>{error}</Text>}
+
+          <Button
+            label={mode === 'signIn' ? t('auth.signInButton') : t('auth.signUpButton')}
+            disabled={isSubmitting}
+            onPress={submit}
+          />
+        </Card>
+
+        <Text
+          style={[styles.switchLink, { color: tint }]}
+          onPress={() => {
+            setMode(mode === 'signIn' ? 'signUp' : 'signIn');
+            setError(null);
+          }}>
+          {mode === 'signIn' ? t('auth.switchToSignUp') : t('auth.switchToSignIn')}
+        </Text>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = {
+  container: { flexGrow: 1, justifyContent: 'center' as const, padding: 20, gap: 16 },
+  title: { fontSize: 26, fontWeight: '800' as const, textAlign: 'center' as const },
+  subtitle: { fontSize: 14, textAlign: 'center' as const, marginBottom: 4 },
+  switchLink: { textAlign: 'center' as const, fontSize: 13, fontWeight: '700' as const, marginTop: 4 },
+};

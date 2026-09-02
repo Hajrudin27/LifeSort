@@ -1,0 +1,11 @@
+{
+  "title": "Indstillinger",
+  "theme": "Udseende",
+  "light": "Lys",
+  "dark": "Mørk",
+  "system": "Systemstandard",
+  "signOutButton": "Log ud",
+  "signOutConfirmTitle": "Log ud?",
+  "signOutConfirmMessage": "Du bliver sendt tilbage til login-skærmen.",
+  "languageLabel": "Sprog"
+}

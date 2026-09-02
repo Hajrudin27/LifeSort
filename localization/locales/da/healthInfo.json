@@ -1,0 +1,106 @@
+{
+    "title": "Sundhedsinfo",
+    "conditionsTab": "Tilstande",
+    "symptomsTab": "Symptomer",
+    "disclaimerTitle": "Vigtigt at vide",
+    "disclaimerBody": "Denne app er ikke en erstatning for lægefaglig rådgivning. Vi er ikke læger, og indholdet her er kun til generel oplysning. Kontakt altid din egen læge, hvis du er bekymret for symptomer eller mistænker, at du kan have en af disse tilstande.",
+    "whatItIsLabel": "Hvad er det?",
+    "commonSymptomsLabel": "Almindelige symptomer",
+    "whatHelpsLabel": "Hvad kan hjælpe",
+    "whenToSeeDoctorLabel": "Hvornår bør du kontakte lægen",
+    "relatedSymptomsLabel": "Relaterede symptomer",
+    "relatedConditionsLabel": "Nævnes ofte i forbindelse med",
+    "searchPlaceholder": "Søg tilstand eller symptom",
+    "conditions": {
+        "thyroidDisorders": {
+        "name": "Skjoldbruskkirtelproblemer",
+        "summary": "For høj eller for lav aktivitet i skjoldbruskkirtlen kan påvirke cyklus.",
+        "whatItIs": "Skjoldbruskkirtlen producerer hormoner, der styrer stofskiftet, og som også har indflydelse på menstruationscyklussen. Både for høj (hyperthyreose) og for lav (hypothyreose) aktivitet kan give uregelmæssig, udebleven eller kraftigere menstruation, samt påvirke energiniveau og humør.",
+        "whatHelps": "Behandling afhænger af, om aktiviteten er for høj eller for lav, og involverer typisk medicin fastsat af en læge efter blodprøver.",
+        "whenToSeeDoctor": "Kontakt din læge, hvis du oplever vedvarende træthed, uforklarlige vægtændringer, eller markante ændringer i din cyklus, du ikke kan forklare."
+        },
+        "anemia": {
+        "name": "Jernmangelanæmi",
+        "summary": "Lavt jerniveau, ofte forbundet med kraftig menstruationsblødning.",
+        "whatItIs": "Jernmangelanæmi opstår, når kroppen ikke har nok jern til at danne røde blodlegemer. Kraftig eller langvarig menstruationsblødning er en almindelig årsag hos kvinder, fordi det tab af blod over tid kan tømme kroppens jernlagre.",
+        "whatHelps": "Behandling kan omfatte jerntilskud og, hvor relevant, håndtering af den bagvedliggende årsag til blodtabet — begge dele bør vurderes af en læge.",
+        "whenToSeeDoctor": "Kontakt din læge, hvis du oplever vedvarende træthed, bleghed, åndenød ved almindelig aktivitet, eller ved kraftig menstruationsblødning."
+        },
+        "ovarianCysts": {
+        "name": "Cyster på æggestokkene",
+        "summary": "Væskefyldte hulrum på æggestokken, ofte uden symptomer.",
+        "whatItIs": "Cyster på æggestokkene er væskefyldte hulrum, der kan opstå som en naturlig del af ægløsningen. De fleste er godartede og forsvinder af sig selv, men nogle kan give smerter, oppustethed eller uregelmæssig cyklus, særligt hvis de bliver store.",
+        "whatHelps": "De fleste cyster kræver ingen behandling og overvåges blot. Ved vedvarende eller store cyster kan behandling omfatte hormonel regulering eller i sjældnere tilfælde kirurgi.",
+        "whenToSeeDoctor": "Kontakt din læge ved pludselige, kraftige smerter i underlivet, eller hvis du oplever vedvarende oppustethed eller uregelmæssig cyklus."
+        },
+      "endometriosis": {
+        "name": "Endometriose",
+        "summary": "Kronisk tilstand hvor væv, der ligner livmoderslimhinden, vokser uden for livmoderen.",
+        "whatItIs": "Endometriose er en kronisk tilstand, hvor væv, der minder om livmoderslimhinden, vokser andre steder i kroppen — typisk på æggestokkene, æggelederne eller bækkenets bindevæv. Dette væv reagerer på samme måde som livmoderslimhinden under cyklussen, hvilket kan give betændelse, smerte og arvæv over tid. Tilstanden rammer et betydeligt antal kvinder i den fødedygtige alder.",
+        "whatHelps": "Behandling afhænger af sværhedsgrad og ønske om graviditet, og spænder fra smertestillende medicin og hormonel behandling til kirurgi. Varme, regelmæssig bevægelse og stresshåndtering nævnes ofte som noget, der kan lindre symptomer for nogle, men erstatter ikke lægelig behandling.",
+        "whenToSeeDoctor": "Kontakt din læge, hvis du oplever kraftige menstruationssmerter, der påvirker din hverdag, smerter under samleje, eller hvis smerterne forværres over tid."
+      },
+      "pcos": {
+        "name": "PCOS (Polycystisk ovariesyndrom)",
+        "summary": "Hormonel tilstand der kan påvirke menstruationscyklus, hud og fertilitet.",
+        "whatItIs": "PCOS er en hormonel tilstand, hvor æggestokkene kan producere flere mandlige kønshormoner end normalt. Det kan give uregelmæssig eller udebleven menstruation, cyster på æggestokkene, og påvirke hud og hårvækst. PCOS er en af de hyppigste hormonelle tilstande hos kvinder i den fødedygtige alder.",
+        "whatHelps": "Behandling kan omfatte livsstilsændringer (kost, motion), hormonel prævention for at regulere cyklussen, eller specifik medicin afhængigt af symptomer og ønsker om graviditet.",
+        "whenToSeeDoctor": "Kontakt din læge, hvis din menstruation er meget uregelmæssig eller udebliver i flere måneder, eller hvis du oplever uventet hårvækst, vægtændringer eller uren hud, du er bekymret for."
+      },
+      "pms": {
+        "name": "PMS (Præmenstruelt syndrom)",
+        "summary": "Fysiske og følelsesmæssige symptomer i ugen(erne) før menstruation.",
+        "whatItIs": "PMS dækker over en bred vifte af fysiske og følelsesmæssige symptomer, der typisk opstår i den luteale fase (efter ægløsning, før menstruation) og forsvinder, når menstruationen starter. Det menes at hænge sammen med hormonelle udsving i denne del af cyklussen.",
+        "whatHelps": "Regelmæssig søvn, motion, en afbalanceret kost og stresshåndtering nævnes ofte som støttende. Nogle oplever lindring af håndkøbssmertestillende midler ved fysiske symptomer.",
+        "whenToSeeDoctor": "Kontakt din læge, hvis symptomerne er så kraftige, at de forstyrrer din dagligdag, arbejde eller relationer."
+      },
+      "pmdd": {
+        "name": "PMDD (Præmenstruel dysforisk lidelse)",
+        "summary": "En mere alvorlig form for PMS med udtalte følelsesmæssige symptomer.",
+        "whatItIs": "PMDD er en mere alvorlig variant af PMS, kendetegnet ved markante humørsvingninger, irritabilitet, angst eller nedtrykthed i ugerne før menstruation. Symptomerne er kraftige nok til at påvirke daglig funktion markant, og adskiller sig fra almindelig PMS i intensitet.",
+        "whatHelps": "Behandling kan omfatte terapi, hormonel behandling eller anden medicin, afhængigt af den enkeltes situation — dette bør altid vurderes af en læge.",
+        "whenToSeeDoctor": "Kontakt din læge, hvis du oplever kraftige humørmæssige symptomer måned efter måned, der påvirker dit arbejde, relationer eller trivsel."
+      },
+      "dysmenorrhea": {
+        "name": "Dysmenoré (smertefuld menstruation)",
+        "summary": "Kraftige kramper eller smerter i forbindelse med menstruation.",
+        "whatItIs": "Dysmenoré betyder smertefuld menstruation og dækker over kramper i underlivet, ofte ledsaget af smerter i lænd og lår. Det kan enten være 'primær' (uden underliggende årsag) eller 'sekundær' (forårsaget af en anden tilstand, fx endometriose).",
+        "whatHelps": "Varme (varmepude), håndkøbssmertestillende midler, og let bevægelse nævnes ofte som lindrende for milde til moderate smerter.",
+        "whenToSeeDoctor": "Kontakt din læge, hvis smerterne er så kraftige, at de forhindrer dig i dagligdags aktiviteter, eller hvis de pludselig bliver værre end normalt."
+      },
+      "menorrhagia": {
+        "name": "Menoragi (kraftig menstruationsblødning)",
+        "summary": "Unormalt kraftig eller langvarig menstruationsblødning.",
+        "whatItIs": "Menoragi betegner en menstruation, der er markant kraftigere eller varer længere end normalt, og som kan påvirke dagligdagen betydeligt. Det kan skyldes flere forskellige underliggende årsager og bør altid undersøges.",
+        "whatHelps": "Behandling afhænger af årsagen og kan omfatte medicin eller andre indgreb — dette skal vurderes af en læge.",
+        "whenToSeeDoctor": "Kontakt din læge, hvis du skal skifte bind/tampon hver time i flere timer i træk, oplever store blodpropper, eller føler dig usædvanligt træt eller svimmel."
+      },
+      "amenorrhea": {
+        "name": "Amenoré (udebleven menstruation)",
+        "summary": "Fravær af menstruation i en periode, hvor den forventes.",
+        "whatItIs": "Amenoré betyder, at menstruationen udebliver. Det kan skyldes graviditet, hormonelle forandringer, kraftigt vægttab eller -tab, stress, intensiv træning, eller andre underliggende tilstande.",
+        "whatHelps": "Det afhænger fuldstændigt af den underliggende årsag, og bør altid afklares med en læge først.",
+        "whenToSeeDoctor": "Kontakt din læge, hvis din menstruation udebliver i tre måneder eller mere, og graviditet er udelukket."
+      },
+      "fibroids": {
+        "name": "Myomer (godartede knuder i livmoderen)",
+        "summary": "Godartede knuder i eller omkring livmoderen.",
+        "whatItIs": "Myomer er godartede (ikke-kræftfremkaldende) knuder af muskel- og bindevæv, der vokser i eller omkring livmoderen. Mange kvinder har myomer uden at mærke noget, men de kan hos nogle give kraftig blødning, smerter eller tryksymptomer.",
+        "whatHelps": "Behandling afhænger af størrelse, placering og symptomer, og spænder fra ingen behandling til medicin eller kirurgi.",
+        "whenToSeeDoctor": "Kontakt din læge, hvis du oplever kraftig eller forlænget blødning, bækkensmerter, eller tryk på blæren."
+      }
+    },
+
+
+    "symptomInfo": {
+      "cramps": "Kramper i underlivet skyldes typisk livmoderens sammentrækninger under menstruation, drevet af hormonlignende stoffer kaldet prostaglandiner. Milde til moderate kramper er almindelige, men kraftige, invaliderende kramper bør undersøges.",
+      "headache": "Hovedpine omkring menstruation kan hænge sammen med hormonelle udsving, særligt fald i østrogen. For nogle er det et fast, forudsigeligt mønster i cyklussen.",
+      "bloating": "Oppustethed skyldes ofte væskeophobning påvirket af hormonelle ændringer i ugen før menstruation, og aftager typisk, når menstruationen starter.",
+      "fatigue": "Træthed omkring menstruation kan skyldes en kombination af hormonelle udsving, søvnforstyrrelser og — ved kraftig blødning — lavere jernniveau.",
+      "moodSwings": "Humørsvingninger i den luteale fase menes at hænge sammen med udsving i østrogen og progesteron, som påvirker signalstoffer i hjernen.",
+      "acne": "Uren hud omkring menstruation kan skyldes hormonelle udsving, der øger talgproduktionen i huden.",
+      "backache": "Rygsmerter under menstruation hænger ofte sammen med de samme muskelsammentrækninger, der giver underlivssmerter, og kan stråle til lænd og lår.",
+      "nausea": "Kvalme omkring menstruation kan være relateret til prostaglandiner, som udover livmoderen også kan påvirke mave-tarm-systemet hos nogle.",
+      "tenderBreasts": "Ømme bryster før menstruation er en almindelig reaktion på hormonelle udsving og aftager typisk, når menstruationen starter."
+    }
+  }

@@ -1,0 +1,48 @@
+{
+    "title": "Karriere",
+    "applicationsLabel": "Jobansøgninger",
+    "searchPlaceholder": "Søg ansøgning",
+    "newScreenTitle": "Ny ansøgning",
+    "emptyState": "Ingen ansøgninger endnu",
+    "addButton": "+ Tilføj ansøgning",
+    "companyPlaceholder": "Firma",
+    "positionPlaceholder": "Stilling",
+    "appliedDateLabel": "Dato ansøgt",
+    "linkPlaceholder": "Link til opslag (valgfrit)",
+    "notesPlaceholder": "Noter (valgfrit)",
+    "statusLabel": "Status",
+    "status": {
+      "applied": "Ansøgt",
+      "interview": "Til samtale",
+      "offer": "Tilbud",
+      "rejected": "Afvist"
+    },
+    "save": "Gem",
+    "delete": "Slet",
+    "edit": "Rediger",
+    "deleteConfirmTitle": "Slet ansøgning?",
+    "deleteConfirmMessage": "Denne handling kan ikke fortrydes.",
+    "skillsLabel": "Kompetencer",
+    "skillsScreenTitle": "Kompetencer",
+    "skillNamePlaceholder": "Kompetence (fx Excel, Engelsk, Ledelse)",
+    "categoryLabel": "Kategori",
+    "category": {
+      "technical": "Teknisk",
+      "language": "Sprog",
+      "soft": "Bløde kompetencer"
+    },
+    "levelLabel": "Niveau",
+    "level": {
+      "beginner": "Begynder",
+      "proficient": "Øvet",
+      "expert": "Ekspert"
+    },
+    "emptySkills": "Ingen kompetencer endnu",
+    "editSkill": "Rediger kompetence",
+    "confirm": "Bekræft",
+    "newCategoryPlaceholder": "Kategorinavn",
+    "addCategory": "Tilføj kategori",
+    "addCategoryConfirm": "Tilføj",
+    "cvLabel": "CV",
+    "selectCategory": "Vælg kategori"
+  }

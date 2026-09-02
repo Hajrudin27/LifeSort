@@ -1,0 +1,27 @@
+{
+  "screenTitle": "To-do",
+  "newScreenTitle": "New task",
+  "emptyState": "No tasks yet",
+  "addButton": "+ Add task",
+  "titlePlaceholder": "Title",
+  "descriptionPlaceholder": "Description (optional)",
+  "dueDateLabel": "Due date",
+  "importanceLabel": "Importance",
+  "importance": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
+  "save": "Save",
+  "delete": "Delete",
+  "deleteConfirmTitle": "Delete task?",
+  "deleteConfirmMessage": "This action cannot be undone.",
+  "dueIn": "In {{days}} days",
+  "overdue": "Overdue",
+  "dueToday": "Today",
+  "activeLabel": "Active",
+  "showCompleted": "Show completed",
+  "markComplete": "Mark as complete",
+  "markActive": "Mark as active",
+  "dueDatePhaseHint": "This date falls within your expected period."
+}

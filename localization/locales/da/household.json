@@ -1,0 +1,39 @@
+{
+    "title": "Hjemmet",
+    "cleaningLabel": "Rengøring",
+    "maintenanceLabel": "Vedligeholdelse",
+    "shoppingListLabel": "Ting jeg mangler",
+    "movingLabel": "Flytte-tjekliste",
+    "newTaskScreenTitle": "Ny opgave",
+    "emptyTasks": "Ingen opgaver endnu",
+    "addTask": "+ Tilføj opgave",
+    "titlePlaceholder": "Titel (fx Støvsug stuen)",
+    "frequencyLabel": "Hvor tit",
+    "frequency": {
+      "weekly": "Ugentligt",
+      "monthly": "Månedligt",
+      "quarterly": "Hvert kvartal",
+      "yearly": "Årligt"
+    },
+    "markDone": "Marker som gjort",
+    "lastDone": "Sidst gjort: {{date}}",
+    "neverDone": "Aldrig gjort",
+    "dueIn": "Om {{days}} dage",
+    "dueToday": "I dag",
+    "overdue": "Overskredet",
+    "save": "Gem",
+    "delete": "Slet",
+    "deleteConfirmTitle": "Slet opgave?",
+    "deleteConfirmMessage": "Denne handling kan ikke fortrydes.",
+    "newItemPlaceholder": "Ny vare",
+    "add": "Tilføj",
+    "shoppingEmpty": "Listen er tom",
+    "movingEmpty": "Listen er tom",
+    "movingDefaults": {
+      "addressChange": "Adresseændring",
+      "internet": "Bestil internet",
+      "electricity": "Opret el-abonnement",
+      "mailForwarding": "Eftersendelse af post",
+      "insurance": "Opdater forsikring"
+    }
+  }

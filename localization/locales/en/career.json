@@ -1,0 +1,48 @@
+{
+    "title": "Career",
+    "applicationsLabel": "Job applications",
+    "searchPlaceholder": "Search application",
+    "newScreenTitle": "New application",
+    "emptyState": "No applications yet",
+    "addButton": "+ Add application",
+    "companyPlaceholder": "Company",
+    "positionPlaceholder": "Position",
+    "appliedDateLabel": "Date applied",
+    "linkPlaceholder": "Link to listing (optional)",
+    "notesPlaceholder": "Notes (optional)",
+    "statusLabel": "Status",
+    "status": {
+      "applied": "Applied",
+      "interview": "Interview",
+      "offer": "Offer",
+      "rejected": "Rejected"
+    },
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "deleteConfirmTitle": "Delete application?",
+    "deleteConfirmMessage": "This action cannot be undone.",
+    "skillsLabel": "Skills",
+    "skillsScreenTitle": "Skills",
+    "skillNamePlaceholder": "Skill (e.g. Excel, English, Leadership)",
+    "categoryLabel": "Category",
+    "category": {
+      "technical": "Technical",
+      "language": "Language",
+      "soft": "Soft skills"
+    },
+    "levelLabel": "Level",
+    "level": {
+      "beginner": "Beginner",
+      "proficient": "Proficient",
+      "expert": "Expert"
+    },
+    "emptySkills": "No skills yet",
+    "editSkill": "Edit skill",
+    "confirm": "Confirm",
+    "newCategoryPlaceholder": "Category name",
+    "addCategory": "Add category",
+    "addCategoryConfirm": "Add",
+    "cvLabel": "CV",
+    "selectCategory": "Select category"
+  }

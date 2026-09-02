@@ -1,0 +1,22 @@
+{
+    "screenTitle": "Vaner",
+    "newScreenTitle": "Ny vane",
+    "emptyState": "Ingen vaner endnu",
+    "addButton": "+ Tilføj vane",
+    "titlePlaceholder": "Titel (fx Løb 20 minutter)",
+    "directionLabel": "Type",
+    "direction": {
+      "build": "Vane jeg vil opbygge",
+      "quit": "Vane jeg vil af med"
+    },
+    "targetLabel": "Mål per uge (valgfrit)",
+    "logToday": "Registrér i dag",
+    "loggedToday": "Registreret i dag",
+    "streakLabel": "{{count}} dage i træk",
+    "weekLabel": "{{count}}/{{target}} denne uge",
+    "save": "Gem",
+    "delete": "Slet",
+    "deleteConfirmTitle": "Slet vane?",
+    "deleteConfirmMessage": "Denne handling kan ikke fortrydes.",
+    "edit": "Rediger"
+  }

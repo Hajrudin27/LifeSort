@@ -1,0 +1,21 @@
+{
+    "screenTitle": "Life goals",
+    "newScreenTitle": "New goal",
+    "emptyState": "No goals yet",
+    "addButton": "+ Add goal",
+    "titlePlaceholder": "Title (e.g. Learn to play guitar)",
+    "descriptionPlaceholder": "Description (optional)",
+    "deadlineLabel": "Deadline (optional)",
+    "subGoalsLabel": "Sub-goals",
+    "newSubGoalPlaceholder": "New sub-goal",
+    "addSubGoal": "Add",
+    "noSubGoals": "No sub-goals yet",
+    "save": "Save",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete goal?",
+    "deleteConfirmMessage": "This will also delete all sub-goals. This cannot be undone.",
+    "progressLabel": "{{done}}/{{total}} sub-goals",
+    "edit": "Edit",
+    "activeLabel": "Active",
+    "showCompleted": "Show completed"
+  }

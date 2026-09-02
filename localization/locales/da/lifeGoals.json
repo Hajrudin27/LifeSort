@@ -1,0 +1,21 @@
+{
+    "screenTitle": "Livsmål",
+    "newScreenTitle": "Nyt mål",
+    "emptyState": "Ingen mål endnu",
+    "addButton": "+ Tilføj mål",
+    "titlePlaceholder": "Titel (fx Lær at spille guitar)",
+    "descriptionPlaceholder": "Beskrivelse (valgfrit)",
+    "deadlineLabel": "Deadline (valgfrit)",
+    "subGoalsLabel": "Delmål",
+    "newSubGoalPlaceholder": "Nyt delmål",
+    "addSubGoal": "Tilføj",
+    "noSubGoals": "Ingen delmål endnu",
+    "save": "Gem",
+    "delete": "Slet",
+    "deleteConfirmTitle": "Slet mål?",
+    "deleteConfirmMessage": "Dette sletter også alle delmål. Kan ikke fortrydes.",
+    "progressLabel": "{{done}}/{{total}} delmål",
+    "edit": "Rediger",
+    "activeLabel": "Aktive",
+    "showCompleted": "Vis fuldførte"
+  }

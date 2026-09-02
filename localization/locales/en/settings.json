@@ -1,0 +1,11 @@
+{
+  "title": "Settings",
+  "theme": "Appearance",
+  "light": "Light",
+  "dark": "Dark",
+  "system": "System default",
+  "signOutButton": "Sign out",
+  "signOutConfirmTitle": "Sign out?",
+  "signOutConfirmMessage": "You'll be sent back to the sign-in screen.",
+  "languageLabel": "Language"
+}

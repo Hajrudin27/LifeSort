@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FlatList, Pressable, StyleSheet } from "react-native";
 
+import EmptyState from "@/components/EmptyState";
 import ExpensePieChart from "@/components/ExpensePieChart";
 import ProgressBar from "@/components/ProgressBar";
 import { Text, useThemeColor, View } from "@/components/Themed";
@@ -170,10 +171,12 @@ export default function ExpensesScreen() {
             </View>
 
             {usedCategories.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: accentTints.accentSoft }]}>
-                <SymbolView name={{ ios: "tray.fill", android: "inbox", web: "inbox" }} size={28} tintColor={accentTints.accent} />
-                <Text style={{ color: textMuted, marginTop: 8 }}>{t("expenses.emptyState")}</Text>
-              </View>
+              <EmptyState
+                icon={{ ios: "tray.fill", android: "inbox", web: "inbox" }}
+                title={t("expenses.emptyState")}
+                actionLabel={t("expenses.addButton")}
+                onAction={() => router.push("/expenses/new")}
+              />
             ) : (
               <Text style={styles.sectionLabel}>{t("expenses.categoriesLabel") ?? t("expenses.screenTitle")}</Text>
             )}

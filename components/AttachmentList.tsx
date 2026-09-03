@@ -7,52 +7,57 @@ import { Alert, Image, Pressable, StyleSheet } from 'react-native';
 
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { useAccentTints } from '@/hooks/useAccentTints';
-import { useWarrantiesStore } from '@/store/useWarrantiesStore';
-import { WarrantyAttachment } from '@/types/warranty';
+import { Attachment } from '@/types/attachment';
 import { persistFile } from '@/utils/shared/attachmentStorage';
+import { compressImage } from '@/utils/shared/imageCompression';
 
 type Props = {
-  warrantyId: string;
-  attachments: WarrantyAttachment[];
+  attachments: Attachment[];
+  onAdd: (attachment: Attachment) => void;
+  onRemove: (attachmentId: string) => void;
 };
 
-export default function AttachmentList({ warrantyId, attachments }: Props) {
+export default function AttachmentList({ attachments, onAdd, onRemove }: Props) {
   const { t } = useTranslation();
   const accentTints = useAccentTints();
   const tint = accentTints.accent;
   const borderColor = useThemeColor({}, 'border');
   const textMuted = useThemeColor({}, 'textMuted');
 
-  const addAttachment = useWarrantiesStore((s) => s.addAttachment);
-  const removeAttachment = useWarrantiesStore((s) => s.removeAttachment);
-
   const addFromCamera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) return;
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (result.canceled) return;
-    const uri = await persistFile(result.assets[0].uri, warrantyId);
-    addAttachment(warrantyId, { id: Date.now().toString(), uri, name: 'photo.jpg', kind: 'image' });
+    const asset = result.assets[0];
+    const compressed = await compressImage(asset.uri, asset.width, asset.height);
+    const id = Date.now().toString();
+    const uri = await persistFile(compressed.uri, id);
+    onAdd({ id, uri, name: 'photo.jpg', kind: 'image' });
   };
 
   const addFromLibrary = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
     if (result.canceled) return;
-    const uri = await persistFile(result.assets[0].uri, warrantyId);
-    addAttachment(warrantyId, { id: Date.now().toString(), uri, name: 'photo.jpg', kind: 'image' });
+    const asset = result.assets[0];
+    const compressed = await compressImage(asset.uri, asset.width, asset.height);
+    const id = Date.now().toString();
+    const uri = await persistFile(compressed.uri, id);
+    onAdd({ id, uri, name: 'photo.jpg', kind: 'image' });
   };
 
   const addDocument = async () => {
     const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
     if (result.canceled) return;
-    const uri = await persistFile(result.assets[0].uri, warrantyId);
-    addAttachment(warrantyId, { id: Date.now().toString(), uri, name: result.assets[0].name, kind: 'document' });
+    const id = Date.now().toString();
+    const uri = await persistFile(result.assets[0].uri, result.assets[0].name);
+    onAdd({ id, uri, name: result.assets[0].name, kind: 'document' });
   };
 
   const confirmRemove = (attachmentId: string) => {
     Alert.alert(t('warranties.removeAttachment'), undefined, [
       { text: t('warranties.cancel'), style: 'cancel' },
-      { text: t('warranties.removeAttachment'), style: 'destructive', onPress: () => removeAttachment(warrantyId, attachmentId) },
+      { text: t('warranties.removeAttachment'), style: 'destructive', onPress: () => onRemove(attachmentId) },
     ]);
   };
 

@@ -1,0 +1,12 @@
+{
+    "placeholder": "Søg i gøremål, udgifter, garantier...",
+    "hint": "Skriv mindst 2 bogstaver for at søge",
+    "noResults": "Intet fundet",
+    "kinds": {
+      "todo": "Gøremål",
+      "expense": "Udgift",
+      "warranty": "Garanti",
+      "habit": "Vane",
+      "goal": "Livsmål"
+    }
+  }

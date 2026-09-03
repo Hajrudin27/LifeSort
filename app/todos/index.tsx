@@ -7,6 +7,7 @@ import { FlatList, Pressable } from 'react-native';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
+import EmptyState from '@/components/EmptyState';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useAccentTints } from '@/hooks/useAccentTints';
@@ -52,9 +53,12 @@ export default function TodosScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={sharedStyles.list}
         ListEmptyComponent={
-          <Card style={sharedStyles.emptyCard}>
-            <Text style={{ color: textMuted }}>{t('todos.emptyState')}</Text>
-          </Card>
+          <EmptyState
+            icon={{ ios: 'checklist', android: 'checklist', web: 'checklist' }}
+            title={t('todos.emptyState')}
+            actionLabel={t('todos.addButton')}
+            onAction={() => router.push('/todos/new')}
+          />
         }
         renderItem={({ item }) => {
           const days = item.dueDate ? daysUntil(item.dueDate) : null;

@@ -40,6 +40,20 @@ export default function TabLayout() {
               size={26}
             />
           ),
+          headerLeft: () => (
+            <Link href="/search" asChild>
+              <Pressable style={{ marginLeft: 15 }}>
+                {({ pressed }) => (
+                  <SymbolView
+                    name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
+                    size={22}
+                    tintColor={theme.text}
+                    style={{ opacity: pressed ? 0.5 : 1 }}
+                  />
+                )}
+              </Pressable>
+            </Link>
+          ),
           headerRight: () => (
             <Link href="/modal" asChild>
               <Pressable style={{ marginRight: 15 }}>

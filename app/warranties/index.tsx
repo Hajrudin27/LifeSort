@@ -7,6 +7,7 @@ import { Pressable, SectionList, TextInput } from 'react-native';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
+import EmptyState from '@/components/EmptyState';
 import SwipeableRow from '@/components/SwipeableRow';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
@@ -111,9 +112,12 @@ export default function WarrantiesScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={sharedStyles.list}
         ListEmptyComponent={
-          <Card style={[sharedStyles.emptyCard, { backgroundColor: accentTints.accentSoft }]}>
-            <Text style={{ color: textMuted }}>{t('warranties.emptyState')}</Text>
-          </Card>
+          <EmptyState
+            icon={{ ios: 'shield.fill', android: 'shield', web: 'shield' }}
+            title={t('warranties.emptyState')}
+            actionLabel={t('warranties.addButton')}
+            onAction={() => router.push('/warranties/new')}
+          />
         }
         renderSectionHeader={({ section }) =>
           section.title ? <Text style={sharedStyles.sectionLabel}>{section.title}</Text> : null

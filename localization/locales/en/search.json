@@ -1,0 +1,12 @@
+{
+    "placeholder": "Search todos, expenses, warranties...",
+    "hint": "Type at least 2 letters to search",
+    "noResults": "Nothing found",
+    "kinds": {
+      "todo": "Todo",
+      "expense": "Expense",
+      "warranty": "Warranty",
+      "habit": "Habit",
+      "goal": "Life goal"
+    }
+  }

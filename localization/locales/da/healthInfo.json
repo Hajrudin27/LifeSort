@@ -11,6 +11,7 @@
     "relatedSymptomsLabel": "Relaterede symptomer",
     "relatedConditionsLabel": "Nævnes ofte i forbindelse med",
     "searchPlaceholder": "Søg tilstand eller symptom",
+    "emptyState": "Ingen sundhedsinfo tilgængelig endnu.",
     "conditions": {
         "thyroidDisorders": {
         "name": "Skjoldbruskkirtelproblemer",

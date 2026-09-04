@@ -11,6 +11,7 @@
     "relatedSymptomsLabel": "Related symptoms",
     "relatedConditionsLabel": "Often mentioned in connection with",
     "searchPlaceholder": "Search condition or symptom",
+    "emptyState": "No health info available yet.",
     "conditions": {
        "thyroidDisorders": {
         "name": "Thyroid disorders",

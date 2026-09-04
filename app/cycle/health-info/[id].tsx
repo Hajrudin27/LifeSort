@@ -9,18 +9,20 @@ import { Text, useThemeColor, View } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import { CycleTints } from '@/constants/Colors';
 import { sharedStyles } from '@/constants/sharedStyles';
-import { HEALTH_CONDITIONS } from '@/data/healthConditions';
+import { useCycleStore } from '@/store/useCycleStore';
 import { getConditionIconName } from '@/utils/cycle/healthConditionIcon';
 
 export default function HealthConditionDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isDa = i18n.language === 'da';
   const { id } = useLocalSearchParams<{ id: string }>();
   const colorScheme = useColorScheme();
   const cycleTints = CycleTints[colorScheme];
   const backgroundColor = useThemeColor({}, 'background');
   const textMuted = useThemeColor({}, 'textMuted');
 
-  const condition = HEALTH_CONDITIONS.find((c) => c.id === id);
+  const condition = useCycleStore((s) => s.healthConditions.find((c) => c.id === id));
+  const symptomGlossary = useCycleStore((s) => s.symptomGlossary);
 
   if (!condition) {
     return (
@@ -30,9 +32,13 @@ export default function HealthConditionDetailScreen() {
     );
   }
 
+  const commonSymptomNames = condition.commonSymptoms
+    .map((symptomId) => symptomGlossary.find((s) => s.id === symptomId))
+    .filter((s): s is NonNullable<typeof s> => !!s);
+
   return (
     <ScrollView style={{ backgroundColor }} contentContainerStyle={sharedStyles.formContainerScroll}>
-      <Stack.Screen options={{ title: t(condition.nameKey) }} />
+      <Stack.Screen options={{ title: isDa ? condition.nameDa : condition.nameEn }} />
 
       <HealthDisclaimer />
 
@@ -41,25 +47,25 @@ export default function HealthConditionDetailScreen() {
         <View style={[styles.bigIconCircle, { backgroundColor: cycleTints.accent }]}>
           <SymbolView name={getConditionIconName(condition.id) as any} size={30} tintColor="#FFFFFF" />
         </View>
-        <Text style={styles.conditionName}>{t(condition.nameKey)}</Text>
+        <Text style={styles.conditionName}>{isDa ? condition.nameDa : condition.nameEn}</Text>
       </View>
 
       <View style={[styles.sectionKicker, { backgroundColor: cycleTints.accentSoft }]}>
         <Text style={[styles.sectionKickerText, { color: cycleTints.accent }]}>{t('healthInfo.whatItIsLabel')}</Text>
       </View>
       <Card style={[styles.sectionCard, { borderColor: cycleTints.accentSoft }]}>
-        <Text style={styles.body}>{t(condition.whatItIsKey)}</Text>
+        <Text style={styles.body}>{isDa ? condition.whatItIsDa : condition.whatItIsEn}</Text>
       </Card>
 
-      {condition.commonSymptomsKeys.length > 0 && (
+      {commonSymptomNames.length > 0 && (
         <>
           <View style={[styles.sectionKicker, { backgroundColor: cycleTints.accentSoft }]}>
             <Text style={[styles.sectionKickerText, { color: cycleTints.accent }]}>{t('healthInfo.commonSymptomsLabel')}</Text>
           </View>
           <View style={sharedStyles.chipRow}>
-            {condition.commonSymptomsKeys.map((s) => (
-              <View key={s} style={[styles.symptomChip, { borderColor: cycleTints.accent, backgroundColor: cycleTints.accentSoft }]}>
-                <Text style={{ color: cycleTints.accent, fontSize: 13, fontWeight: '700' }}>{t(`cycle.symptoms.${s}`)}</Text>
+            {commonSymptomNames.map((s) => (
+              <View key={s.id} style={[styles.symptomChip, { borderColor: cycleTints.accent, backgroundColor: cycleTints.accentSoft }]}>
+                <Text style={{ color: cycleTints.accent, fontSize: 13, fontWeight: '700' }}>{isDa ? s.nameDa : s.nameEn}</Text>
               </View>
             ))}
           </View>
@@ -70,14 +76,14 @@ export default function HealthConditionDetailScreen() {
         <Text style={[styles.sectionKickerText, { color: cycleTints.accent }]}>{t('healthInfo.whatHelpsLabel')}</Text>
       </View>
       <Card style={[styles.sectionCard, { borderColor: cycleTints.accentSoft }]}>
-        <Text style={styles.body}>{t(condition.whatHelpsKey)}</Text>
+        <Text style={styles.body}>{isDa ? condition.whatHelpsDa : condition.whatHelpsEn}</Text>
       </Card>
 
       <View style={[styles.sectionKicker, { backgroundColor: cycleTints.accentSoft }]}>
         <Text style={[styles.sectionKickerText, { color: cycleTints.accent }]}>{t('healthInfo.whenToSeeDoctorLabel')}</Text>
       </View>
       <Card style={[styles.sectionCard, { borderColor: cycleTints.accentSoft }]}>
-        <Text style={styles.body}>{t(condition.whenToSeeDoctorKey)}</Text>
+        <Text style={styles.body}>{isDa ? condition.whenToSeeDoctorDa : condition.whenToSeeDoctorEn}</Text>
       </Card>
     </ScrollView>
   );

@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { supabase } from '@/lib/supabase';
 import { CycleEntry, FlowIntensity, Symptom, SymptomLog } from '@/types/cycle';
+import { HealthConditionRecord, SymptomGlossaryRecord } from '@/types/healthInfo';
 
 function newId() {
   return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
@@ -62,6 +63,10 @@ interface CycleState {
   reminderEnabled: boolean;
   reminderDaysBefore: number;
 
+  // Admin-styret, globalt indhold — samme for alle brugere, ingen user_id-filter.
+  healthConditions: HealthConditionRecord[];
+  symptomGlossary: SymptomGlossaryRecord[];
+
   startPeriod: (startDate: string) => void;
   endPeriod: (id: string, endDate: string) => void;
   updateCycle: (id: string, updates: Partial<Pick<CycleEntry, 'startDate' | 'endDate'>>) => void;
@@ -87,6 +92,8 @@ export const useCycleStore = create<CycleState>()(
       lutealPhaseLength: 14,
       reminderEnabled: false,
       reminderDaysBefore: 1,
+      healthConditions: [],
+      symptomGlossary: [],
 
       startPeriod: (startDate) => {
         const newCycle: CycleEntry = { id: newId(), startDate, createdAt: new Date().toISOString() };
@@ -151,10 +158,13 @@ export const useCycleStore = create<CycleState>()(
         const userId = await getUserId();
         if (!userId) return;
 
-        const [cyclesResult, logsResult, settingsResult] = await Promise.all([
+        const [cyclesResult, logsResult, settingsResult, conditionsResult, symptomsResult] = await Promise.all([
           supabase.from('cycles').select('id, start_date, end_date, created_at').eq('user_id', userId),
           supabase.from('symptom_logs').select('id, date, symptoms, flow, notes').eq('user_id', userId),
           supabase.from('cycle_settings').select('avg_cycle_length, luteal_phase_length, reminder_enabled, reminder_days_before').eq('user_id', userId).single(),
+          // Admin-styret, globalt indhold — ingen user_id-filter, alle brugere ser samme data.
+          supabase.from('health_conditions').select('*'),
+          supabase.from('symptom_glossary').select('*'),
         ]);
 
         set((state) => {
@@ -198,6 +208,34 @@ export const useCycleStore = create<CycleState>()(
               next.reminderEnabled = row.reminder_enabled;
               next.reminderDaysBefore = row.reminder_days_before;
             }
+          }
+
+          // Admin-styret indhold erstattes altid helt (ikke merge-if-new-id som personlig
+          // data) — det skal altid afspejle den nyeste version fra admin-panelet.
+          if (!conditionsResult.error && conditionsResult.data) {
+            next.healthConditions = conditionsResult.data.map((row) => ({
+              id: row.id,
+              nameDa: row.name_da,
+              nameEn: row.name_en,
+              summaryDa: row.summary_da,
+              summaryEn: row.summary_en,
+              whatItIsDa: row.what_it_is_da,
+              whatItIsEn: row.what_it_is_en,
+              commonSymptoms: row.common_symptoms ?? [],
+              whatHelpsDa: row.what_helps_da,
+              whatHelpsEn: row.what_helps_en,
+              whenToSeeDoctorDa: row.when_to_see_doctor_da,
+              whenToSeeDoctorEn: row.when_to_see_doctor_en,
+            }));
+          }
+          if (!symptomsResult.error && symptomsResult.data) {
+            next.symptomGlossary = symptomsResult.data.map((row) => ({
+              id: row.id,
+              nameDa: row.name_da,
+              nameEn: row.name_en,
+              descriptionDa: row.description_da,
+              descriptionEn: row.description_en,
+            }));
           }
 
           return next;

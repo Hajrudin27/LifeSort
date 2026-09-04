@@ -11,25 +11,27 @@ import { Text, useThemeColor, View } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import { CycleTints } from '@/constants/Colors';
 import { sharedStyles } from '@/constants/sharedStyles';
-import { HEALTH_CONDITIONS } from '@/data/healthConditions';
-import { SYMPTOM_GLOSSARY } from '@/data/symptomGlossary';
+import { useCycleStore } from '@/store/useCycleStore';
 import { getConditionIconName } from '@/utils/cycle/healthConditionIcon';
-import { getConditionsForSymptom } from '@/utils/cycle/healthInfoLinks';
 
 export default function HealthInfoScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isDa = i18n.language === 'da';
   const colorScheme = useColorScheme();
   const cycleTints = CycleTints[colorScheme];
   const textMuted = useThemeColor({}, 'textMuted');
   const borderColor = useThemeColor({}, 'border');
   const surface = useThemeColor({}, 'surface');
 
+  const conditions = useCycleStore((s) => s.healthConditions);
+  const symptoms = useCycleStore((s) => s.symptomGlossary);
+
   const [tab, setTab] = useState<'conditions' | 'symptoms'>('conditions');
   const [search, setSearch] = useState('');
 
   const query = search.trim().toLowerCase();
-  const filteredConditions = HEALTH_CONDITIONS.filter((c) => t(c.nameKey).toLowerCase().includes(query));
-  const filteredSymptoms = SYMPTOM_GLOSSARY.filter((s) => t(s.nameKey).toLowerCase().includes(query));
+  const filteredConditions = conditions.filter((c) => (isDa ? c.nameDa : c.nameEn).toLowerCase().includes(query));
+  const filteredSymptoms = symptoms.filter((s) => (isDa ? s.nameDa : s.nameEn).toLowerCase().includes(query));
 
   return (
     <ScrollView style={{}} contentContainerStyle={styles.container}>
@@ -48,7 +50,9 @@ export default function HealthInfoScreen() {
         <Chip label={t('healthInfo.symptomsTab')} active={tab === 'symptoms'} onPress={() => setTab('symptoms')} />
       </View>
 
-      {tab === 'conditions' ? (
+      {conditions.length === 0 && symptoms.length === 0 ? (
+        <Text style={{ color: textMuted, textAlign: 'center', marginTop: 24 }}>{t('healthInfo.emptyState')}</Text>
+      ) : tab === 'conditions' ? (
         <View style={sharedStyles.list}>
           {filteredConditions.map((c) => (
             <Pressable key={c.id} onPress={() => router.push(`/cycle/health-info/${c.id}`)}>
@@ -57,8 +61,8 @@ export default function HealthInfoScreen() {
                   <SymbolView name={getConditionIconName(c.id) as any} size={18} tintColor="#FFFFFF" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{t(c.nameKey)}</Text>
-                  <Text style={{ color: textMuted, fontSize: 13, marginTop: 2 }}>{t(c.summaryKey)}</Text>
+                  <Text style={styles.name}>{isDa ? c.nameDa : c.nameEn}</Text>
+                  <Text style={{ color: textMuted, fontSize: 13, marginTop: 2 }}>{isDa ? c.summaryDa : c.summaryEn}</Text>
                 </View>
                 <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} size={14} tintColor={textMuted} />
               </Card>
@@ -68,11 +72,11 @@ export default function HealthInfoScreen() {
       ) : (
         <View style={sharedStyles.list}>
           {filteredSymptoms.map((s) => {
-            const relatedConditions = getConditionsForSymptom(s.id);
+            const relatedConditions = conditions.filter((c) => c.commonSymptoms.includes(s.id));
             return (
               <Card key={s.id} style={[styles.symptomCard, { borderColor: cycleTints.accentSoft }]}>
-                <Text style={styles.name}>{t(s.nameKey)}</Text>
-                <Text style={{ color: textMuted, fontSize: 13, marginTop: 2 }}>{t(s.descriptionKey)}</Text>
+                <Text style={styles.name}>{isDa ? s.nameDa : s.nameEn}</Text>
+                <Text style={{ color: textMuted, fontSize: 13, marginTop: 2 }}>{isDa ? s.descriptionDa : s.descriptionEn}</Text>
                 {relatedConditions.length > 0 && (
                   <>
                     <Text style={[styles.relatedLabel, { color: cycleTints.accent }]}>{t('healthInfo.relatedConditionsLabel')}</Text>
@@ -80,7 +84,7 @@ export default function HealthInfoScreen() {
                       {relatedConditions.map((c) => (
                         <Pressable key={c.id} onPress={() => router.push(`/cycle/health-info/${c.id}`)}>
                           <View style={[styles.relatedChip, { backgroundColor: cycleTints.accentSoft, borderColor: cycleTints.accent }]}>
-                            <Text style={[styles.relatedChipText, { color: cycleTints.accent }]}>{t(c.nameKey)}</Text>
+                            <Text style={[styles.relatedChipText, { color: cycleTints.accent }]}>{isDa ? c.nameDa : c.nameEn}</Text>
                           </View>
                         </Pressable>
                       ))}

@@ -4,18 +4,39 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { supabase } from '@/lib/supabase';
 import i18n from '@/localization/i18n';
-import { HouseholdItem, HouseholdTask, MovingItem, TaskFrequency, TaskKind } from '@/types/household';
+import {
+  HouseholdItem,
+  HouseholdTask,
+  MovingItem,
+  TaskAssignee,
+  TaskFrequency,
+  TaskKind,
+} from '@/types/household';
+import { createSyncQueue } from '@/utils/shared/syncQueue';
 
 function newId() {
   return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+}
+
+function otherAssignee(assignee: TaskAssignee): TaskAssignee {
+  return assignee === 'me' ? 'partner' : 'me';
 }
 
 const DEFAULT_MOVING_KEYS = ['addressChange', 'internet', 'electricity', 'mailForwarding', 'insurance'];
 
 interface HouseholdState {
   tasks: HouseholdTask[];
-  addTask: (input: { kind: TaskKind; title: string; frequency: TaskFrequency }) => void;
-  updateTask: (id: string, updates: Partial<Pick<HouseholdTask, 'title' | 'frequency'>>) => void;
+  addTask: (input: {
+    kind: TaskKind;
+    title: string;
+    frequency: TaskFrequency;
+    assignedTo?: TaskAssignee;
+    rotates?: boolean;
+  }) => void;
+  updateTask: (
+    id: string,
+    updates: Partial<Pick<HouseholdTask, 'title' | 'frequency' | 'assignedTo' | 'rotates'>>,
+  ) => void;
   markTaskDone: (id: string) => void;
   removeTask: (id: string) => void;
 
@@ -45,6 +66,8 @@ function taskToRow(userId: string, t: HouseholdTask) {
     title: t.title,
     frequency: t.frequency,
     last_done: t.lastDone ?? null,
+    assigned_to: t.assignedTo,
+    rotates: t.rotates,
     created_at: t.createdAt,
   };
 }
@@ -79,6 +102,14 @@ async function syncDeleteShoppingItem(id: string) {
   await supabase.from('household_shopping_items').delete().eq('user_id', userId).eq('id', id);
 }
 
+// Bruges kun til toggleShoppingItem — at krydse flere varer af i træk skal ikke
+// sende ét netværkskald pr. klik.
+const shoppingItemToggleQueue = createSyncQueue<HouseholdItem>(async (items) => {
+  const userId = await getUserId();
+  if (!userId) return;
+  await supabase.from('household_shopping_items').upsert(items.map((i) => shoppingItemToRow(userId, i)));
+});
+
 async function syncUpsertMovingItem(item: MovingItem) {
   const userId = await getUserId();
   if (!userId) return;
@@ -95,7 +126,13 @@ export const useHouseholdStore = create<HouseholdState>()(
     (set, get) => ({
       tasks: [],
       addTask: (input) => {
-        const newTask: HouseholdTask = { id: newId(), createdAt: new Date().toISOString(), ...input };
+        const newTask: HouseholdTask = {
+          id: newId(),
+          createdAt: new Date().toISOString(),
+          assignedTo: input.assignedTo ?? 'me',
+          rotates: input.rotates ?? false,
+          ...input,
+        };
         set((state) => ({ tasks: [...state.tasks, newTask] }));
         syncUpsertTask(newTask);
       },
@@ -106,7 +143,15 @@ export const useHouseholdStore = create<HouseholdState>()(
       },
       markTaskDone: (id) => {
         set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === id ? { ...t, lastDone: new Date().toISOString().slice(0, 10) } : t)),
+          tasks: state.tasks.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  lastDone: new Date().toISOString().slice(0, 10),
+                  assignedTo: t.rotates ? otherAssignee(t.assignedTo) : t.assignedTo,
+                }
+              : t,
+          ),
         }));
         const target = get().tasks.find((t) => t.id === id);
         if (target) syncUpsertTask(target);
@@ -127,7 +172,7 @@ export const useHouseholdStore = create<HouseholdState>()(
           shoppingItems: state.shoppingItems.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)),
         }));
         const target = get().shoppingItems.find((i) => i.id === id);
-        if (target) syncUpsertShoppingItem(target);
+        if (target) shoppingItemToggleQueue.enqueue(target);
       },
       removeShoppingItem: (id) => {
         set((state) => ({ shoppingItems: state.shoppingItems.filter((i) => i.id !== id) }));
@@ -157,7 +202,10 @@ export const useHouseholdStore = create<HouseholdState>()(
         if (!userId) return;
 
         const [tasksResult, shoppingResult, movingResult] = await Promise.all([
-          supabase.from('household_tasks').select('id, kind, title, frequency, last_done, created_at').eq('user_id', userId),
+          supabase
+            .from('household_tasks')
+            .select('id, kind, title, frequency, last_done, assigned_to, rotates, created_at')
+            .eq('user_id', userId),
           supabase.from('household_shopping_items').select('id, label, checked').eq('user_id', userId),
           supabase.from('household_moving_items').select('id, label, checked').eq('user_id', userId),
         ]);
@@ -174,6 +222,8 @@ export const useHouseholdStore = create<HouseholdState>()(
               title: row.title,
               frequency: row.frequency as TaskFrequency,
               lastDone: row.last_done ?? undefined,
+              assignedTo: (row.assigned_to as TaskAssignee) ?? 'me',
+              rotates: row.rotates ?? false,
               createdAt: row.created_at,
             }));
 
@@ -210,6 +260,12 @@ export const useHouseholdStore = create<HouseholdState>()(
             checked: false,
           }));
         }
+        // Bagudkompatibilitet: opgaver oprettet før rotationsfunktionen fik felterne.
+        state.tasks = state.tasks.map((t) => ({
+          ...t,
+          assignedTo: t.assignedTo ?? 'me',
+          rotates: t.rotates ?? false,
+        }));
       },
     }
   )

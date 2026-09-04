@@ -1,9 +1,10 @@
 import * as DocumentPicker from 'expo-document-picker';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useTranslation } from 'react-i18next';
-import { Alert, Image, Pressable, StyleSheet } from 'react-native';
+import { Alert, Pressable, StyleSheet } from 'react-native';
 
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { useAccentTints } from '@/hooks/useAccentTints';
@@ -95,7 +96,7 @@ export default function AttachmentList({ attachments, onAdd, onRemove }: Props) 
               onPress={() => a.kind === 'image' && router.push({ pathname: '/warranties/view-image', params: { uri: a.uri } })}
               onLongPress={() => confirmRemove(a.id)}>
               {a.kind === 'image' ? (
-                <Image source={{ uri: a.uri }} style={styles.thumbImage} />
+                 <Image source={{ uri: a.uri }} style={styles.thumbImage} cachePolicy="disk" transition={150} />
               ) : (
                 <View style={[styles.docIconWrap, { backgroundColor: accentTints.accentSoft }]}>
                   <SymbolView name={{ ios: 'doc.fill', android: 'description', web: 'description' }} size={26} tintColor={tint} />

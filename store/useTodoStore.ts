@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { supabase } from '@/lib/supabase';
 import { TodoImportance, TodoItem } from '@/types/life';
+import { createSyncQueue } from '@/utils/shared/syncQueue';
 
 function newId() {
   return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
@@ -48,6 +49,15 @@ async function syncDeleteTodo(id: string) {
   await supabase.from('todos').delete().eq('user_id', userId).eq('id', id);
 }
 
+// Bruges kun til toggleTodo — at afkrydse flere gøremål hurtigt i træk skal ikke
+// sende ét netværkskald pr. klik. Andre handlinger (opret/redigér/slet) er sjældnere
+// og sender stadig med det samme, så brugeren ser fejl hurtigt, hvis noget går galt.
+const todoToggleQueue = createSyncQueue<TodoItem>(async (items) => {
+  const userId = await getUserId();
+  if (!userId) return;
+  await supabase.from('todos').upsert(items.map((t) => toRow(userId, t)));
+});
+
 export const useTodoStore = create<TodoState>()(
   persist(
     (set, get) => ({
@@ -72,7 +82,7 @@ export const useTodoStore = create<TodoState>()(
           todos: state.todos.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
         }));
         const target = get().todos.find((t) => t.id === id);
-        if (target) syncUpsertTodo(target);
+        if (target) todoToggleQueue.enqueue(target);
       },
 
       removeTodo: (id) => {

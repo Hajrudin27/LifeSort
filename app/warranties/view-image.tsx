@@ -1,5 +1,6 @@
+import { Image } from "expo-image";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { Image, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
 import { View } from "@/components/Themed";
 
@@ -9,7 +10,7 @@ export default function ViewImageScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ presentation: "fullScreenModal", title: "" }} />
-      <Image source={{ uri }} style={styles.image} resizeMode="contain" />
+      <Image source={{ uri }} style={styles.image} contentFit="contain" cachePolicy="disk" transition={150} />
     </View>
   );
 }

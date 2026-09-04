@@ -7,7 +7,9 @@
   "amountPlaceholder": "Amount",
   "nextPaymentPlaceholder": "Next payment (YYYY-MM-DD)",
   "save": "Save",
-  "currency": "kr.",
+  "attachmentsLabel": "Receipts",
+  "done": "Done",
+  "currency": "kr.",  
   "categories": {
     "subscription": "Subscription",
     "bill": "Bill",

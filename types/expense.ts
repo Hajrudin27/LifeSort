@@ -1,3 +1,5 @@
+import { Attachment } from './attachment';
+
 export type ExpenseCategory = string;
 
 export interface Expense {
@@ -8,5 +10,6 @@ export interface Expense {
   amount: number;
   category: ExpenseCategory;
   nextPaymentDate: string;
+  attachments: Attachment[]; // kvitteringer knyttet til DENNE måneds instans, ikke hele serien
   createdAt: string;
 }

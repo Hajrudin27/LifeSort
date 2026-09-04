@@ -1,5 +1,6 @@
 export type TaskKind = 'cleaning' | 'maintenance';
 export type TaskFrequency = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+export type TaskAssignee = 'me' | 'partner';
 
 export interface HouseholdTask {
   id: string;
@@ -7,6 +8,8 @@ export interface HouseholdTask {
   title: string;
   frequency: TaskFrequency;
   lastDone?: string; // ISO-dato
+  assignedTo: TaskAssignee;
+  rotates: boolean; // skifter automatisk til den anden person, når opgaven markeres som gjort
   createdAt: string;
 }
 

@@ -1,3 +1,5 @@
+import { Attachment } from './attachment';
+
 export type WarrantyType =
   | "insurance"
   | "rental"
@@ -5,19 +7,12 @@ export type WarrantyType =
   | "receipt"
   | "other";
 
-export interface WarrantyAttachment {
-  id: string;
-  uri: string;
-  name: string;
-  kind: "image" | "document";
-}
-
 export interface Warranty {
   id: string;
   name: string;
   type: WarrantyType;
   expiryDate: string;
   notes?: string;
-  attachments: WarrantyAttachment[];
+  attachments: Attachment[];
   createdAt: string;
 }

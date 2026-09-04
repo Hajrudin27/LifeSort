@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, Switch, TextInput } from "react-native";
 
+import AttachmentList from "@/components/AttachmentList";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import CategoryPicker from "@/components/CategoryPicker";
@@ -24,6 +25,8 @@ export default function EditExpenseScreen() {
   const updateExpense = useExpensesStore((s) => s.updateExpense);
   const removeExpense = useExpensesStore((s) => s.removeExpense);
   const deleteRecurringFromMonth = useExpensesStore((s) => s.deleteRecurringFromMonth);
+  const addAttachment = useExpensesStore((s) => s.addAttachment);
+  const removeAttachment = useExpensesStore((s) => s.removeAttachment);
 
   const [name, setName] = useState(expense?.name ?? "");
   const [amount, setAmount] = useState(expense?.amount.toString() ?? "");
@@ -99,6 +102,13 @@ export default function EditExpenseScreen() {
           <Switch value={isRecurring} onValueChange={setIsRecurring} trackColor={{ true: tint }} />
         </View>
       </Card>
+
+      <Text style={sharedStyles.sectionLabel}>{t("expenses.attachmentsLabel")}</Text>
+      <AttachmentList
+        attachments={expense.attachments}
+        onAdd={(a) => addAttachment(expense.id, a)}
+        onRemove={(attachmentId) => removeAttachment(expense.id, attachmentId)}
+      />
 
       <Button label={t("expenses.save")} disabled={!canSave} onPress={save} />
       <Button label={t("expenses.delete")} variant="danger" onPress={confirmDelete} />

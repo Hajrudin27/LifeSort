@@ -3,7 +3,9 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { supabase } from "@/lib/supabase";
-import { Warranty, WarrantyAttachment, WarrantyType } from "@/types/warranty";
+import { Attachment } from "@/types/attachment";
+import { Warranty, WarrantyType } from "@/types/warranty";
+import { deleteAttachmentRemote, fetchAttachmentsFor, uploadAttachment } from "@/utils/shared/attachmentSync";
 import {
   cancelWarrantyReminder,
   scheduleWarrantyReminder,
@@ -29,7 +31,7 @@ interface WarrantiesState {
   ) => void;
   renewWarranty: (id: string) => string | null; // returnerer den nye dato, eller null hvis garantien ikke findes
   removeWarranty: (id: string) => void;
-  addAttachment: (warrantyId: string, attachment: WarrantyAttachment) => void;
+  addAttachment: (warrantyId: string, attachment: Attachment) => void;
   removeAttachment: (warrantyId: string, attachmentId: string) => void;
   fetchFromSupabase: () => Promise<void>;
 }
@@ -39,8 +41,8 @@ async function getUserId(): Promise<string | null> {
   return userData.user?.id ?? null;
 }
 
-// Bemærk: "attachments" sendes bevidst ALDRIG med til Supabase —
-// vedhæftninger forbliver kun lokale for nu (kræver Supabase Storage senere).
+// Bemærk: "attachments" sendes ALDRIG med i selve warranty-raden — de synkroniseres
+// separat til den delte `attachments`-tabel + Storage-bucket (se utils/shared/attachmentSync.ts).
 function toRow(userId: string, w: Warranty) {
   return {
     id: w.id,
@@ -118,15 +120,34 @@ export const useWarrantiesStore = create<WarrantiesState>()(
         }));
         syncDeleteWarranty(id);
       },
-      addAttachment: (warrantyId, attachment) =>
+      addAttachment: (warrantyId, attachment) => {
         set((state) => ({
           warranties: state.warranties.map((w) =>
             w.id === warrantyId
               ? { ...w, attachments: [...w.attachments, attachment] }
               : w,
           ),
-        })),
-      removeAttachment: (warrantyId, attachmentId) =>
+        }));
+        // Upload sker i baggrunden — brugeren ser billedet med det samme lokalt.
+        uploadAttachment("warranty", warrantyId, attachment).then((result) => {
+          if (!result) return;
+          set((state) => ({
+            warranties: state.warranties.map((w) =>
+              w.id === warrantyId
+                ? {
+                    ...w,
+                    attachments: w.attachments.map((a) =>
+                      a.id === attachment.id ? { ...a, storagePath: result.storagePath } : a,
+                    ),
+                  }
+                : w,
+            ),
+          }));
+        });
+      },
+      removeAttachment: (warrantyId, attachmentId) => {
+        const warranty = get().warranties.find((w) => w.id === warrantyId);
+        const attachment = warranty?.attachments.find((a) => a.id === attachmentId);
         set((state) => ({
           warranties: state.warranties.map((w) =>
             w.id === warrantyId
@@ -138,7 +159,9 @@ export const useWarrantiesStore = create<WarrantiesState>()(
                 }
               : w,
           ),
-        })),
+        }));
+        deleteAttachmentRemote(attachmentId, attachment?.storagePath);
+      },
 
       fetchFromSupabase: async () => {
         const userId = await getUserId();
@@ -151,26 +174,38 @@ export const useWarrantiesStore = create<WarrantiesState>()(
 
         if (error || !data) return;
 
-        set((state) => {
-          const existingIds = new Set(state.warranties.map((w) => w.id));
-          const fetched: Warranty[] = data
-            .filter((row) => !existingIds.has(row.id))
-            .map((row) => ({
-              id: row.id,
-              name: row.name,
-              type: row.type as WarrantyType,
-              expiryDate: row.expiry_date,
-              notes: row.notes ?? undefined,
-              attachments: [], // vedhæftninger findes kun lokalt, aldrig hentet fra Supabase
-              createdAt: row.created_at,
+        const existingIds = new Set(get().warranties.map((w) => w.id));
+        const newRows = data.filter((row) => !existingIds.has(row.id));
+
+        // Hent vedhæftninger for de NYE garantier (fx på et andet device) —
+        // sker efter set() nedenfor, så listen viser sig med det samme uden billeder,
+        // og billederne popper ind, når de signerede URL'er er hentet.
+        const fetched: Warranty[] = newRows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          type: row.type as WarrantyType,
+          expiryDate: row.expiry_date,
+          notes: row.notes ?? undefined,
+          attachments: [],
+          createdAt: row.created_at,
+        }));
+
+        for (const w of fetched) {
+          scheduleWarrantyReminder(w.id, w.name, w.expiryDate);
+        }
+
+        set((state) => ({ warranties: [...state.warranties, ...fetched] }));
+
+        for (const row of newRows) {
+          fetchAttachmentsFor("warranty", row.id).then((attachments) => {
+            if (attachments.length === 0) return;
+            set((state) => ({
+              warranties: state.warranties.map((w) =>
+                w.id === row.id ? { ...w, attachments } : w,
+              ),
             }));
-
-          for (const w of fetched) {
-            scheduleWarrantyReminder(w.id, w.name, w.expiryDate);
-          }
-
-          return { warranties: [...state.warranties, ...fetched] };
-        });
+          });
+        }
       },
     }),
     {

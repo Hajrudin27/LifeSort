@@ -15,6 +15,9 @@
     "agePlaceholder": "Your age",
     "nameRequiredError": "Enter your name to continue",
     "ageRequiredError": "Enter your age to continue",
+    "partnerNameLabel": "Your partner's name",
+    "partnerNamePlaceholder": "E.g. Walid",
+    "partnerNameHint": "Used to split tasks in the Household module between the two of you.",
     "onboardingTitle": "Welcome to LifeSort",
     "onboardingSubtitle": "Tell us a bit about yourself before we get started.",
     "continueButton": "Continue"

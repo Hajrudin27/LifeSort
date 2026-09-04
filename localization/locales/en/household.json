@@ -21,6 +21,13 @@
     "dueIn": "In {{days}} days",
     "dueToday": "Today",
     "overdue": "Overdue",
+    "assignedToLabel": "Whose turn it is",
+    "assignee": {
+      "me": "Me",
+      "partner": "Partner"
+    },
+    "rotatesLabel": "Rotates automatically",
+    "rotatesHint": "Switches to the other person when marked as done",
     "save": "Save",
     "delete": "Delete",
     "deleteConfirmTitle": "Delete task?",

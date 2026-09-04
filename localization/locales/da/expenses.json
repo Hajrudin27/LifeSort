@@ -7,6 +7,8 @@
   "amountPlaceholder": "Beløb",
   "nextPaymentPlaceholder": "Næste betaling (ÅÅÅÅ-MM-DD)",
   "save": "Gem",
+  "attachmentsLabel": "Kvitteringer",
+  "done": "Færdig",
   "currency": "kr.",
   "categories": {
     "subscription": "Abonnement",

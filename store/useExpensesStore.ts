@@ -3,7 +3,9 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { supabase } from '@/lib/supabase';
+import { Attachment } from '@/types/attachment';
 import { Expense, ExpenseCategory } from '@/types/expense';
+import { deleteAttachmentRemote, fetchAttachmentsFor, uploadAttachment } from '@/utils/shared/attachmentSync';
 
 interface ExpensesState {
   expenses: Expense[];
@@ -15,13 +17,15 @@ interface ExpensesState {
     category: ExpenseCategory;
     nextPaymentDate: string;
     isRecurring: boolean;
-  }) => void;
-  updateExpense: (id: string, updates: Partial<Omit<Expense, 'id' | 'seriesId' | 'createdAt'>>) => void;
+  }) => string;
+  updateExpense: (id: string, updates: Partial<Omit<Expense, 'id' | 'seriesId' | 'createdAt' | 'attachments'>>) => void;
   removeExpense: (id: string) => void;
   deleteRecurringFromMonth: (seriesId: string, fromMonthKey: string) => void;
   rollForwardMonth: (monthKey: string) => void;
   setCategoryBudget: (category: string, limit: number) => void;
   removeCategoryBudget: (category: string) => void;
+  addAttachment: (expenseId: string, attachment: Attachment) => void;
+  removeAttachment: (expenseId: string, attachmentId: string) => void;
   fetchFromSupabase: () => Promise<void>;
 }
 
@@ -30,6 +34,8 @@ async function getUserId(): Promise<string | null> {
   return userData.user?.id ?? null;
 }
 
+// Bemærk: "attachments" sendes ALDRIG med i selve expense-raden — de synkroniseres
+// separat til den delte `attachments`-tabel + Storage-bucket (se utils/shared/attachmentSync.ts).
 function toRow(userId: string, e: Expense) {
   return {
     id: e.id,
@@ -88,11 +94,13 @@ export const useExpensesStore = create<ExpensesState>()(
         const newExpense: Expense = {
           id,
           seriesId: id, // ny udgift starter sin egen serie
+          attachments: [],
           createdAt: new Date().toISOString(),
           ...input,
         };
         set((state) => ({ expenses: [...state.expenses, newExpense] }));
         syncUpsertExpense(newExpense);
+        return id;
       },
 
       updateExpense: (id, updates) => {
@@ -179,6 +187,7 @@ export const useExpensesStore = create<ExpensesState>()(
               ...latestBefore,
               id: newId,
               nextPaymentDate: `${monthKey}-${latestBefore.nextPaymentDate.slice(8)}`,
+              attachments: [], // en ny måneds instans arver ALDRIG forrige måneds kvittering
               createdAt: new Date().toISOString(),
             });
           }
@@ -211,6 +220,42 @@ export const useExpensesStore = create<ExpensesState>()(
         });
       },
 
+      addAttachment: (expenseId, attachment) => {
+        set((state) => ({
+          expenses: state.expenses.map((e) =>
+            e.id === expenseId ? { ...e, attachments: [...e.attachments, attachment] } : e,
+          ),
+        }));
+        // Upload sker i baggrunden — brugeren ser billedet med det samme lokalt.
+        uploadAttachment('expense', expenseId, attachment).then((result) => {
+          if (!result) return;
+          set((state) => ({
+            expenses: state.expenses.map((e) =>
+              e.id === expenseId
+                ? {
+                    ...e,
+                    attachments: e.attachments.map((a) =>
+                      a.id === attachment.id ? { ...a, storagePath: result.storagePath } : a,
+                    ),
+                  }
+                : e,
+            ),
+          }));
+        });
+      },
+      removeAttachment: (expenseId, attachmentId) => {
+        const expense = get().expenses.find((e) => e.id === expenseId);
+        const attachment = expense?.attachments.find((a) => a.id === attachmentId);
+        set((state) => ({
+          expenses: state.expenses.map((e) =>
+            e.id === expenseId
+              ? { ...e, attachments: e.attachments.filter((a) => a.id !== attachmentId) }
+              : e,
+          ),
+        }));
+        deleteAttachmentRemote(attachmentId, attachment?.storagePath);
+      },
+
       fetchFromSupabase: async () => {
         const userId = await getUserId();
         if (!userId) return;
@@ -226,23 +271,27 @@ export const useExpensesStore = create<ExpensesState>()(
             .eq('user_id', userId),
         ]);
 
+        let newExpenseIds: string[] = [];
+
         set((state) => {
           const next: Partial<ExpensesState> = {};
 
           if (!expensesResult.error && expensesResult.data) {
             const existingIds = new Set(state.expenses.map((e) => e.id));
-            const fetched: Expense[] = expensesResult.data
-              .filter((row) => !existingIds.has(row.id))
-              .map((row) => ({
-                id: row.id,
-                seriesId: row.series_id ?? row.id,
-                isRecurring: row.is_recurring,
-                name: row.name,
-                amount: Number(row.amount),
-                category: row.category as ExpenseCategory,
-                nextPaymentDate: row.next_payment_date,
-                createdAt: row.created_at,
-              }));
+            const newRows = expensesResult.data.filter((row) => !existingIds.has(row.id));
+            newExpenseIds = newRows.map((row) => row.id);
+
+            const fetched: Expense[] = newRows.map((row) => ({
+              id: row.id,
+              seriesId: row.series_id ?? row.id,
+              isRecurring: row.is_recurring,
+              name: row.name,
+              amount: Number(row.amount),
+              category: row.category as ExpenseCategory,
+              nextPaymentDate: row.next_payment_date,
+              attachments: [],
+              createdAt: row.created_at,
+            }));
             next.expenses = [...state.expenses, ...fetched];
           }
 
@@ -256,6 +305,18 @@ export const useExpensesStore = create<ExpensesState>()(
 
           return next;
         });
+
+        // Hent vedhæftninger for de nye udgifter (fx på et andet device) —
+        // sker efter set() ovenfor, så listen viser sig med det samme uden billeder,
+        // og billederne popper ind, når de signerede URL'er er hentet.
+        for (const expenseId of newExpenseIds) {
+          fetchAttachmentsFor('expense', expenseId).then((attachments) => {
+            if (attachments.length === 0) return;
+            set((state) => ({
+              expenses: state.expenses.map((e) => (e.id === expenseId ? { ...e, attachments } : e)),
+            }));
+          });
+        }
       },
     }),
     {
@@ -269,6 +330,7 @@ export const useExpensesStore = create<ExpensesState>()(
           seenIds.add(e.id);
           return true;
         });
+        state.expenses = state.expenses.map((e) => ({ ...e, attachments: e.attachments ?? [] }));
       },
     }
   )

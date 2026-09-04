@@ -14,13 +14,14 @@ interface ProfileState {
   setName: (name: string) => void;
   setAge: (age: number) => void;
   setGender: (gender: Gender) => void;
+  setPartnerName: (partnerName: string) => void;
   setPin: (pin: string) => Promise<void>;
   fetchFromSupabase: () => Promise<void>;
   clearLocal: () => void;
 }
 
 async function syncProfileField(
-  fields: Partial<{ name: string; age: number; gender: Gender; pin_hash: string }>,
+  fields: Partial<{ name: string; age: number; gender: Gender; partner_name: string; pin_hash: string }>,
 ) {
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id;
@@ -49,6 +50,11 @@ export const useProfileStore = create<ProfileState>()(
         set((state) => ({ profile: { ...state.profile, gender } }));
         syncProfileField({ gender });
       },
+      setPartnerName: (partnerName) => {
+        const trimmed = partnerName.trim() || undefined;
+        set((state) => ({ profile: { ...state.profile, partnerName: trimmed } }));
+        syncProfileField({ partner_name: trimmed ?? "" });
+      },
       setPin: async (pin) => {
         const hash = await hashPin(pin);
         // Gem lokalt FØRST — appen kan altid verificere PIN-koden offline,
@@ -68,7 +74,7 @@ export const useProfileStore = create<ProfileState>()(
 
         const { data, error } = await supabase
           .from("profiles")
-          .select("name, age, gender")
+          .select("name, age, gender, partner_name")
           .eq("id", userId)
           .single();
 
@@ -83,6 +89,7 @@ export const useProfileStore = create<ProfileState>()(
             name: data.name ?? undefined,
             age: data.age ?? undefined,
             gender: (data.gender as Gender) ?? "unspecified",
+            partnerName: data.partner_name ?? undefined,
           },
           hasOnboarded,
           isSyncing: false,

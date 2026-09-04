@@ -21,6 +21,13 @@
     "dueIn": "Om {{days}} dage",
     "dueToday": "I dag",
     "overdue": "Overskredet",
+    "assignedToLabel": "Hvis tur er det",
+    "assignee": {
+      "me": "Mig",
+      "partner": "Partner"
+    },
+    "rotatesLabel": "Skifter automatisk",
+    "rotatesHint": "Skifter til den anden, når opgaven markeres som gjort",
     "save": "Gem",
     "delete": "Slet",
     "deleteConfirmTitle": "Slet opgave?",

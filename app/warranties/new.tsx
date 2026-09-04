@@ -21,6 +21,8 @@ export default function NewWarrantyScreen() {
   const { t } = useTranslation();
   const addWarranty = useWarrantiesStore((s) => s.addWarranty);
   const allWarranties = useWarrantiesStore((s) => s.warranties);
+  const addAttachment = useWarrantiesStore((s) => s.addAttachment);
+  const removeAttachment = useWarrantiesStore((s) => s.removeAttachment);
   const accentTints = useAccentTints();
   const borderColor = useThemeColor({}, 'border');
   const surface = useThemeColor({}, 'surface');
@@ -89,8 +91,12 @@ export default function NewWarrantyScreen() {
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, { backgroundColor, borderColor }]}>
             {createdWarranty && (
-              <AttachmentList warrantyId={createdWarranty.id} attachments={createdWarranty.attachments ?? []} />
-            )}
+                <AttachmentList
+                  attachments={createdWarranty.attachments ?? []}
+                  onAdd={(a) => addAttachment(createdWarranty.id, a)}
+                  onRemove={(attachmentId) => removeAttachment(createdWarranty.id, attachmentId)}
+                />
+              )}
             <Button label={t('warranties.done')} onPress={finish} />
           </View>
         </View>

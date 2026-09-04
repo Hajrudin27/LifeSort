@@ -3,13 +3,16 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, TextInput } from 'react-native';
 
+import AssigneeSelector, { AssigneeAvatar } from '@/components/AssigneeSelector';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
+import { useAccentTints } from '@/hooks/useAccentTints';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
-import { TaskFrequency } from '@/types/household';
+import { useProfileStore } from '@/store/useProfileStore';
+import { TaskAssignee, TaskFrequency } from '@/types/household';
 
 const FREQUENCIES: TaskFrequency[] = ['weekly', 'monthly', 'quarterly', 'yearly'];
 
@@ -20,6 +23,8 @@ export default function HouseholdTaskDetailScreen() {
   const surface = useThemeColor({}, 'surface');
   const backgroundColor = useThemeColor({}, 'background');
   const textMuted = useThemeColor({}, 'textMuted');
+  const accentTints = useAccentTints();
+  const partnerName = useProfileStore((s) => s.profile.partnerName);
 
   const task = useHouseholdStore((s) => s.tasks.find((t) => t.id === id));
   const updateTask = useHouseholdStore((s) => s.updateTask);
@@ -28,6 +33,8 @@ export default function HouseholdTaskDetailScreen() {
 
   const [title, setTitle] = useState(task?.title ?? '');
   const [frequency, setFrequency] = useState<TaskFrequency>(task?.frequency ?? 'monthly');
+  const [assignedTo, setAssignedTo] = useState<TaskAssignee>(task?.assignedTo ?? 'me');
+  const [rotates, setRotates] = useState(task?.rotates ?? false);
 
   if (!task) {
     return (
@@ -38,9 +45,10 @@ export default function HouseholdTaskDetailScreen() {
   }
 
   const canSave = title.trim().length > 0;
+  const assigneeLabel = task.assignedTo === 'me' ? t('household.assignee.me') : partnerName || t('household.assignee.partner');
 
   const save = () => {
-    updateTask(task.id, { title: title.trim(), frequency });
+    updateTask(task.id, { title: title.trim(), frequency, assignedTo, rotates });
     router.back();
   };
 
@@ -62,8 +70,10 @@ export default function HouseholdTaskDetailScreen() {
     <ScrollView style={{ backgroundColor }} contentContainerStyle={sharedStyles.formContainerScroll} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: task.title }} />
 
-      <Card style={styles.statusCard}>
-        <Text style={{ color: textMuted }}>
+      <Card style={[styles.statusCard, { borderColor: accentTints.accentSoft }]}>
+        <AssigneeAvatar assignee={task.assignedTo} size={44} />
+        <Text style={styles.assigneeName}>{assigneeLabel}</Text>
+        <Text style={{ color: textMuted, fontSize: 13 }}>
           {task.lastDone ? t('household.lastDone', { date: task.lastDone }) : t('household.neverDone')}
         </Text>
       </Card>
@@ -85,6 +95,15 @@ export default function HouseholdTaskDetailScreen() {
         </View>
       </Card>
 
+      <Card style={sharedStyles.card}>
+        <AssigneeSelector
+          assignedTo={assignedTo}
+          onChangeAssignee={setAssignedTo}
+          rotates={rotates}
+          onChangeRotates={setRotates}
+        />
+      </Card>
+
       <Button label={t('household.save')} disabled={!canSave} onPress={save} />
       <Button label={t('household.delete')} variant="danger" onPress={confirmDelete} />
     </ScrollView>
@@ -92,5 +111,6 @@ export default function HouseholdTaskDetailScreen() {
 }
 
 const styles = {
-  statusCard: { alignItems: 'center' as const },
+  statusCard: { alignItems: 'center' as const, gap: 6, borderWidth: 1.5 },
+  assigneeName: { fontWeight: '700' as const, fontSize: 16 },
 };

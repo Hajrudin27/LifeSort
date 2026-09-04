@@ -41,6 +41,8 @@ export default function WarrantyDetailScreen() {
   const updateWarranty = useWarrantiesStore((s) => s.updateWarranty);
   const removeWarranty = useWarrantiesStore((s) => s.removeWarranty);
   const renewWarranty = useWarrantiesStore((s) => s.renewWarranty);
+  const addAttachment = useWarrantiesStore((s) => s.addAttachment);
+  const removeAttachment = useWarrantiesStore((s) => s.removeAttachment);
 
   const [name, setName] = useState(warranty?.name ?? "");
   const [type, setType] = useState<WarrantyType>(warranty?.type ?? "other");
@@ -138,7 +140,11 @@ export default function WarrantyDetailScreen() {
       <Text style={sharedStyles.sectionLabel}>
         {t("warranties.attachmentsLabel")}
       </Text>
-      <AttachmentList warrantyId={warranty.id} attachments={warranty.attachments} />
+      <AttachmentList
+        attachments={warranty.attachments}
+        onAdd={(a) => addAttachment(warranty.id, a)}
+        onRemove={(attachmentId) => removeAttachment(warranty.id, attachmentId)}
+      />
 
       <Modal
         visible={showEdit}

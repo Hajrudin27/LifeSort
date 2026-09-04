@@ -25,11 +25,13 @@ export default function ProfileScreen() {
   const setName = useProfileStore((s) => s.setName);
   const setAge = useProfileStore((s) => s.setAge);
   const setGender = useProfileStore((s) => s.setGender);
+  const setPartnerName = useProfileStore((s) => s.setPartnerName);
   const showToast = useToastStore((s) => s.show);
 
   const [name, setLocalName] = useState(profile.name ?? '');
   const [age, setLocalAge] = useState(profile.age?.toString() ?? '');
   const [gender, setLocalGender] = useState<Gender>(profile.gender);
+  const [partnerName, setLocalPartnerName] = useState(profile.partnerName ?? '');
   const [error, setError] = useState<string | null>(null);
 
   const parsedAge = parseInt(age, 10);
@@ -48,6 +50,7 @@ export default function ProfileScreen() {
     setName(name);
     setAge(parsedAge);
     setGender(gender);
+    setPartnerName(partnerName);
     showToast(t('common.saved'));
   };
 
@@ -82,6 +85,18 @@ export default function ProfileScreen() {
         <Text style={[styles.hint, { color: textMuted }]}>{t('profile.genderHint')}</Text>
 
         {error && <Text style={{ color: danger, fontSize: 13 }}>{error}</Text>}
+      </Card>
+
+      <Card style={sharedStyles.card}>
+        <Text style={sharedStyles.fieldLabel}>{t('profile.partnerNameLabel')}</Text>
+        <TextInput
+          style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
+          placeholder={t('profile.partnerNamePlaceholder')}
+          placeholderTextColor={borderColor}
+          value={partnerName}
+          onChangeText={setLocalPartnerName}
+        />
+        <Text style={[styles.hint, { color: textMuted }]}>{t('profile.partnerNameHint')}</Text>
       </Card>
 
       <Button label={t('profile.save')} disabled={!canSave} onPress={save} />

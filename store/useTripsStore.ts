@@ -351,6 +351,11 @@ export const useTripsStore = create<TripsState>()(
           if (error.message.includes('cannot_invite_self')) {
             return { error: 'cannot_invite_self' };
           }
+          // Turen findes ikke i Supabase under din egen bruger — enten fordi den ikke er
+          // synket endnu, eller fordi nogen forsøger at invitere til en fremmed tur.
+          if (error.message.includes('trip_not_found')) {
+            return { error: 'trip_not_found' };
+          }
           return { error: error.message };
         }
 

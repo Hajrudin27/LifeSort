@@ -101,6 +101,8 @@ export default function TripDetailScreen() {
       setInviteError(t('travel.inviteNoAccountError'));
     } else if (error === 'cannot_invite_self') {
       setInviteError(t('travel.inviteSelfError'));
+    } else if (error === 'trip_not_found') {
+      setInviteError(t('travel.inviteTripNotFoundError'));
     } else if (error) {
       setInviteError(error);
     } else {

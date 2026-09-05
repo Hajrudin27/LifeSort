@@ -55,6 +55,7 @@
 "sendingInvite": "Sending...",
 "inviteNoAccountError": "No user found with this email. They need to create an account first.",
 "inviteSelfError": "You can't invite yourself.",
+"inviteTripNotFoundError": "This trip isn't saved to the cloud yet. Check your connection and try again.",
 "removeParticipantTitle": "Remove participant?",
 "removeParticipantMessage": "{{email}} will lose access to this trip.",
 "removeParticipant": "Remove",

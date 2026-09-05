@@ -55,6 +55,7 @@
 "sendingInvite": "Sender...",
 "inviteNoAccountError": "Ingen bruger fundet med denne email. Personen skal oprette en konto først.",
 "inviteSelfError": "Du kan ikke invitere dig selv.",
+"inviteTripNotFoundError": "Rejsen er ikke gemt i skyen endnu. Tjek din internetforbindelse og prøv igen.",
 "removeParticipantTitle": "Fjern deltager?",
 "removeParticipantMessage": "{{email}} mister adgang til denne rejse.",
 "removeParticipant": "Fjern",

@@ -1,0 +1,16 @@
+{
+  "title": "Delete account",
+  "settingsLink": "Delete my account",
+  "heading": "Delete your account and all your data",
+  "explanation": "Everything you have created in LifeSort will be permanently deleted: finances, meal plans, cycle and symptom data, trips, tasks, CV and attached files.",
+  "permanentWarning": "Deletion cannot be undone, and we cannot restore your data afterwards. If you want a copy, make a backup first under Settings.",
+  "confirmEmailLabel": "Type {{email}} to confirm",
+  "passwordLabel": "Your password",
+  "passwordPlaceholder": "Password",
+  "deleteButton": "Delete my account permanently",
+  "deleting": "Deleting...",
+  "done": "Your account and all your data have been deleted.",
+  "wrongPassword": "Wrong password.",
+  "adminAccountError": "This account has admin panel access and cannot be deleted here. Contact an owner.",
+  "genericError": "The account could not be deleted. Try again, or contact support."
+}

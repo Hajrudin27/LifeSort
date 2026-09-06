@@ -1,0 +1,16 @@
+{
+  "title": "Slet konto",
+  "settingsLink": "Slet min konto",
+  "heading": "Slet din konto og alle dine data",
+  "explanation": "Alt du har oprettet i LifeSort bliver slettet permanent: økonomi, madplan, cyklus- og symptomdata, ture, opgaver, CV og vedhæftede filer.",
+  "permanentWarning": "Sletningen kan ikke fortrydes, og vi kan ikke gendanne dine data bagefter. Vil du gemme en kopi, kan du lave en backup først under Indstillinger.",
+  "confirmEmailLabel": "Skriv {{email}} for at bekræfte",
+  "passwordLabel": "Din adgangskode",
+  "passwordPlaceholder": "Adgangskode",
+  "deleteButton": "Slet min konto permanent",
+  "deleting": "Sletter...",
+  "done": "Din konto og alle dine data er slettet.",
+  "wrongPassword": "Forkert adgangskode.",
+  "adminAccountError": "Denne konto har adgang til admin-panelet og kan ikke slettes herfra. Kontakt en ejer.",
+  "genericError": "Kontoen kunne ikke slettes. Prøv igen, eller skriv til support."
+}

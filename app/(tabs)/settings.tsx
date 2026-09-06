@@ -176,6 +176,19 @@ export default function SettingsScreen() {
           </Text>
         </Card>
       </Pressable>
+
+      <Pressable onPress={() => router.push("/settings/delete-account")}>
+        <Card style={sharedStyles.rowBetween}>
+          <Text style={[styles.rowLabel, { color: danger }]}>
+            {t("deleteAccount.settingsLink")}
+          </Text>
+          <SymbolView
+            name={{ ios: "chevron.right", android: "chevron_right", web: "chevron_right" }}
+            tintColor={borderColor}
+            size={18}
+          />
+        </Card>
+      </Pressable>
     </ScrollView>
   );
 }

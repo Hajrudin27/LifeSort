@@ -6,19 +6,17 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleShee
 
 import AttachmentList from '@/components/AttachmentList';
 import Button from '@/components/Button';
-import Card from '@/components/Card';
 import DatePickerField from '@/components/DatePickerField';
 import { Text, useThemeColor } from '@/components/Themed';
+import Hero, { HeroBadge, HeroBadgeText } from '@/components/Hero';
 import { useAccentTints } from '@/hooks/useAccentTints';
+import { useBrandTints } from '@/hooks/useBrandTints';
 import { useToastStore } from '@/store/useToastStore';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
 import { WarrantyType } from '@/types/warranty';
 import { getWarrantyTypeIconName } from '@/utils/warranty/warrantyTypeIcon';
 
 const TYPES: WarrantyType[] = ['warranty', 'receipt', 'insurance', 'rental', 'other'];
-const BRAND_INK = '#16130F';
-const BRAND_ROSE = '#E11D48';
-const BRAND_AMBER = '#F59E0B';
 
 const pad = (value: number) => value.toString().padStart(2, '0');
 
@@ -46,6 +44,7 @@ export default function NewWarrantyScreen() {
   const removeAttachment = useWarrantiesStore((s) => s.removeAttachment);
   const showToast = useToastStore((s) => s.show);
   const accentTints = useAccentTints();
+  const brand = useBrandTints();
   const borderColor = useThemeColor({}, 'border');
   const surface = useThemeColor({}, 'surface');
   const surfaceMuted = useThemeColor({}, 'surfaceMuted');
@@ -100,22 +99,19 @@ export default function NewWarrantyScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
       >
-        <Card style={[styles.hero, { backgroundColor: BRAND_INK, overflow: 'hidden' }]}>
-          <View style={[styles.heroRoseGlow, { backgroundColor: BRAND_ROSE }]} />
-          <View style={[styles.heroAmberGlow, { backgroundColor: BRAND_AMBER }]} />
-          <View style={styles.heroTopRow}>
-            <View style={styles.heroIcon}>
-              <SymbolView name={{ ios: 'shield.lefthalf.filled', android: 'shield', web: 'shield' }} size={24} tintColor="#FFFFFF" />
-            </View>
-            <View style={styles.heroBadge}>
-              <SymbolView name={{ ios: 'bell.badge.fill', android: 'notifications', web: 'notifications' }} size={14} tintColor="#FFFFFF" />
-              <Text style={styles.heroBadgeText}>{t('warranties.reminderBadge')}</Text>
-            </View>
-          </View>
-          <Text style={styles.heroKicker}>{t('warranties.quickKicker')}</Text>
-          <Text style={styles.heroTitle}>{t('warranties.quickTitle')}</Text>
-          <Text style={styles.heroSubtitle}>{t('warranties.quickSubtitle')}</Text>
-        </Card>
+        <Hero
+          variant="brand"
+          icon={{ ios: 'shield.lefthalf.filled', android: 'shield', web: 'shield' }}
+          kicker={t('warranties.quickKicker')}
+          title={t('warranties.quickTitle')}
+          subtitle={t('warranties.quickSubtitle')}
+          trailing={
+            <HeroBadge>
+              <SymbolView name={{ ios: 'bell.badge.fill', android: 'notifications', web: 'notifications' }} size={14} tintColor={brand.onBrand} />
+              <HeroBadgeText>{t('warranties.reminderBadge')}</HeroBadgeText>
+            </HeroBadge>
+          }
+        />
 
         <View style={styles.formSection}>
           <Text style={styles.sectionEyebrow}>{t('warranties.nameLabel')}</Text>
@@ -252,38 +248,6 @@ export default function NewWarrantyScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   container: { padding: 16, gap: 16, paddingBottom: 44 },
-  hero: { borderRadius: 24, gap: 8, padding: 20, position: 'relative' },
-  heroRoseGlow: { position: 'absolute', width: 190, height: 190, borderRadius: 95, top: -86, right: -58, opacity: 0.25 },
-  heroAmberGlow: { position: 'absolute', width: 130, height: 130, borderRadius: 65, bottom: -48, left: -34, opacity: 0.18 },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'transparent' },
-  heroIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  heroBadge: {
-    minHeight: 30,
-    borderRadius: 15,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  heroBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', backgroundColor: 'transparent' },
-  heroKicker: {
-    color: '#FFE4EA',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    backgroundColor: 'transparent',
-  },
-  heroTitle: { color: '#FFFFFF', fontSize: 27, fontWeight: '800', backgroundColor: 'transparent' },
-  heroSubtitle: { color: '#FFFFFF', fontSize: 14, lineHeight: 20, opacity: 0.85, backgroundColor: 'transparent' },
   formSection: { gap: 9 },
   sectionEyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase', opacity: 0.62 },
   nameInput: {

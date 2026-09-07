@@ -13,6 +13,7 @@ import SectionHeader from '@/components/SectionHeader';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useAccentTints } from '@/hooks/useAccentTints';
+import { useBrandTints } from '@/hooks/useBrandTints';
 import { useCycleStore } from '@/store/useCycleStore';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useFoodStore } from '@/store/useFoodStore';
@@ -35,13 +36,11 @@ import { getMonthKey } from '@/utils/shared/monthKey';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PAGE_WIDTH = SCREEN_WIDTH - 32;
-const BRAND_INK = '#16130F';
-const BRAND_ROSE = '#E11D48';
-const BRAND_AMBER = '#F59E0B';
 
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
   const accentTints = useAccentTints();
+  const brand = useBrandTints();
   const tint = accentTints.accent;
   const textMuted = useThemeColor({}, 'textMuted');
   const danger = useThemeColor({}, 'danger');
@@ -199,14 +198,14 @@ export default function HomeScreen() {
                 subtitle: t('home.nextActionFoodBudgetSubtitle'),
                 icon: { ios: 'cart.fill.badge.plus', android: 'shopping_cart', web: 'shopping_cart' },
                 route: '/food/budget' as any,
-                tone: BRAND_ROSE,
+                tone: brand.glowPrimary,
               }
             : {
                 title: t('home.nextActionAllGoodTitle'),
                 subtitle: t('home.nextActionAllGoodSubtitle'),
                 icon: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },
                 route: '/search' as any,
-                tone: BRAND_ROSE,
+                tone: brand.glowPrimary,
               };
 
   const quickActions = [
@@ -216,7 +215,7 @@ export default function HomeScreen() {
       subtitle: t('home.quickTodoSubtitle'),
       icon: { ios: 'checklist', android: 'checklist', web: 'checklist' },
       route: '/todos/new' as any,
-      tone: BRAND_ROSE,
+      tone: brand.glowPrimary,
     },
     {
       key: 'expense',
@@ -232,7 +231,7 @@ export default function HomeScreen() {
       subtitle: t('home.quickFoodSubtitle'),
       icon: { ios: 'calendar.badge.plus', android: 'event', web: 'event' },
       route: '/food/weekly-plan' as any,
-      tone: BRAND_AMBER,
+      tone: brand.glowSecondary,
     },
     {
       key: 'warranty',
@@ -249,24 +248,24 @@ export default function HomeScreen() {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={tint} />}>
       {/* Hero */}
-      <Card style={[styles.hero, { backgroundColor: BRAND_INK, overflow: 'hidden' }]}>
-        <View style={[styles.heroRoseGlow, { backgroundColor: BRAND_ROSE }]} />
-        <View style={[styles.heroAmberGlow, { backgroundColor: BRAND_AMBER }]} />
+      <Card style={[styles.hero, { backgroundColor: brand.ink, overflow: 'hidden' }]}>
+        <View style={[styles.heroRoseGlow, { backgroundColor: brand.glowPrimary }]} />
+        <View style={[styles.heroAmberGlow, { backgroundColor: brand.glowSecondary }]} />
         <View style={styles.heroTopLine}>
-          <Text style={styles.heroKicker}>{t('home.commandCenterLabel')}</Text>
+          <Text style={[styles.heroKicker, { color: brand.kickerOnBrand }]}>{t('home.commandCenterLabel')}</Text>
           <View style={styles.heroStatusPill}>
-            <Text style={styles.heroStatusText}>{totalAttentionCount > 0 ? totalAttentionCount : t('home.zeroAttention')}</Text>
+            <Text style={[styles.heroStatusText, { color: brand.onBrand }]}>{totalAttentionCount > 0 ? totalAttentionCount : t('home.zeroAttention')}</Text>
           </View>
         </View>
-        <Text style={styles.heroGreeting}>
+        <Text style={[styles.heroGreeting, { color: brand.onBrand }]}>
           {t(`home.greeting.${greetingPeriod}`)}{profileName ? `, ${profileName}` : ''}
         </Text>
-        <Text style={styles.heroDate}>{dateLabel}</Text>
-        <Text style={styles.heroSubtitle}>
+        <Text style={[styles.heroDate, { color: brand.onBrand }]}>{dateLabel}</Text>
+        <Text style={[styles.heroSubtitle, { color: brand.onBrand }]}>
           {totalAttentionCount > 0 ? t('home.attentionSubtitle', { count: totalAttentionCount }) : t('home.allGoodSubtitle')}
         </Text>
         {topStreak && (
-          <Text style={styles.heroStreak}>
+          <Text style={[styles.heroStreak, { color: brand.onBrand }]}>
             {t('home.heroStreak', { days: topStreak.streak, habit: topStreak.habit.title })}
           </Text>
         )}
@@ -471,7 +470,7 @@ export default function HomeScreen() {
           label={t('home.moneySnapshotLabel')}
           value={`${moneyAvailable.toFixed(0)} kr.`}
           helper={t('home.moneySnapshotHelper')}
-          tone={moneyAvailable < 0 ? danger : BRAND_ROSE}
+          tone={moneyAvailable < 0 ? danger : brand.glowPrimary}
           onPress={() => router.push({ pathname: '/economy' } as any)}
         />
 
@@ -481,7 +480,7 @@ export default function HomeScreen() {
           label={t('home.foodSnapshotLabel')}
           value={foodRemaining !== null ? `${foodRemaining.toFixed(0)} kr.` : '—'}
           helper={foodRemaining !== null ? t('home.foodSnapshotHelper') : t('home.foodSnapshotMissing')}
-          tone={foodRemaining !== null && foodRemaining < 0 ? danger : BRAND_AMBER}
+          tone={foodRemaining !== null && foodRemaining < 0 ? danger : brand.glowSecondary}
           onPress={() => router.push({ pathname: '/food', params: { from: 'home' } } as any)}
         />
 
@@ -501,7 +500,7 @@ export default function HomeScreen() {
           label={t('home.tripSnapshotLabel')}
           value={upcomingTrip ? t('home.tripDaysUntil', { days: daysUntil(upcomingTrip.startDate) }) : t('home.noUpcomingTrip')}
           helper={upcomingTrip?.name ?? t('home.tripSnapshotMissing')}
-          tone={BRAND_ROSE}
+          tone={brand.glowPrimary}
           onPress={() => router.push({ pathname: '/travel', params: { from: 'home' } } as any)}
         />
 
@@ -527,13 +526,13 @@ const styles = {
   heroRoseGlow: { position: 'absolute' as const, width: 220, height: 220, borderRadius: 110, top: -92, right: -62, opacity: 0.24 },
   heroAmberGlow: { position: 'absolute' as const, width: 140, height: 140, borderRadius: 70, bottom: -58, left: -36, opacity: 0.14 },
   heroTopLine: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, marginBottom: 12, backgroundColor: 'transparent' },
-  heroKicker: { color: '#FFE4EA', fontSize: 11, fontWeight: '800' as const, textTransform: 'uppercase' as const, letterSpacing: 0.6, backgroundColor: 'transparent' },
+  heroKicker: { fontSize: 11, fontWeight: '800' as const, textTransform: 'uppercase' as const, letterSpacing: 0.6, backgroundColor: 'transparent' },
   heroStatusPill: { minWidth: 34, height: 26, borderRadius: 13, alignItems: 'center' as const, justifyContent: 'center' as const, paddingHorizontal: 10, backgroundColor: 'rgba(255,255,255,0.12)' },
-  heroStatusText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' as const, backgroundColor: 'transparent' },
-  heroGreeting: { fontSize: 26, fontWeight: '800' as const, color: '#FFFFFF', backgroundColor: 'transparent' },
-  heroDate: { fontSize: 14, color: '#FFFFFF', opacity: 0.9, textTransform: 'capitalize' as const, marginTop: 2 },
-  heroSubtitle: { fontSize: 13, color: '#FFFFFF', opacity: 0.85, marginTop: 10, backgroundColor: 'transparent' },
-  heroStreak: { fontSize: 13, color: '#FFFFFF', fontWeight: '700' as const, marginTop: 8, backgroundColor: 'transparent' },
+  heroStatusText: { fontSize: 12, fontWeight: '800' as const, backgroundColor: 'transparent' },
+  heroGreeting: { fontSize: 26, fontWeight: '800' as const, backgroundColor: 'transparent' },
+  heroDate: { fontSize: 14, opacity: 0.9, textTransform: 'capitalize' as const, marginTop: 2 },
+  heroSubtitle: { fontSize: 13, opacity: 0.85, marginTop: 10, backgroundColor: 'transparent' },
+  heroStreak: { fontSize: 13, fontWeight: '700' as const, marginTop: 8, backgroundColor: 'transparent' },
   invitationsSection: { gap: 8 },
   invitationsKicker: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5, alignSelf: 'flex-start' as const, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 10 },
   invitationsKickerText: { fontSize: 11, fontWeight: '800' as const, textTransform: 'uppercase' as const, letterSpacing: 0.4 },

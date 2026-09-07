@@ -8,6 +8,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-na
 import { Text, useThemeColor } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import { useBrandTints } from "@/hooks/useBrandTints";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useTabBarScroll } from "@/hooks/useTabBarScroll";
 import { useAppLockStore } from "@/store/useAppLockStore";
@@ -53,6 +54,7 @@ export default function SettingsScreen() {
   const theme = Colors[colorScheme];
   const accentTints = useAccentTints();
   const backgroundColor = useThemeColor({}, "background");
+  const brand = useBrandTints();
   const borderColor = useThemeColor({}, "border");
   const danger = useThemeColor({}, "danger");
   const surface = useThemeColor({}, "surface");
@@ -152,10 +154,10 @@ export default function SettingsScreen() {
     >
       <Pressable
         onPress={() => router.push("/settings/profile")}
-        style={({ pressed }) => [styles.profileCard, pressed && styles.pressedCard]}
+        style={({ pressed }) => [styles.profileCard, { backgroundColor: brand.ink }, pressed && styles.pressedCard]}
       >
-        <View style={styles.profileGlowRose} />
-        <View style={styles.profileGlowAmber} />
+        <View style={[styles.profileGlowRose, { backgroundColor: brand.glowPrimary }]} />
+        <View style={[styles.profileGlowAmber, { backgroundColor: brand.glowSecondary }]} />
         <View style={styles.profileTopRow}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
@@ -362,7 +364,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingTop: 18, gap: 18, paddingBottom: 116 },
   profileCard: {
-    backgroundColor: "#16130F",
     borderColor: "rgba(255,255,255,0.1)",
     borderRadius: 26,
     borderWidth: 1,
@@ -379,7 +380,6 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.99 }],
   },
   profileGlowRose: {
-    backgroundColor: "#E11D48",
     borderRadius: 110,
     height: 220,
     opacity: 0.32,
@@ -389,7 +389,6 @@ const styles = StyleSheet.create({
     width: 220,
   },
   profileGlowAmber: {
-    backgroundColor: "#F59E0B",
     borderRadius: 70,
     bottom: -58,
     height: 140,

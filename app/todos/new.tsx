@@ -5,11 +5,12 @@ import { useTranslation } from "react-i18next";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
 import Button from "@/components/Button";
-import Card from "@/components/Card";
 import Chip from "@/components/Chip";
 import DatePickerField from "@/components/DatePickerField";
+import Hero from "@/components/Hero";
 import { Text, useThemeColor } from "@/components/Themed";
 import { useAccentTints } from "@/hooks/useAccentTints";
+import { useBrandTints } from "@/hooks/useBrandTints";
 import { useCycleStore } from "@/store/useCycleStore";
 import { useProfileStore } from "@/store/useProfileStore";
 import { useTodoStore } from "@/store/useTodoStore";
@@ -18,9 +19,6 @@ import { TodoImportance } from "@/types/life";
 import { getPhaseForDate } from "@/utils/cycle/cycleInsights";
 
 const IMPORTANCE_LEVELS: TodoImportance[] = ["low", "medium", "high"];
-const BRAND_INK = "#16130F";
-const BRAND_ROSE = "#E11D48";
-const BRAND_AMBER = "#F59E0B";
 
 const pad = (value: number) => value.toString().padStart(2, "0");
 
@@ -39,6 +37,7 @@ export default function NewTodoScreen() {
   const addTodo = useTodoStore((s) => s.addTodo);
   const showToast = useToastStore((s) => s.show);
   const accentTints = useAccentTints();
+  const brand = useBrandTints();
   const borderColor = useThemeColor({}, "border");
   const backgroundColor = useThemeColor({}, "background");
   const surface = useThemeColor({}, "surface");
@@ -102,16 +101,13 @@ export default function NewTodoScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
       >
-        <Card style={[styles.hero, { backgroundColor: BRAND_INK, overflow: "hidden" }]}>
-          <View style={[styles.heroRoseGlow, { backgroundColor: BRAND_ROSE }]} />
-          <View style={[styles.heroAmberGlow, { backgroundColor: BRAND_AMBER }]} />
-          <View style={styles.heroIcon}>
-            <SymbolView name={{ ios: "checklist", android: "checklist", web: "checklist" }} size={24} tintColor="#FFFFFF" />
-          </View>
-          <Text style={styles.heroKicker}>{t("todos.quickKicker")}</Text>
-          <Text style={styles.heroTitle}>{t("todos.quickTitle")}</Text>
-          <Text style={styles.heroSubtitle}>{t("todos.quickSubtitle")}</Text>
-        </Card>
+        <Hero
+          variant="brand"
+          icon={{ ios: "checklist", android: "checklist", web: "checklist" }}
+          kicker={t("todos.quickKicker")}
+          title={t("todos.quickTitle")}
+          subtitle={t("todos.quickSubtitle")}
+        />
 
         <View style={styles.formSection}>
           <Text style={styles.sectionEyebrow}>{t("todos.titleLabel")}</Text>
@@ -144,7 +140,7 @@ export default function NewTodoScreen() {
           <View style={styles.importanceGrid}>
             {IMPORTANCE_LEVELS.map((level) => {
               const active = importance === level;
-              const tone = level === "high" ? BRAND_ROSE : level === "medium" ? BRAND_AMBER : success;
+              const tone = level === "high" ? brand.glowPrimary : level === "medium" ? brand.glowSecondary : success;
               return (
                 <Pressable
                   key={level}
@@ -161,9 +157,9 @@ export default function NewTodoScreen() {
                       web: level === "high" ? "local_fire_department" : level === "medium" ? "flag" : "eco",
                     }}
                     size={19}
-                    tintColor={active ? "#FFFFFF" : tone}
+                    tintColor={active ? brand.onBrand : tone}
                   />
-                  <Text style={[styles.importanceLabel, { color: active ? "#FFFFFF" : undefined }]}>
+                  <Text style={[styles.importanceLabel, { color: active ? brand.onBrand : undefined }]}>
                     {t(`todos.importance.${level}`)}
                   </Text>
                 </Pressable>
@@ -203,7 +199,7 @@ export default function NewTodoScreen() {
 
           {dueDatePhase === "menstrual" && (
             <View style={[styles.phaseHint, { backgroundColor: surfaceMuted }]}>
-              <SymbolView name={{ ios: "drop.fill", android: "water_drop", web: "water_drop" }} size={14} tintColor={BRAND_ROSE} />
+              <SymbolView name={{ ios: "drop.fill", android: "water_drop", web: "water_drop" }} size={14} tintColor={brand.glowPrimary} />
               <Text style={[styles.phaseHintText, { color: textMuted }]}>{t("todos.dueDatePhaseHint")}</Text>
             </View>
           )}
@@ -223,28 +219,6 @@ export default function NewTodoScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   container: { padding: 16, gap: 16, paddingBottom: 44 },
-  hero: { borderRadius: 24, gap: 8, padding: 20, position: "relative" },
-  heroRoseGlow: { position: "absolute", width: 190, height: 190, borderRadius: 95, top: -82, right: -54, opacity: 0.25 },
-  heroAmberGlow: { position: "absolute", width: 130, height: 130, borderRadius: 65, bottom: -48, left: -34, opacity: 0.18 },
-  heroIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
-    marginBottom: 6,
-  },
-  heroKicker: {
-    color: "#FFE4EA",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    backgroundColor: "transparent",
-  },
-  heroTitle: { color: "#FFFFFF", fontSize: 27, fontWeight: "800", backgroundColor: "transparent" },
-  heroSubtitle: { color: "#FFFFFF", fontSize: 14, lineHeight: 20, opacity: 0.85, backgroundColor: "transparent" },
   formSection: { gap: 9 },
   sectionEyebrow: { fontSize: 12, fontWeight: "800", letterSpacing: 0.4, textTransform: "uppercase", opacity: 0.62 },
   titleInput: {

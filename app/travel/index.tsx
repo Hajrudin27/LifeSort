@@ -8,6 +8,7 @@ import ProgressBar from '@/components/ProgressBar';
 import RingProgress from '@/components/RingProgress';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
+import Hero, { HeroPill, HeroPillText } from '@/components/Hero';
 import { useAccentTints } from '@/hooks/useAccentTints';
 import { useHomeBackTitle } from '@/hooks/useHomeBackTitle';
 import { useTripsStore } from '@/store/useTripsStore';
@@ -57,24 +58,16 @@ export default function TravelScreen() {
   return (
     <View style={sharedStyles.formContainer}>
       {trips.length > 0 && (
-        <View style={[styles.hero, { backgroundColor: accentTints.accent, overflow: 'hidden' }]}>
-          <View style={[styles.heroCircleLarge, { backgroundColor: '#FFFFFF', opacity: 0.08 }]} />
-          <View style={[styles.heroCircleSmall, { backgroundColor: '#FFFFFF', opacity: 0.1 }]} />
-
-          <View style={styles.heroTopRow}>
-            <View style={styles.heroIconCircle}>
-              <SymbolView name={{ ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' }} size={20} tintColor="#FFFFFF" />
-            </View>
-            <View style={styles.heroTextGroup}>
-              <Text style={styles.heroKicker}>{t('travel.totalSpentLabel', { year: CURRENT_YEAR })}</Text>
-              <Text style={styles.heroAmount}>{totalSpentThisYear.toFixed(0)} kr.</Text>
-            </View>
-          </View>
-
-          <View style={styles.heroCountPill}>
-            <Text style={styles.heroCountText}>{t('travel.tripsCountThisYear', { count: tripsThisYear.length })}</Text>
-          </View>
-        </View>
+        <Hero
+          icon={{ ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' }}
+          kicker={t('travel.totalSpentLabel', { year: CURRENT_YEAR })}
+          value={`${totalSpentThisYear.toFixed(0)} kr.`}
+          style={styles.hero}
+        >
+          <HeroPill style={styles.heroPillSpacing}>
+            <HeroPillText>{t('travel.tripsCountThisYear', { count: tripsThisYear.length })}</HeroPillText>
+          </HeroPill>
+        </Hero>
       )}
 
       <TextInput
@@ -175,30 +168,8 @@ export default function TravelScreen() {
 }
 
 const styles = {
-  hero: { padding: 20, gap: 4, position: 'relative' as const, borderRadius: 20, marginBottom: 4 },
-  heroCircleLarge: { position: 'absolute' as const, width: 160, height: 160, borderRadius: 80, top: -50, right: -40 },
-  heroCircleSmall: { position: 'absolute' as const, width: 80, height: 80, borderRadius: 40, bottom: -25, left: -15 },
-  heroTopRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14, backgroundColor: 'transparent' },
-  heroIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  heroTextGroup: { backgroundColor: 'transparent' },
-  heroKicker: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' as const, opacity: 0.85, textTransform: 'uppercase' as const, letterSpacing: 0.6, backgroundColor: 'transparent' },
-  heroAmount: { fontSize: 28, fontWeight: '800' as const, color: '#FFFFFF', backgroundColor: 'transparent', marginTop: 2 },
-  heroCountPill: {
-    alignSelf: 'flex-start' as const,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 14,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    marginTop: 14,
-  },
-  heroCountText: { fontSize: 12, color: '#FFFFFF', fontWeight: '700' as const },
+  hero: { marginBottom: 4 },
+  heroPillSpacing: { marginTop: 14 },
   emptyCard: { alignItems: 'center' as const, borderRadius: 20, padding: 32 },
   card: {
     gap: 8,

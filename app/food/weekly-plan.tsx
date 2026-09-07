@@ -7,7 +7,9 @@ import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import { Text, useThemeColor } from "@/components/Themed";
+import Hero, { HeroBadge, HeroBadgeText } from "@/components/Hero";
 import { useAccentTints } from "@/hooks/useAccentTints";
+import { useBrandTints } from "@/hooks/useBrandTints";
 import { useFoodStore } from "@/store/useFoodStore";
 import { useToastStore } from "@/store/useToastStore";
 import { MealType } from "@/types/food";
@@ -16,9 +18,6 @@ import { planWeek, WeekPlan } from "@/utils/food/mealPlanning";
 import { getMonthKey } from "@/utils/shared/monthKey";
 
 const MEAL_SLOTS: MealType[] = ["breakfast", "lunch", "dinner"];
-const BRAND_INK = "#16130F";
-const BRAND_ROSE = "#E11D48";
-const BRAND_AMBER = "#F59E0B";
 
 export default function WeeklyPlanScreen() {
   const { t, i18n } = useTranslation();
@@ -28,6 +27,7 @@ export default function WeeklyPlanScreen() {
   const surface = useThemeColor({}, "surface");
   const surfaceMuted = useThemeColor({}, "surfaceMuted");
   const accentTints = useAccentTints();
+  const brand = useBrandTints();
   const tintColor = accentTints.accent;
   const textMuted = useThemeColor({}, "textMuted");
   const warning = useThemeColor({}, "warning");
@@ -150,30 +150,27 @@ export default function WeeklyPlanScreen() {
 
   return (
     <ScrollView style={[styles.root, { backgroundColor }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <Card style={[styles.hero, { backgroundColor: BRAND_INK, overflow: "hidden" }]}>
-        <View style={[styles.heroRoseGlow, { backgroundColor: BRAND_ROSE }]} />
-        <View style={[styles.heroAmberGlow, { backgroundColor: BRAND_AMBER }]} />
-        <View style={styles.heroTopRow}>
-          <View style={styles.heroIcon}>
-            <SymbolView name={{ ios: "calendar.badge.plus", android: "event", web: "event" }} size={24} tintColor="#FFFFFF" />
-          </View>
-          <View style={styles.heroBadge}>
-            <Text style={styles.heroBadgeText}>{weekLabel}</Text>
-          </View>
-        </View>
-        <Text style={styles.heroKicker}>{t("food.weeklyPlanKicker")}</Text>
-        <Text style={styles.heroTitle}>{t("food.weeklyPlanHeroTitle")}</Text>
-        <Text style={styles.heroSubtitle}>{t("food.weeklyPlanHeroSubtitle")}</Text>
-      </Card>
+      <Hero
+        variant="brand"
+        icon={{ ios: "calendar.badge.plus", android: "event", web: "event" }}
+        kicker={t("food.weeklyPlanKicker")}
+        title={t("food.weeklyPlanHeroTitle")}
+        subtitle={t("food.weeklyPlanHeroSubtitle")}
+        trailing={
+          <HeroBadge>
+            <HeroBadgeText>{weekLabel}</HeroBadgeText>
+          </HeroBadge>
+        }
+      />
 
       <View style={styles.statGrid}>
         <View style={[styles.statCard, { backgroundColor: surface, borderColor }]}>
-          <SymbolView name={{ ios: "fork.knife", android: "restaurant", web: "restaurant" }} size={17} tintColor={BRAND_ROSE} />
+          <SymbolView name={{ ios: "fork.knife", android: "restaurant", web: "restaurant" }} size={17} tintColor={brand.glowPrimary} />
           <Text style={styles.statValue}>{recipes.length}</Text>
           <Text style={[styles.statLabel, { color: textMuted }]}>{t("food.recipesLabel")}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: surface, borderColor }]}>
-          <SymbolView name={{ ios: "banknote.fill", android: "payments", web: "payments" }} size={17} tintColor={BRAND_AMBER} />
+          <SymbolView name={{ ios: "banknote.fill", android: "payments", web: "payments" }} size={17} tintColor={brand.glowSecondary} />
           <Text style={styles.statValue}>{weeklyBudget.toFixed(0)} kr.</Text>
           <Text style={[styles.statLabel, { color: textMuted }]}>{t("food.weeklyBudgetShort")}</Text>
         </View>
@@ -196,7 +193,7 @@ export default function WeeklyPlanScreen() {
         </Pressable>
 
         <Pressable style={[styles.actionCard, { backgroundColor: surface, borderColor }]} onPress={() => router.push("/food/budget")}>
-          <SymbolView name={{ ios: "chart.pie.fill", android: "pie_chart", web: "pie_chart" }} size={18} tintColor={BRAND_AMBER} />
+          <SymbolView name={{ ios: "chart.pie.fill", android: "pie_chart", web: "pie_chart" }} size={18} tintColor={brand.glowSecondary} />
           <View style={styles.actionTextGroup}>
             <Text style={styles.actionTitle}>{t("food.budgetLabel")}</Text>
             <Text style={[styles.actionSubtitle, { color: textMuted }]} numberOfLines={1}>
@@ -392,37 +389,6 @@ export default function WeeklyPlanScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { padding: 16, gap: 14, paddingBottom: 48 },
-  hero: { borderRadius: 24, gap: 8, padding: 20, position: "relative" },
-  heroRoseGlow: { position: "absolute", width: 190, height: 190, borderRadius: 95, top: -86, right: -58, opacity: 0.25 },
-  heroAmberGlow: { position: "absolute", width: 130, height: 130, borderRadius: 65, bottom: -48, left: -34, opacity: 0.18 },
-  heroTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "transparent" },
-  heroIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  heroBadge: {
-    minHeight: 30,
-    borderRadius: 15,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  heroBadgeText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800", backgroundColor: "transparent" },
-  heroKicker: {
-    color: "#FFE4EA",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    backgroundColor: "transparent",
-  },
-  heroTitle: { color: "#FFFFFF", fontSize: 27, fontWeight: "800", backgroundColor: "transparent" },
-  heroSubtitle: { color: "#FFFFFF", fontSize: 14, lineHeight: 20, opacity: 0.85, backgroundColor: "transparent" },
   statGrid: { flexDirection: "row", gap: 10 },
   statCard: { flex: 1, borderWidth: 1, borderRadius: 18, padding: 12, gap: 5 },
   statValue: { fontSize: 18, fontWeight: "800" },

@@ -14,6 +14,7 @@ import { Text, useThemeColor } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import { CycleTints } from "@/constants/Colors";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { useBrandTints } from "@/hooks/useBrandTints";
 import { useTabBarScroll } from "@/hooks/useTabBarScroll";
 import { useCycleStore } from "@/store/useCycleStore";
 import { FlowIntensity, Symptom } from "@/types/cycle";
@@ -63,6 +64,7 @@ export default function CycleScreen() {
   const surface = useThemeColor({}, "surface");
   const surfaceMuted = useThemeColor({}, "surfaceMuted");
   const backgroundColor = useThemeColor({}, "background");
+  const brand = useBrandTints();
   const locale = i18n.language === "da" ? "da-DK" : "en-US";
   const handleTabBarScroll = useTabBarScroll();
 
@@ -246,9 +248,9 @@ export default function CycleScreen() {
       onScroll={handleTabBarScroll}
       scrollEventThrottle={16}
     >
-      <Card style={styles.hero}>
-        <View style={[styles.heroGlow, styles.heroGlowRose]} />
-        <View style={[styles.heroGlow, styles.heroGlowAmber]} />
+      <Card style={[styles.hero, { backgroundColor: brand.ink }]}>
+        <View style={[styles.heroGlow, styles.heroGlowRose, { backgroundColor: brand.glowPrimary }]} />
+        <View style={[styles.heroGlow, styles.heroGlowAmber, { backgroundColor: brand.glowSecondary }]} />
         <View style={styles.heroTopRow}>
           <View style={styles.heroIcon}>
             <SymbolView
@@ -500,7 +502,6 @@ export default function CycleScreen() {
 const styles = StyleSheet.create({
   container: { padding: 16, gap: 16, paddingBottom: 116 },
   hero: {
-    backgroundColor: "#16130F",
     borderColor: "rgba(255,255,255,0.08)",
     gap: 13,
     overflow: "hidden",
@@ -511,7 +512,6 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   heroGlowRose: {
-    backgroundColor: "#E11D48",
     borderRadius: 112,
     height: 224,
     opacity: 0.34,
@@ -520,7 +520,6 @@ const styles = StyleSheet.create({
     width: 224,
   },
   heroGlowAmber: {
-    backgroundColor: "#F59E0B",
     borderRadius: 74,
     bottom: -62,
     height: 148,

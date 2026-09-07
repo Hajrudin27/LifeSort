@@ -11,6 +11,7 @@ import EmptyState from '@/components/EmptyState';
 import SwipeableRow from '@/components/SwipeableRow';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
+import Hero, { HeroPill, HeroPillText } from '@/components/Hero';
 import { useAccentTints } from '@/hooks/useAccentTints';
 import { useHomeBackTitle } from '@/hooks/useHomeBackTitle';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
@@ -65,33 +66,28 @@ export default function WarrantiesScreen() {
 
   return (
     <View style={sharedStyles.formContainer}>
-      <View style={[styles.hero, { backgroundColor: accentTints.accent, overflow: 'hidden' }]}>
-        <View style={[styles.heroCircleLarge, { backgroundColor: '#FFFFFF', opacity: 0.08 }]} />
-        <View style={[styles.heroCircleSmall, { backgroundColor: '#FFFFFF', opacity: 0.1 }]} />
-        <View style={styles.heroTopRow}>
-          <View style={styles.heroIconCircle}>
-            <SymbolView name={{ ios: 'shield.lefthalf.filled', android: 'shield', web: 'shield' }} size={20} tintColor="#FFFFFF" />
-          </View>
-          <View style={{ backgroundColor: 'transparent' }}>
-            <Text style={styles.heroKicker}>{t('warranties.screenTitle')}</Text>
-            <Text style={styles.heroCount}>{warranties.length}</Text>
-          </View>
-        </View>
+      <Hero
+        icon={{ ios: 'shield.lefthalf.filled', android: 'shield', web: 'shield' }}
+        kicker={t('warranties.screenTitle')}
+        value={String(warranties.length)}
+        valueSize={32}
+        style={styles.hero}
+      >
         {(expiringSoonCount > 0 || expiredCount > 0) && (
           <View style={styles.heroStatsRow}>
             {expiringSoonCount > 0 && (
-              <View style={styles.heroStatPill}>
-                <Text style={styles.heroStatText}>{t('warranties.expiringSoonTitle')}: {expiringSoonCount}</Text>
-              </View>
+              <HeroPill>
+                <HeroPillText>{t('warranties.expiringSoonTitle')}: {expiringSoonCount}</HeroPillText>
+              </HeroPill>
             )}
             {expiredCount > 0 && (
-              <View style={styles.heroStatPill}>
-                <Text style={styles.heroStatText}>{t('warranties.expired')}: {expiredCount}</Text>
-              </View>
+              <HeroPill>
+                <HeroPillText>{t('warranties.expired')}: {expiredCount}</HeroPillText>
+              </HeroPill>
             )}
           </View>
         )}
-      </View>
+      </Hero>
 
       <TextInput
         style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
@@ -160,33 +156,14 @@ export default function WarrantiesScreen() {
 
 const styles = {
   hero: {
-    padding: 20,
-    gap: 4,
-    position: 'relative' as const,
     marginBottom: 4,
-    borderRadius: 20,
     shadowColor: '#3B2C24',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.07,
     shadowRadius: 8,
     elevation: 2,
   },
-  heroCircleLarge: { position: 'absolute' as const, width: 160, height: 160, borderRadius: 80, top: -50, right: -40 },
-  heroCircleSmall: { position: 'absolute' as const, width: 80, height: 80, borderRadius: 40, bottom: -25, left: -15 },
-  heroTopRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14, backgroundColor: 'transparent' },
-  heroIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  heroKicker: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' as const, opacity: 0.85, textTransform: 'uppercase' as const, letterSpacing: 0.6, backgroundColor: 'transparent' },
-  heroCount: { fontSize: 32, fontWeight: '800' as const, color: '#FFFFFF', backgroundColor: 'transparent', marginTop: 2 },
   heroStatsRow: { flexDirection: 'row' as const, gap: 8, marginTop: 14, flexWrap: 'wrap' as const, backgroundColor: 'transparent' },
-  heroStatPill: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 14, paddingVertical: 4, paddingHorizontal: 10 },
-  heroStatText: { fontSize: 12, color: '#FFFFFF', fontWeight: '700' as const, backgroundColor: 'transparent' },
   card: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, borderWidth: 1.5, marginBottom: 2 },
   iconWrap: { width: 34, height: 34, alignItems: 'center' as const, justifyContent: 'center' as const },
   iconGlow: { position: 'absolute' as const, width: 34, height: 34, borderRadius: 17 },

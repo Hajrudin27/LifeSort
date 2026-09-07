@@ -10,6 +10,7 @@ import EmptyState from '@/components/EmptyState';
 import SwipeableRow from '@/components/SwipeableRow';
 import { Text, useThemeColor } from '@/components/Themed';
 import { useAccentTints } from '@/hooks/useAccentTints';
+import { useBrandTints } from '@/hooks/useBrandTints';
 import { useHomeBackTitle } from '@/hooks/useHomeBackTitle';
 import { useToastStore } from '@/store/useToastStore';
 import { useTodoStore } from '@/store/useTodoStore';
@@ -19,9 +20,6 @@ import { addTodoToCalendar } from '@/utils/todo/calendarSync';
 
 type FilterKey = 'active' | 'today' | 'upcoming' | 'overdue' | 'completed';
 
-const BRAND_INK = '#16130F';
-const BRAND_ROSE = '#E11D48';
-const BRAND_AMBER = '#F59E0B';
 
 function getDueState(todo: TodoItem) {
   if (!todo.dueDate) return null;
@@ -38,6 +36,7 @@ export default function TodosScreen() {
   const surface = useThemeColor({}, 'surface');
   const surfaceMuted = useThemeColor({}, 'surfaceMuted');
   const accentTints = useAccentTints();
+  const brand = useBrandTints();
   const tintColor = accentTints.accent;
   const textMuted = useThemeColor({}, 'textMuted');
   const danger = useThemeColor({}, 'danger');
@@ -202,20 +201,20 @@ export default function TodosScreen() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Card style={[styles.hero, { backgroundColor: BRAND_INK, overflow: 'hidden' }]}>
-              <View style={[styles.heroRoseGlow, { backgroundColor: BRAND_ROSE }]} />
-              <View style={[styles.heroAmberGlow, { backgroundColor: BRAND_AMBER }]} />
+            <Card style={[styles.hero, { backgroundColor: brand.ink, overflow: 'hidden' }]}>
+              <View style={[styles.heroRoseGlow, { backgroundColor: brand.glowPrimary }]} />
+              <View style={[styles.heroAmberGlow, { backgroundColor: brand.glowSecondary }]} />
               <View style={styles.heroTopRow}>
                 <View style={styles.heroIcon}>
-                  <SymbolView name={{ ios: 'checklist', android: 'checklist', web: 'checklist' }} size={22} tintColor="#FFFFFF" />
+                  <SymbolView name={{ ios: 'checklist', android: 'checklist', web: 'checklist' }} size={22} tintColor={brand.onBrand} />
                 </View>
                 <Pressable style={styles.heroAddButton} onPress={() => router.push('/todos/new')}>
-                  <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={17} tintColor="#FFFFFF" />
+                  <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={17} tintColor={brand.onBrand} />
                 </Pressable>
               </View>
-              <Text style={styles.heroKicker}>{t('todos.overviewKicker')}</Text>
-              <Text style={styles.heroTitle}>{t('todos.overviewTitle')}</Text>
-              <Text style={styles.heroSubtitle}>
+              <Text style={[styles.heroKicker, { color: brand.kickerOnBrand }]}>{t('todos.overviewKicker')}</Text>
+              <Text style={[styles.heroTitle, { color: brand.onBrand }]}>{t('todos.overviewTitle')}</Text>
+              <Text style={[styles.heroSubtitle, { color: brand.onBrand }]}>
                 {overdueTodos.length > 0
                   ? t('todos.overviewOverdueSubtitle', { count: overdueTodos.length })
                   : todayTodos.length > 0
@@ -225,11 +224,11 @@ export default function TodosScreen() {
             </Card>
 
             <View style={[styles.focusStrip, { backgroundColor: surface, borderColor }]}>
-              <SummaryItem color={BRAND_AMBER} label={t('todos.todayFilter')} value={todayTodos.length} />
+              <SummaryItem color={brand.glowSecondary} label={t('todos.todayFilter')} value={todayTodos.length} />
               <View style={[styles.focusDivider, { backgroundColor: borderColor }]} />
               <SummaryItem color={danger} label={t('todos.overdueFilter')} value={overdueTodos.length} />
               <View style={[styles.focusDivider, { backgroundColor: borderColor }]} />
-              <SummaryItem color={BRAND_ROSE} label={t('todos.highPriorityShort')} value={highPriorityTodos.length} />
+              <SummaryItem color={brand.glowPrimary} label={t('todos.highPriorityShort')} value={highPriorityTodos.length} />
             </View>
 
             <View style={styles.sectionHeader}>
@@ -311,15 +310,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.14)',
   },
   heroKicker: {
-    color: '#FFE4EA',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     backgroundColor: 'transparent',
   },
-  heroTitle: { color: '#FFFFFF', fontSize: 24, fontWeight: '800', backgroundColor: 'transparent' },
-  heroSubtitle: { color: '#FFFFFF', fontSize: 13, lineHeight: 18, opacity: 0.85, backgroundColor: 'transparent' },
+  heroTitle: { fontSize: 24, fontWeight: '800', backgroundColor: 'transparent' },
+  heroSubtitle: { fontSize: 13, lineHeight: 18, opacity: 0.85, backgroundColor: 'transparent' },
   focusStrip: {
     minHeight: 70,
     borderWidth: 1,

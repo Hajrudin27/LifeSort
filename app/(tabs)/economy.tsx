@@ -17,6 +17,7 @@ import RingProgress from "@/components/RingProgress";
 import Screen from "@/components/Screen";
 import SectionHeader from "@/components/SectionHeader";
 import { Text, useThemeColor, View } from "@/components/Themed";
+import { useBrandTints } from "@/hooks/useBrandTints";
 import { useModuleTints } from "@/hooks/useModuleTints";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { useFoodStore } from "@/store/useFoodStore";
@@ -33,6 +34,7 @@ export default function EconomyScreen() {
   const moduleTints = useModuleTints();
   const borderColor = useThemeColor({}, "border");
   const backgroundColor = useThemeColor({}, "background");
+  const brand = useBrandTints();
   const surfaceMuted = useThemeColor({}, "surfaceMuted");
   const textMuted = useThemeColor({}, "textMuted");
   const WARRANTY_ALERT_COLOR = useThemeColor({}, "warning");
@@ -128,7 +130,7 @@ export default function EconomyScreen() {
       }),
       icon: { ios: "creditcard.fill", android: "credit_card", web: "credit_card" },
       route: "/expenses" as const,
-      tone: "#E11D48",
+      tone: brand.glowPrimary,
       visual: "pie",
     },
     {
@@ -139,7 +141,7 @@ export default function EconomyScreen() {
       }),
       icon: { ios: "target", android: "track_changes", web: "track_changes" },
       route: "/savings" as const,
-      tone: "#F59E0B",
+      tone: brand.glowSecondary,
       visual: "savings",
     },
     {
@@ -189,9 +191,9 @@ export default function EconomyScreen() {
   return (
     <View style={[styles.root, { backgroundColor }]}>
       <Screen contentContainerStyle={styles.content}>
-        <Card style={styles.hero}>
-          <View style={[styles.heroGlow, styles.heroGlowRose]} />
-          <View style={[styles.heroGlow, styles.heroGlowAmber]} />
+        <Card style={[styles.hero, { backgroundColor: brand.ink }]}>
+          <View style={[styles.heroGlow, styles.heroGlowRose, { backgroundColor: brand.glowPrimary }]} />
+          <View style={[styles.heroGlow, styles.heroGlowAmber, { backgroundColor: brand.glowSecondary }]} />
           <View style={styles.heroTopRow}>
             <View style={styles.heroIcon}>
               <SymbolView
@@ -244,7 +246,7 @@ export default function EconomyScreen() {
             label={t("economy.savingsProgressLabel")}
             value={goals.length > 0 ? percent.format(savingsProgress) : "0%"}
             helper={t("economy.savingsProgressHelper", { count: goals.length })}
-            tone="#F59E0B"
+            tone={brand.glowSecondary}
             onPress={() => goals.length > 0 ? setShowSavingsModal(true) : router.push("/savings/new")}
             style={styles.metricItem}
           />
@@ -314,7 +316,7 @@ export default function EconomyScreen() {
             icon={{ ios: "plus.circle.fill", android: "add_circle", web: "add_circle" }}
             title={t("economy.newExpenseTitle")}
             subtitle={t("economy.newExpenseSubtitle")}
-            tone="#E11D48"
+            tone={brand.glowPrimary}
             onPress={() => router.push("/expenses/new")}
             style={styles.quickItem}
           />
@@ -433,7 +435,6 @@ const styles = StyleSheet.create({
     paddingBottom: 72,
   },
   hero: {
-    backgroundColor: "#16130F",
     borderColor: "rgba(255,255,255,0.08)",
     gap: 12,
     overflow: "hidden",
@@ -447,12 +448,10 @@ const styles = StyleSheet.create({
     opacity: 0.2,
   },
   heroGlowRose: {
-    backgroundColor: "#E11D48",
     right: -48,
     top: -54,
   },
   heroGlowAmber: {
-    backgroundColor: "#F59E0B",
     bottom: -70,
     left: -56,
   },

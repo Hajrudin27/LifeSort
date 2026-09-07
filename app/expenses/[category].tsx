@@ -6,6 +6,7 @@ import { Alert, FlatList, Pressable, StyleSheet } from "react-native";
 import EmptyState from "@/components/EmptyState";
 import ProgressBar from "@/components/ProgressBar";
 import { Text, useThemeColor, View } from "@/components/Themed";
+import { useBrandTints } from "@/hooks/useBrandTints";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { Expense, ExpenseCategory } from "@/types/expense";
@@ -17,6 +18,7 @@ export default function CategoryExpensesScreen() {
   const { category, month } = useLocalSearchParams<{ category: ExpenseCategory; month?: string }>();
   const accentTints = useAccentTints();
   const background = useThemeColor({}, "background");
+  const brand = useBrandTints();
   const surface = useThemeColor({}, "surface");
   const border = useThemeColor({}, "border");
   const textMuted = useThemeColor({}, "textMuted");
@@ -89,7 +91,7 @@ export default function CategoryExpensesScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={styles.header}>
-            <View style={styles.hero}>
+            <View style={[styles.hero, { backgroundColor: brand.inkDeep }]}>
               <View style={[styles.heroCircleLarge, { backgroundColor: accentTints.accent }]} />
               <View style={[styles.heroCircleSmall, { backgroundColor: accentTints.accentSoft }]} />
               <View style={styles.heroTopRow}>
@@ -171,7 +173,6 @@ const styles = StyleSheet.create({
     padding: 20,
     position: "relative",
     overflow: "hidden",
-    backgroundColor: "#15100D",
   },
   heroCircleLarge: { position: "absolute", width: 190, height: 190, borderRadius: 95, top: -70, right: -48, opacity: 0.32 },
   heroCircleSmall: { position: "absolute", width: 118, height: 118, borderRadius: 59, bottom: -48, left: -28, opacity: 0.26 },

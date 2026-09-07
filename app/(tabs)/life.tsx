@@ -9,6 +9,7 @@ import QuickActionCard from '@/components/QuickActionCard';
 import Screen from '@/components/Screen';
 import SectionHeader from '@/components/SectionHeader';
 import { Text, useThemeColor, View } from '@/components/Themed';
+import { useBrandTints } from '@/hooks/useBrandTints';
 import { useLifeModuleTints } from '@/hooks/useLifeModuleTints';
 import { useCareerStore } from '@/store/useCareerStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
@@ -34,6 +35,7 @@ export default function LifeScreen() {
   const { t } = useTranslation();
   const tints = useLifeModuleTints();
   const backgroundColor = useThemeColor({}, 'background');
+  const brand = useBrandTints();
   const borderColor = useThemeColor({}, 'border');
   const surfaceMuted = useThemeColor({}, 'surfaceMuted');
   const textMuted = useThemeColor({}, 'textMuted');
@@ -75,7 +77,7 @@ export default function LifeScreen() {
           title: t('life.focusOverdueTitle'),
           subtitle: t('life.focusOverdueSubtitle', { count: overdueTodos.length }),
           route: '/todos',
-          tone: '#E11D48',
+          tone: brand.glowPrimary,
         }
       : dueTodayTodos.length > 0
         ? {
@@ -83,7 +85,7 @@ export default function LifeScreen() {
             title: t('life.focusTodayTitle'),
             subtitle: t('life.focusTodaySubtitle', { count: dueTodayTodos.length }),
             route: '/todos',
-            tone: '#F59E0B',
+            tone: brand.glowSecondary,
           }
         : dueHouseholdCount > 0
           ? {
@@ -99,7 +101,7 @@ export default function LifeScreen() {
                 title: t('life.focusHabitTitle'),
                 subtitle: t('life.focusHabitSubtitle'),
                 route: '/habits',
-                tone: '#E11D48',
+                tone: brand.glowPrimary,
               }
             : activeGoals > 0 && goalProgress < 1
               ? {
@@ -107,7 +109,7 @@ export default function LifeScreen() {
                   title: t('life.focusGoalTitle'),
                   subtitle: t('life.focusGoalSubtitle', { progress: Math.round(goalProgress * 100) }),
                   route: '/life-goals',
-                  tone: '#F59E0B',
+                  tone: brand.glowSecondary,
                 }
               : {
                   icon: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },
@@ -135,7 +137,7 @@ export default function LifeScreen() {
       value: String(activeTodos.length),
       helper: t('life.todosHelper', { count: highPriorityTodos.length }),
       route: '/todos',
-      tone: '#E11D48',
+      tone: brand.glowPrimary,
     },
     {
       key: 'lifeGoals',
@@ -145,7 +147,7 @@ export default function LifeScreen() {
       value: `${Math.round(goalProgress * 100)}%`,
       helper: t('life.lifeGoalsHelper', { count: activeGoals }),
       route: '/life-goals',
-      tone: '#F59E0B',
+      tone: brand.glowSecondary,
     },
     {
       key: 'habits',
@@ -181,9 +183,9 @@ export default function LifeScreen() {
 
   return (
     <Screen contentContainerStyle={styles.content}>
-      <Card style={styles.hero}>
-        <View style={[styles.heroGlow, styles.heroGlowRose]} />
-        <View style={[styles.heroGlow, styles.heroGlowAmber]} />
+      <Card style={[styles.hero, { backgroundColor: brand.ink }]}>
+        <View style={[styles.heroGlow, styles.heroGlowRose, { backgroundColor: brand.glowPrimary }]} />
+        <View style={[styles.heroGlow, styles.heroGlowAmber, { backgroundColor: brand.glowSecondary }]} />
         <View style={styles.heroTopRow}>
           <View style={styles.heroIcon}>
             <SymbolView
@@ -282,14 +284,14 @@ export default function LifeScreen() {
           icon={{ ios: 'plus.circle.fill', android: 'add_circle', web: 'add_circle' }}
           title={t('life.quickTodoTitle')}
           subtitle={t('life.quickTodoSubtitle')}
-          tone="#E11D48"
+          tone={brand.glowPrimary}
           onPress={() => router.push('/todos/new')}
         />
         <QuickActionCard
           icon={{ ios: 'flag.badge.ellipsis', android: 'outlined_flag', web: 'outlined_flag' }}
           title={t('life.quickGoalTitle')}
           subtitle={t('life.quickGoalSubtitle')}
-          tone="#F59E0B"
+          tone={brand.glowSecondary}
           onPress={() => router.push('/life-goals/new')}
         />
         <QuickActionCard
@@ -309,7 +311,6 @@ const styles = StyleSheet.create({
     paddingBottom: 72,
   },
   hero: {
-    backgroundColor: '#16130F',
     borderColor: 'rgba(255,255,255,0.08)',
     gap: 12,
     overflow: 'hidden',
@@ -323,12 +324,10 @@ const styles = StyleSheet.create({
     opacity: 0.2,
   },
   heroGlowRose: {
-    backgroundColor: '#E11D48',
     right: -48,
     top: -54,
   },
   heroGlowAmber: {
-    backgroundColor: '#F59E0B',
     bottom: -70,
     left: -56,
   },

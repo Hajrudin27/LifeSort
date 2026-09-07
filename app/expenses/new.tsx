@@ -6,18 +6,16 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleShee
 
 import AttachmentList from "@/components/AttachmentList";
 import Button from "@/components/Button";
-import Card from "@/components/Card";
 import CategoryPicker from "@/components/CategoryPicker";
 import DatePickerField from "@/components/DatePickerField";
 import { Text, useThemeColor } from "@/components/Themed";
+import Hero, { HeroBadge, HeroBadgeText } from "@/components/Hero";
 import { useAccentTints } from "@/hooks/useAccentTints";
+import { useBrandTints } from "@/hooks/useBrandTints";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { useToastStore } from "@/store/useToastStore";
 import { ExpenseCategory } from "@/types/expense";
 
-const BRAND_INK = "#16130F";
-const BRAND_ROSE = "#E11D48";
-const BRAND_AMBER = "#F59E0B";
 
 const pad = (value: number) => value.toString().padStart(2, "0");
 
@@ -50,6 +48,7 @@ export default function NewExpenseScreen() {
   const removeAttachment = useExpensesStore((s) => s.removeAttachment);
   const showToast = useToastStore((s) => s.show);
   const accentTints = useAccentTints();
+  const brand = useBrandTints();
   const borderColor = useThemeColor({}, "border");
   const backgroundColor = useThemeColor({}, "background");
   const surface = useThemeColor({}, "surface");
@@ -114,21 +113,18 @@ export default function NewExpenseScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
       >
-        <Card style={[styles.hero, { backgroundColor: BRAND_INK, overflow: "hidden" }]}>
-          <View style={[styles.heroRoseGlow, { backgroundColor: BRAND_ROSE }]} />
-          <View style={[styles.heroAmberGlow, { backgroundColor: BRAND_AMBER }]} />
-          <View style={styles.heroTopRow}>
-            <View style={styles.heroIcon}>
-              <SymbolView name={{ ios: "creditcard.fill", android: "credit_card", web: "credit_card" }} size={24} tintColor="#FFFFFF" />
-            </View>
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>{t("expenses.currency")}</Text>
-            </View>
-          </View>
-          <Text style={styles.heroKicker}>{t("expenses.quickKicker")}</Text>
-          <Text style={styles.heroTitle}>{t("expenses.quickTitle")}</Text>
-          <Text style={styles.heroSubtitle}>{t("expenses.quickSubtitle")}</Text>
-        </Card>
+        <Hero
+          variant="brand"
+          icon={{ ios: "creditcard.fill", android: "credit_card", web: "credit_card" }}
+          kicker={t("expenses.quickKicker")}
+          title={t("expenses.quickTitle")}
+          subtitle={t("expenses.quickSubtitle")}
+          trailing={
+            <HeroBadge>
+              <HeroBadgeText>{t("expenses.currency")}</HeroBadgeText>
+            </HeroBadge>
+          }
+        />
 
         <View style={styles.amountPanel}>
           <Text style={styles.sectionEyebrow}>{t("expenses.amountLabel")}</Text>
@@ -251,37 +247,6 @@ export default function NewExpenseScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   container: { padding: 16, gap: 16, paddingBottom: 44 },
-  hero: { borderRadius: 24, gap: 8, padding: 20, position: "relative" },
-  heroRoseGlow: { position: "absolute", width: 190, height: 190, borderRadius: 95, top: -86, right: -58, opacity: 0.25 },
-  heroAmberGlow: { position: "absolute", width: 130, height: 130, borderRadius: 65, bottom: -48, left: -34, opacity: 0.18 },
-  heroTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "transparent" },
-  heroIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  heroBadge: {
-    minHeight: 28,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  heroBadgeText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800", backgroundColor: "transparent" },
-  heroKicker: {
-    color: "#FFE4EA",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    backgroundColor: "transparent",
-  },
-  heroTitle: { color: "#FFFFFF", fontSize: 27, fontWeight: "800", backgroundColor: "transparent" },
-  heroSubtitle: { color: "#FFFFFF", fontSize: 14, lineHeight: 20, opacity: 0.85, backgroundColor: "transparent" },
   amountPanel: { gap: 9 },
   sectionEyebrow: { fontSize: 12, fontWeight: "800", letterSpacing: 0.4, textTransform: "uppercase", opacity: 0.62 },
   amountInputWrap: {

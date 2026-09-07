@@ -135,3 +135,65 @@ export const ModuleTintsMasculine = {
     food: '#2A3226',
   },
 };
+// --- Brand-tokens -----------------------------------------------------------
+// "Ink"-hero'en (mørkt brandkort med to farvede glød-cirkler) er et bevidst
+// mørkt fremhævningskort i BEGGE temaer — derfor er `ink` ens i light/dark.
+// Den er stadig defineret pr. tema, så den kan justeres ét sted.
+//
+// Glød-farverne følger brugerens palet på samme måde som CycleTints/
+// MasculineTints, så en maskulin profil ikke får rosa glød og rosa accenter.
+// Brug ALDRIG rå hex til disse — hent dem via useBrandTints().
+
+export const BrandTints = {
+  light: {
+    ink: '#16130F',
+    inkDeep: '#15100D',
+    glowPrimary: '#E11D48',
+    glowSecondary: '#F59E0B',
+    onBrand: '#FFFFFF',
+    kickerOnBrand: '#FFE4EA',
+    veil: 'rgba(255,255,255,0.12)',
+    veilMedium: 'rgba(255,255,255,0.18)',
+    veilStrong: 'rgba(255,255,255,0.2)',
+    hairline: 'rgba(255,255,255,0.08)',
+  },
+  dark: {
+    ink: '#16130F',
+    inkDeep: '#15100D',
+    glowPrimary: '#E11D48',
+    glowSecondary: '#F59E0B',
+    onBrand: '#FFFFFF',
+    kickerOnBrand: '#FFE4EA',
+    veil: 'rgba(255,255,255,0.12)',
+    veilMedium: 'rgba(255,255,255,0.18)',
+    veilStrong: 'rgba(255,255,255,0.2)',
+    hairline: 'rgba(255,255,255,0.08)',
+  },
+};
+
+export const BrandTintsMasculine = {
+  light: {
+    ink: '#16130F',
+    inkDeep: '#15100D',
+    glowPrimary: '#6FA3B8',
+    glowSecondary: '#C9A227',
+    onBrand: '#FFFFFF',
+    kickerOnBrand: '#DCE8E4',
+    veil: 'rgba(255,255,255,0.12)',
+    veilMedium: 'rgba(255,255,255,0.18)',
+    veilStrong: 'rgba(255,255,255,0.2)',
+    hairline: 'rgba(255,255,255,0.08)',
+  },
+  dark: {
+    ink: '#16130F',
+    inkDeep: '#15100D',
+    glowPrimary: '#6FA3B8',
+    glowSecondary: '#C9A227',
+    onBrand: '#FFFFFF',
+    kickerOnBrand: '#DCE8E4',
+    veil: 'rgba(255,255,255,0.12)',
+    veilMedium: 'rgba(255,255,255,0.18)',
+    veilStrong: 'rgba(255,255,255,0.2)',
+    hairline: 'rgba(255,255,255,0.08)',
+  },
+};

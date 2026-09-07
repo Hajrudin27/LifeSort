@@ -1,0 +1,35 @@
+{
+  "title": "Om appen",
+  "kicker": "Om appen",
+  "appName": "LifeSort",
+  "tagline": "Økonomi, hverdag og helbred samlet ét sted — på din egen enhed.",
+  "versionBadge": "v{{version}}",
+  "dataEyebrow": "Privatliv",
+  "dataTitle": "Dine data",
+  "dataIntro": "LifeSort samler følsomme ting: hvad du tjener, hvad du fejler, hvad du planlægger. Her er hvad appen gør ved dem.",
+  "points": {
+    "onDevice": {
+      "title": "Gemt på din enhed først",
+      "body": "Alt du skriver, gemmes lokalt med det samme. Appen virker uden internet, og du venter aldrig på en server."
+    },
+    "backup": {
+      "title": "Sikkerhedskopieret til din konto",
+      "body": "Når du er online, sendes dine data videre til din konto, så de følger med til en ny enhed. Du kan se status under Indstillinger."
+    },
+    "keychain": {
+      "title": "Login gemt i enhedens nøglering",
+      "body": "Dine login-tokens ligger i enhedens krypterede nøglering — ikke i app-mappen — og deles hverken til iCloud eller til en ny enhed."
+    },
+    "appSwitcher": {
+      "title": "Skjult i app-skifteren",
+      "body": "Så snart appen forlader forgrunden, dækkes skærmen. Billedet i app-skifteren afslører derfor ikke det, du sidst kiggede på."
+    },
+    "appLock": {
+      "title": "App-lås, hvis du vil",
+      "body": "Du kan slå en PIN-kode eller biometrisk lås til, så appen kræver godkendelse ved åbning. Den er slået fra som standard."
+    }
+  },
+  "settingsLinkTitle": "Indstillinger",
+  "settingsLinkBody": "Slå app-lås til, skift sprog eller tjek din sikkerhedskopi.",
+  "colophon": "LifeSort {{version}}"
+}

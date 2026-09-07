@@ -43,7 +43,7 @@ export async function addTodoToCalendar(todo: TodoItem) {
 
     return { ok: true as const };
   } catch (error) {
-    console.log('Todo calendar sync error:', error);
+    if (__DEV__) console.warn('[calendar] todo sync:', error);
     return { ok: false as const, reason: 'unavailable' as const };
   }
 }

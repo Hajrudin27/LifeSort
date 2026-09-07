@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 // Dansk
+import da_about from './locales/da/about.json';
 import da_appLock from './locales/da/appLock.json';
 import da_auth from './locales/da/auth.json';
 import da_backup from './locales/da/backup.json';
@@ -30,6 +31,7 @@ import da_travel from './locales/da/travel.json';
 import da_warranties from './locales/da/warranties.json';
 
 // Engelsk
+import en_about from './locales/en/about.json';
 import en_appLock from './locales/en/appLock.json';
 import en_auth from './locales/en/auth.json';
 import en_backup from './locales/en/backup.json';
@@ -85,6 +87,7 @@ const resources = {
       healthInfo: da_healthInfo,
       auth: da_auth,
       appLock: da_appLock,
+      about: da_about,
       search: da_search
     },
   },
@@ -115,6 +118,7 @@ const resources = {
       healthInfo: en_healthInfo,
       auth: en_auth,
       appLock: en_appLock,
+      about: en_about,
       search: en_search
     },
   },

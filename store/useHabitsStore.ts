@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { supabase } from '@/lib/supabase';
+import { trackSync } from '@/store/useSyncStatusStore';
 import { Habit, HabitDirection } from '@/types/life';
 
 function newId() {
@@ -97,7 +98,8 @@ export const useHabitsStore = create<HabitsState>()(
           .select('id, title, direction, target_per_week, logs, created_at')
           .eq('user_id', userId);
 
-        if (error || !data) return;
+        if (!trackSync('habits', 'fetch', { error })) return;
+        if (!data) return;
 
         set((state) => {
           const existingIds = new Set(state.habits.map((h) => h.id));

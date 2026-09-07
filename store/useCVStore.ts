@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { supabase } from '@/lib/supabase';
+import { reportSyncFailure } from '@/store/useSyncStatusStore';
 import { CVPersonalInfo, CvVersion, EducationEntry, ExperienceEntry, LanguageEntry, LanguageProficiency } from '@/types/cv';
 
 function newId() {
@@ -52,7 +53,7 @@ async function syncPersonalInfo(userId: string, info: CVPersonalInfo) {
     website: info.website ?? null,
     summary: info.summary ?? null,
   });
-  if (error) console.log('CV sync error (personalInfo):', error.message);
+  if (error) reportSyncFailure('cv', 'personalInfo', error);
 }
 
 function educationToRow(userId: string, e: EducationEntry) {
@@ -116,7 +117,7 @@ export const useCVStore = create<CVState>()(
         getUserId().then((userId) => {
           if (!userId) return;
           supabase.from('cv_education').upsert(educationToRow(userId, newEntry)).then(({ error }) => {
-            if (error) console.log('CV sync error (addEducation):', error.message);
+            if (error) reportSyncFailure('cv', 'addEducation', error);
           });
         });
       },
@@ -127,7 +128,7 @@ export const useCVStore = create<CVState>()(
           getUserId().then((userId) => {
             if (!userId) return;
             supabase.from('cv_education').upsert(educationToRow(userId, target)).then(({ error }) => {
-              if (error) console.log('CV sync error (updateEducation):', error.message);
+              if (error) reportSyncFailure('cv', 'updateEducation', error);
             });
           });
         }
@@ -137,7 +138,7 @@ export const useCVStore = create<CVState>()(
         getUserId().then((userId) => {
           if (!userId) return;
           supabase.from('cv_education').delete().eq('user_id', userId).eq('id', id).then(({ error }) => {
-            if (error) console.log('CV sync error (removeEducation):', error.message);
+            if (error) reportSyncFailure('cv', 'removeEducation', error);
           });
         });
       },
@@ -149,7 +150,7 @@ export const useCVStore = create<CVState>()(
         getUserId().then((userId) => {
           if (!userId) return;
           supabase.from('cv_experience').upsert(experienceToRow(userId, newEntry)).then(({ error }) => {
-            if (error) console.log('CV sync error (addExperience):', error.message);
+            if (error) reportSyncFailure('cv', 'addExperience', error);
           });
         });
       },
@@ -160,7 +161,7 @@ export const useCVStore = create<CVState>()(
           getUserId().then((userId) => {
             if (!userId) return;
             supabase.from('cv_experience').upsert(experienceToRow(userId, target)).then(({ error }) => {
-              if (error) console.log('CV sync error (updateExperience):', error.message);
+              if (error) reportSyncFailure('cv', 'updateExperience', error);
             });
           });
         }
@@ -170,7 +171,7 @@ export const useCVStore = create<CVState>()(
         getUserId().then((userId) => {
           if (!userId) return;
           supabase.from('cv_experience').delete().eq('user_id', userId).eq('id', id).then(({ error }) => {
-            if (error) console.log('CV sync error (removeExperience):', error.message);
+            if (error) reportSyncFailure('cv', 'removeExperience', error);
           });
         });
       },
@@ -182,7 +183,7 @@ export const useCVStore = create<CVState>()(
         getUserId().then((userId) => {
           if (!userId) return;
           supabase.from('cv_languages').upsert(languageToRow(userId, newEntry)).then(({ error }) => {
-            if (error) console.log('CV sync error (addLanguage):', error.message);
+            if (error) reportSyncFailure('cv', 'addLanguage', error);
           });
         });
       },
@@ -193,7 +194,7 @@ export const useCVStore = create<CVState>()(
           getUserId().then((userId) => {
             if (!userId) return;
             supabase.from('cv_languages').upsert(languageToRow(userId, target)).then(({ error }) => {
-              if (error) console.log('CV sync error (updateLanguage):', error.message);
+              if (error) reportSyncFailure('cv', 'updateLanguage', error);
             });
           });
         }
@@ -203,7 +204,7 @@ export const useCVStore = create<CVState>()(
         getUserId().then((userId) => {
           if (!userId) return;
           supabase.from('cv_languages').delete().eq('user_id', userId).eq('id', id).then(({ error }) => {
-            if (error) console.log('CV sync error (removeLanguage):', error.message);
+            if (error) reportSyncFailure('cv', 'removeLanguage', error);
           });
         });
       },
@@ -215,7 +216,7 @@ export const useCVStore = create<CVState>()(
         getUserId().then((userId) => {
           if (!userId) return;
           supabase.from('cv_versions').upsert(versionToRow(userId, newVersion)).then(({ error }) => {
-            if (error) console.log('CV sync error (addVersion):', error.message);
+            if (error) reportSyncFailure('cv', 'addVersion', error);
           });
         });
       },
@@ -224,7 +225,7 @@ export const useCVStore = create<CVState>()(
         getUserId().then((userId) => {
           if (!userId) return;
           supabase.from('cv_versions').delete().eq('user_id', userId).eq('id', id).then(({ error }) => {
-            if (error) console.log('CV sync error (removeVersion):', error.message);
+            if (error) reportSyncFailure('cv', 'removeVersion', error);
           });
         });
       },

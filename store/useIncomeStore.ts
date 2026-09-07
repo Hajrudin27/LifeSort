@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { supabase } from '@/lib/supabase';
+import { trackSync } from '@/store/useSyncStatusStore';
 
 interface IncomeState {
   incomeByMonth: Record<string, number>; // nøgle: "2026-08"
@@ -46,7 +47,8 @@ export const useIncomeStore = create<IncomeState>()(
           .select('month_key, amount')
           .eq('user_id', userId);
 
-        if (error || !data) return;
+        if (!trackSync('income', 'fetch', { error })) return;
+        if (!data) return;
 
         set((state) => {
           const merged = { ...state.incomeByMonth };

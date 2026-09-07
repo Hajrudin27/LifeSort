@@ -257,7 +257,7 @@ function RootLayoutNav({ language }: { language: string | null }) {
               title: t("expenses.newScreenTitle"),
             }}
           />
-          <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+          <Stack.Screen name="modal" options={{ presentation: "modal", title: t("about.title") }} />
           <Stack.Screen
             name="expenses/edit/[id]"
             options={{ title: t("expenses.edit") }}

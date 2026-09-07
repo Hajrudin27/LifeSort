@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { supabase } from '@/lib/supabase';
+import { trackSync } from '@/store/useSyncStatusStore';
 import { TodoImportance, TodoItem } from '@/types/life';
 import { createSyncQueue } from '@/utils/shared/syncQueue';
 
@@ -99,7 +100,8 @@ export const useTodoStore = create<TodoState>()(
           .select('id, title, description, importance, due_date, completed, created_at')
           .eq('user_id', userId);
 
-        if (error || !data) return;
+        if (!trackSync('todos', 'fetch', { error })) return;
+        if (!data) return;
 
         set((state) => {
           const existingIds = new Set(state.todos.map((t) => t.id));

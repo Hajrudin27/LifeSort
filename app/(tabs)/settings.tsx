@@ -10,6 +10,7 @@ import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useBrandTints } from "@/hooks/useBrandTints";
 import { useAccentTints } from "@/hooks/useAccentTints";
+import { useSyncStatusStore } from "@/store/useSyncStatusStore";
 import { useTabBarScroll } from "@/hooks/useTabBarScroll";
 import { useAppLockStore } from "@/store/useAppLockStore";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -54,6 +55,19 @@ export default function SettingsScreen() {
   const theme = Colors[colorScheme];
   const accentTints = useAccentTints();
   const backgroundColor = useThemeColor({}, "background");
+  const syncFailures = useSyncStatusStore((st) => st.failures);
+  const lastSyncAt = useSyncStatusStore((st) => st.lastSuccessAt);
+  const failedModules = Object.keys(syncFailures);
+  const syncDescription = failedModules.length
+    ? t("settings.syncPendingDescription", { count: failedModules.length })
+    : lastSyncAt
+      ? t("settings.syncLastDescription", {
+          when: new Date(lastSyncAt).toLocaleString(i18n.language === "da" ? "da-DK" : "en-GB", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        })
+      : t("settings.syncNeverDescription");
   const brand = useBrandTints();
   const borderColor = useThemeColor({}, "border");
   const danger = useThemeColor({}, "danger");
@@ -332,6 +346,14 @@ export default function SettingsScreen() {
             title: t("backup.title"),
             description: t("settings.backupDescription"),
             onPress: () => router.push("/settings/backup"),
+          })}
+          <View style={[styles.divider, { backgroundColor: borderColor }]} />
+          {renderRow({
+            icon: failedModules.length
+              ? { ios: "exclamationmark.arrow.triangle.2.circlepath", android: "sync_problem", web: "sync_problem" }
+              : { ios: "checkmark.icloud.fill", android: "cloud_done", web: "cloud_done" },
+            title: t("settings.syncStatusTitle"),
+            description: syncDescription,
           })}
         </View>
       </View>

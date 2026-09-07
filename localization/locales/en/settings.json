@@ -32,5 +32,10 @@
   "signOutButton": "Sign out",
   "signOutConfirmTitle": "Sign out?",
   "signOutConfirmMessage": "You'll be sent back to the sign-in screen.",
-  "languageLabel": "Language"
+  "languageLabel": "Language",
+  "syncStatusTitle": "Sync",
+  "syncLastDescription": "Everything is backed up. Last: {{when}}",
+  "syncNeverDescription": "Not backed up to your account yet",
+  "syncPendingDescription_one": "{{count}} area is waiting to be backed up. This happens automatically once you are back online.",
+  "syncPendingDescription_other": "{{count}} areas are waiting to be backed up. This happens automatically once you are back online."
 }

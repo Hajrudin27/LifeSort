@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { supabase } from "@/lib/supabase";
+import { trackSync } from '@/store/useSyncStatusStore';
 import { Attachment } from "@/types/attachment";
 import { Warranty, WarrantyType } from "@/types/warranty";
 import { deleteAttachmentRemote, fetchAttachmentsFor, uploadAttachment } from "@/utils/shared/attachmentSync";
@@ -172,7 +173,8 @@ export const useWarrantiesStore = create<WarrantiesState>()(
           .select("id, name, type, expiry_date, notes, created_at")
           .eq("user_id", userId);
 
-        if (error || !data) return;
+        if (!trackSync('warranties', 'fetch', { error })) return;
+        if (!data) return;
 
         const existingIds = new Set(get().warranties.map((w) => w.id));
         const newRows = data.filter((row) => !existingIds.has(row.id));

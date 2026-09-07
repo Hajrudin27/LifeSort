@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { getSeedRecipesForLanguage } from '@/data/seedRecipes';
 import { supabase } from '@/lib/supabase';
+import { trackSync, reportSyncFailure } from '@/store/useSyncStatusStore';
 import i18n from '@/localization/i18n';
 import { GlobalOffer, GlobalStandardPrice, GroceryOffer, GroceryPurchase, MealType, PantryItem, Recipe, RecipeIngredient, SavedPlanSlot, ShoppingListItem, StandardPrice } from '@/types/food';
 
@@ -17,8 +18,8 @@ async function getUserId(): Promise<string | null> {
 }
 
 function logIfError(label: string) {
-  return ({ error }: { error: any }) => {
-    if (error) console.log(`Food sync error (${label}):`, error.message ?? error);
+  return (result: { error: any }) => {
+    trackSync('food', label, result);
   };
 }
 
@@ -317,17 +318,17 @@ export const useFoodStore = create<FoodState>()(
           supabase.from('global_offers').select('id, offer_price, valid_from, valid_to, standard_price:global_standard_prices(product_name, store)'),
         ]);
 
-        if (budgetResult.error) console.log('Food fetch error (budget):', budgetResult.error.message);
-        if (purchasesResult.error) console.log('Food fetch error (purchases):', purchasesResult.error.message);
-        if (pantryResult.error) console.log('Food fetch error (pantry):', pantryResult.error.message);
-        if (shoppingResult.error) console.log('Food fetch error (shopping):', shoppingResult.error.message);
-        if (offersResult.error) console.log('Food fetch error (offers):', offersResult.error.message);
-        if (recipesResult.error) console.log('Food fetch error (recipes):', recipesResult.error.message);
-        if (pricesResult.error) console.log('Food fetch error (prices):', pricesResult.error.message);
-        if (plansResult.error) console.log('Food fetch error (plans):', plansResult.error.message);
-        if (storesResult.error) console.log('Food fetch error (stores):', storesResult.error.message);
-        if (globalPricesResult.error) console.log('Food fetch error (global prices):', globalPricesResult.error.message);
-        if (globalOffersResult.error) console.log('Food fetch error (global offers):', globalOffersResult.error.message);
+        if (budgetResult.error) reportSyncFailure('food', 'budget', budgetResult.error);
+        if (purchasesResult.error) reportSyncFailure('food', 'purchases', purchasesResult.error);
+        if (pantryResult.error) reportSyncFailure('food', 'pantry', pantryResult.error);
+        if (shoppingResult.error) reportSyncFailure('food', 'shopping', shoppingResult.error);
+        if (offersResult.error) reportSyncFailure('food', 'offers', offersResult.error);
+        if (recipesResult.error) reportSyncFailure('food', 'recipes', recipesResult.error);
+        if (pricesResult.error) reportSyncFailure('food', 'prices', pricesResult.error);
+        if (plansResult.error) reportSyncFailure('food', 'plans', plansResult.error);
+        if (storesResult.error) reportSyncFailure('food', 'stores', storesResult.error);
+        if (globalPricesResult.error) reportSyncFailure('food', 'global prices', globalPricesResult.error);
+        if (globalOffersResult.error) reportSyncFailure('food', 'global offers', globalOffersResult.error);
 
         set((state) => {
           const next: Partial<FoodState> = {};

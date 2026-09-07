@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { supabase } from "@/lib/supabase";
+import { trackSync } from '@/store/useSyncStatusStore';
 import {
   PackingCategory,
   PackingItem,
@@ -395,7 +396,8 @@ export const useTripsStore = create<TripsState>()(
           .select('trip_id, owner_id, user_id, invited_email, status, invited_at')
           .eq('trip_id', tripId);
 
-        if (error || !data) return;
+        if (!trackSync('trips', 'fetchParticipants', { error })) return;
+        if (!data) return;
 
         set((state) => {
           const others = state.participants.filter((p) => p.tripId !== tripId);

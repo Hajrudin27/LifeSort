@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { supabase } from '@/lib/supabase';
+import { trackSync } from '@/store/useSyncStatusStore';
 import { LifeGoal } from '@/types/life';
 
 function newId() {
@@ -114,7 +115,8 @@ export const useLifeGoalsStore = create<LifeGoalsState>()(
           .select('id, title, description, deadline, sub_goals, created_at')
           .eq('user_id', userId);
 
-        if (error || !data) return;
+        if (!trackSync('lifeGoals', 'fetch', { error })) return;
+        if (!data) return;
 
         set((state) => {
           const existingIds = new Set(state.goals.map((g) => g.id));

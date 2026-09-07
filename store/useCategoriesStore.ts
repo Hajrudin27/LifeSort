@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { supabase } from "@/lib/supabase";
+import { trackSync } from '@/store/useSyncStatusStore';
 
 export interface Category {
   id: string;
@@ -61,7 +62,8 @@ export const useCategoriesStore = create<CategoriesState>()(
           .eq("user_id", userId)
           .eq("is_built_in", false);
 
-        if (error || !data) return;
+        if (!trackSync('categories', 'fetch', { error })) return;
+        if (!data) return;
 
         set((state) => {
           const existingIds = new Set(state.categories.map((c) => c.id.toLowerCase()));

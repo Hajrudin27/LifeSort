@@ -32,5 +32,10 @@
   "signOutButton": "Log ud",
   "signOutConfirmTitle": "Log ud?",
   "signOutConfirmMessage": "Du bliver sendt tilbage til login-skærmen.",
-  "languageLabel": "Sprog"
+  "languageLabel": "Sprog",
+  "syncStatusTitle": "Synkronisering",
+  "syncLastDescription": "Alt er sikkerhedskopieret. Sidst: {{when}}",
+  "syncNeverDescription": "Endnu ikke sikkerhedskopieret til din konto",
+  "syncPendingDescription_one": "{{count}} område venter på at blive sikkerhedskopieret. Det sker automatisk, når du er online igen.",
+  "syncPendingDescription_other": "{{count}} områder venter på at blive sikkerhedskopieret. Det sker automatisk, når du er online igen."
 }

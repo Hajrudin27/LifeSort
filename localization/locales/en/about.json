@@ -1,0 +1,35 @@
+{
+  "title": "About",
+  "kicker": "About the app",
+  "appName": "LifeSort",
+  "tagline": "Money, everyday life and health in one place — on your own device.",
+  "versionBadge": "v{{version}}",
+  "dataEyebrow": "Privacy",
+  "dataTitle": "Your data",
+  "dataIntro": "LifeSort collects sensitive things: what you earn, what you are treated for, what you are planning. Here is what the app does with them.",
+  "points": {
+    "onDevice": {
+      "title": "Stored on your device first",
+      "body": "Everything you write is saved locally right away. The app works without a connection, and you never wait on a server."
+    },
+    "backup": {
+      "title": "Backed up to your account",
+      "body": "When you are online, your data is sent on to your account so it follows you to a new device. You can check the status under Settings."
+    },
+    "keychain": {
+      "title": "Login kept in the device keychain",
+      "body": "Your login tokens live in the device's encrypted keychain — not in the app folder — and are shared with neither iCloud nor a new device."
+    },
+    "appSwitcher": {
+      "title": "Hidden in the app switcher",
+      "body": "The screen is covered the moment the app leaves the foreground, so the app switcher preview never reveals what you were last looking at."
+    },
+    "appLock": {
+      "title": "App lock, if you want it",
+      "body": "You can turn on a PIN or biometric lock so the app asks for approval when opened. It is off by default."
+    }
+  },
+  "settingsLinkTitle": "Settings",
+  "settingsLinkBody": "Turn on the app lock, change language or check your backup.",
+  "colophon": "LifeSort {{version}}"
+}

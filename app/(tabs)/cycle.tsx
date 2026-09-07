@@ -14,6 +14,7 @@ import { Text, useThemeColor, View } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import { CycleTints } from "@/constants/Colors";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { useTabBarScroll } from "@/hooks/useTabBarScroll";
 import { useCycleStore } from "@/store/useCycleStore";
 import { FlowIntensity, Symptom } from "@/types/cycle";
 import {
@@ -62,6 +63,7 @@ export default function CycleScreen() {
   const surface = useThemeColor({}, "surface");
   const backgroundColor = useThemeColor({}, "background");
   const locale = i18n.language === "da" ? "da-DK" : "en-US";
+  const handleTabBarScroll = useTabBarScroll();
 
   const cycles = useCycleStore((s) => s.cycles);
   const symptomLogs = useCycleStore((s) => s.symptomLogs);
@@ -213,6 +215,8 @@ export default function CycleScreen() {
     <ScrollView
       style={{ backgroundColor }}
       contentContainerStyle={styles.container}
+      onScroll={handleTabBarScroll}
+      scrollEventThrottle={16}
     >
       <Card
         style={[

@@ -1,72 +1,94 @@
-import { Link, Tabs } from 'expo-router';
+import { type Href, Link, Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
+import FloatingTabBar from '@/components/FloatingTabBar';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { useAccentTints } from '@/hooks/useAccentTints';
-import { useProfileStore } from "@/store/useProfileStore";
+import { useProfileStore } from '@/store/useProfileStore';
+
+type IconName = { ios: string; android: string; web: string };
+
+type HeaderIconLinkProps = {
+  href: Href;
+  icon: IconName;
+  side: 'left' | 'right';
+  tintColor: string;
+  backgroundColor: string;
+  borderColor: string;
+};
+
+function HeaderIconLink({ href, icon, side, tintColor, backgroundColor, borderColor }: HeaderIconLinkProps) {
+  const buttonStyle = StyleSheet.flatten([
+    styles.headerIconButton,
+    side === 'left' ? styles.headerIconLeft : styles.headerIconRight,
+    { backgroundColor, borderColor },
+  ]);
+
+  return (
+    <Link href={href} asChild>
+      <Pressable style={buttonStyle}>
+        {({ pressed }) => (
+          <SymbolView
+            name={icon as any}
+            size={20}
+            tintColor={tintColor}
+            style={{ opacity: pressed ? 0.5 : 1 }}
+          />
+        )}
+      </Pressable>
+    </Link>
+  );
+}
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
   const theme = Colors[colorScheme];
-  const accentTints = useAccentTints();
   const gender = useProfileStore((s) => s.profile.gender);
   const showCycleTab = gender === 'female';
+  const navBorder = 'rgba(253,246,237,0.1)';
+  const headerButtonBackground = colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(22,19,15,0.05)';
 
   return (
     <Tabs
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: accentTints.accent,
-        tabBarInactiveTintColor: theme.tabIconDefault,
-        tabBarStyle: {
-          backgroundColor: theme.surface,
-          borderTopColor: theme.border,
-          borderTopWidth: 1,
+        sceneStyle: { backgroundColor: theme.background },
+        tabBarHideOnKeyboard: true,
+        headerStyle: {
+          backgroundColor: theme.background,
         },
+        headerTitleStyle: styles.headerTitle,
+        headerTintColor: theme.text,
+        headerShadowVisible: false,
         headerShown: useClientOnlyValue(false, true),
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: t('home.title'),
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'house.fill', android: 'home', web: 'home' }}
-              tintColor={color}
-              size={26}
+          headerLeft: () => (
+            <HeaderIconLink
+              href="/search"
+              icon={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
+              side="left"
+              tintColor={theme.text}
+              backgroundColor={headerButtonBackground}
+              borderColor={navBorder}
             />
           ),
-          headerLeft: () => (
-            <Link href="/search" asChild>
-              <Pressable style={{ marginLeft: 15 }}>
-                {({ pressed }) => (
-                  <SymbolView
-                    name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
-                    size={22}
-                    tintColor={theme.text}
-                    style={{ opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
           headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable style={{ marginRight: 15 }}>
-                {({ pressed }) => (
-                  <SymbolView
-                    name={{ ios: 'info.circle', android: 'info', web: 'info' }}
-                    size={25}
-                    tintColor={theme.text}
-                    style={{ opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
+            <HeaderIconLink
+              href="/modal"
+              icon={{ ios: 'info.circle', android: 'info', web: 'info' }}
+              side="right"
+              tintColor={theme.text}
+              backgroundColor={headerButtonBackground}
+              borderColor={navBorder}
+            />
           ),
         }}
       />
@@ -74,26 +96,15 @@ export default function TabLayout() {
         name="economy"
         options={{
           title: t('economy.title'),
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'chart.pie.fill', android: 'pie_chart', web: 'pie_chart' }}
-              tintColor={color}
-              size={26}
-            />
-          ),
           headerRight: () => (
-            <Link href="/economy/insights" asChild>
-              <Pressable style={{ marginRight: 15 }}>
-                {({ pressed }) => (
-                  <SymbolView
-                    name={{ ios: 'chart.line.uptrend.xyaxis', android: 'trending_up', web: 'trending_up' }}
-                    size={24}
-                    tintColor={theme.text}
-                    style={{ opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
+            <HeaderIconLink
+              href="/economy/insights"
+              icon={{ ios: 'chart.line.uptrend.xyaxis', android: 'trending_up', web: 'trending_up' }}
+              side="right"
+              tintColor={theme.text}
+              backgroundColor={headerButtonBackground}
+              borderColor={navBorder}
+            />
           ),
         }}
       />
@@ -101,13 +112,6 @@ export default function TabLayout() {
         name="life"
         options={{
           title: t('life.title'),
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'star.fill', android: 'star', web: 'star' }}
-              tintColor={color}
-              size={26}
-            />
-          ),
         }}
       />
       <Tabs.Screen
@@ -115,28 +119,36 @@ export default function TabLayout() {
         options={{
           title: t('cycle.title'),
           href: showCycleTab ? undefined : null,
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'drop.fill', android: 'water_drop', web: 'water_drop' }}
-              tintColor={color}
-              size={26}
-            />
-          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: t('settings.title'),
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'gearshape.fill', android: 'settings', web: 'settings' }}
-              tintColor={color}
-              size={26}
-            />
-          ),
+          tabBarLabel: t('settings.tabLabel'),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  headerIconButton: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  headerIconLeft: {
+    marginLeft: 16,
+  },
+  headerIconRight: {
+    marginRight: 16,
+  },
+});

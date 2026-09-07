@@ -10,6 +10,7 @@ import { Text, useThemeColor, View } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import { sharedStyles } from "@/constants/sharedStyles";
 import { useAccentTints } from "@/hooks/useAccentTints";
+import { useTabBarScroll } from "@/hooks/useTabBarScroll";
 import { useAppLockStore } from "@/store/useAppLockStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Language, useSettingsStore } from "@/store/useSettingsStore";
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
   const borderColor = useThemeColor({}, "border");
   const danger = useThemeColor({}, "danger");
   const textMuted = useThemeColor({}, "textMuted");
+  const handleTabBarScroll = useTabBarScroll();
 
   const lockEnabled = useAppLockStore((s) => s.lockEnabled);
   const setLockEnabled = useAppLockStore((s) => s.setLockEnabled);
@@ -68,7 +70,12 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      onScroll={handleTabBarScroll}
+      scrollEventThrottle={16}
+    >
       <Text style={styles.title}>{t("settings.title")}</Text>
 
       <Text style={styles.sectionLabel}>{t("profile.title")}</Text>

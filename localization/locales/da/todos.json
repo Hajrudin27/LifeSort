@@ -5,7 +5,18 @@
   "addButton": "+ Tilføj opgave",
   "titlePlaceholder": "Titel",
   "descriptionPlaceholder": "Beskrivelse (valgfrit)",
+  "quickKicker": "Hurtig opgave",
+  "quickTitle": "Fang den, før den smutter",
+  "quickSubtitle": "Skriv opgaven, vælg vigtighed og giv den en deadline på få sekunder.",
+  "titleLabel": "Opgave",
+  "detailsLabel": "Detaljer",
   "dueDateLabel": "Deadline",
+  "dueQuickLabel": "Hvornår skal den klares?",
+  "dueShortcutNone": "Ingen deadline",
+  "dueShortcutToday": "I dag",
+  "dueShortcutTomorrow": "I morgen",
+  "dueShortcutWeek": "Om 7 dage",
+  "customDate": "Vælg dato",
   "importanceLabel": "Vigtighed",
   "importance": {
     "low": "Lav",
@@ -23,5 +34,6 @@
   "showCompleted": "Vis fuldførte",
   "markComplete": "Marker som fuldført",
   "markActive": "Marker som aktiv",
+  "createdToast": "Opgaven er gemt",
   "dueDatePhaseHint": "Denne dato falder i din forventede menstruationsperiode."
 }

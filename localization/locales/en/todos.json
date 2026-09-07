@@ -5,7 +5,18 @@
   "addButton": "+ Add task",
   "titlePlaceholder": "Title",
   "descriptionPlaceholder": "Description (optional)",
+  "quickKicker": "Quick task",
+  "quickTitle": "Catch it before it slips",
+  "quickSubtitle": "Write the task, choose importance, and add a deadline in seconds.",
+  "titleLabel": "Task",
+  "detailsLabel": "Details",
   "dueDateLabel": "Due date",
+  "dueQuickLabel": "When should it be done?",
+  "dueShortcutNone": "No deadline",
+  "dueShortcutToday": "Today",
+  "dueShortcutTomorrow": "Tomorrow",
+  "dueShortcutWeek": "In 7 days",
+  "customDate": "Choose date",
   "importanceLabel": "Importance",
   "importance": {
     "low": "Low",
@@ -23,5 +34,6 @@
   "showCompleted": "Show completed",
   "markComplete": "Mark as complete",
   "markActive": "Mark as active",
+  "createdToast": "Task saved",
   "dueDatePhaseHint": "This date falls within your expected period."
 }

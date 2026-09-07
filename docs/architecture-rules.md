@@ -34,8 +34,9 @@ private to it.
 | **R3** | A store may only import platform stores. | Two domains sharing state directly cannot be separated later. |
 | **R4** | A shared component or hook may only import platform stores. A module-owned component may also import its own module's stores. | The design system must not carry domain knowledge, or it stops being shared. |
 | **R5** | `utils/<domain>/` must not import any store. `utils/shared/` and `utils/auth/` are exempt as platform services. | Domain logic stays pure, which is why it can be unit-tested directly. |
+| **R6** | A core file must not import a domain store, a domain util, a route or a feature component. See [`docs/core-contract.md`](./core-contract.md). | Core that knows its consumers is not a platform but a hub. Added by APP-004. |
 
-R2, R3 and R5 hold today with no exceptions. R1 and R4 have a frozen baseline.
+R2, R3 and R5 hold today with no exceptions. R1, R4 and R6 have frozen baselines.
 
 ## What to do instead
 
@@ -78,5 +79,7 @@ to forget, and it is removed by APP-071.
   pattern is used in the repo today.
 - It governs stores. Cross-module imports of types, components or utils are not
   restricted, because sharing a type is not the same as sharing state.
-- `core/` does not exist yet, so the master spec's "core must not import a
-  feature" rule has nothing to check. It arrives with APP-004.
+- R6 governs the code that is core **today**, wherever it currently sits, not
+  just the `core/` folder — see the core surface table in
+  [`docs/core-contract.md`](./core-contract.md). `utils/shared/` and
+  `utils/auth/` are exempt from R5 but held to R6 instead, which is stricter.

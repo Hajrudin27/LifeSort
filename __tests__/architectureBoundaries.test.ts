@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * APP-003 — arkitekturens afhængighedsregler.
+ * APP-003 + APP-004 — arkitekturens afhængighedsregler.
  *
  * Formålet er ikke at rette den kobling der allerede findes, men at fryse den:
  * et modul der ikke kan isoleres, kan hverken slås fra, testes for sig eller
@@ -31,6 +31,61 @@ const PLATFORM_MODULES = ['core-shell', 'account'];
  * bliver til registry-opslag i APP-009/APP-021.
  */
 const PLATFORM_UTILS_DIRS = ['shared', 'auth'];
+
+/**
+ * APP-004 — kernens nuværende overflade. Filerne er ikke flyttet til core/ endnu;
+ * specifikationen §3.1 siger udtrykkeligt at de skal flytte, når de alligevel
+ * ændres, frem for i én stor omdøbnings-PR. Kontrakten gælder allerede for dem.
+ * Se docs/core-contract.md.
+ */
+const CORE_TRACK_DIRS = ['core', 'lib', 'constants', 'hooks', 'utils/shared', 'utils/auth'];
+
+/** Kerne-primitiver der ligger fejlplaceret i components/ indtil de flyttes. */
+const CORE_TRACK_FILES = [
+  'components/useColorScheme.ts',
+  'components/useColorScheme.web.ts',
+  'components/useClientOnlyValue.ts',
+  'components/useClientOnlyValue.web.ts',
+];
+
+/**
+ * Kendt kobling fra kerne ud i et domæne pr. 2026-09-07. Må kun skrumpe.
+ * Begge filer er tværgående services, der i dag kender hver eneste store; de
+ * bliver til opslag i module registry'et, og så forsvinder listen.
+ */
+const CORE_BASELINE = [
+  // Logout rydder hver store manuelt. Erstattes af registry-clear i APP-021.
+  'utils/auth/clearAllLocalData.ts -> useCVStore',
+  'utils/auth/clearAllLocalData.ts -> useCareerStore',
+  'utils/auth/clearAllLocalData.ts -> useCategoriesStore',
+  'utils/auth/clearAllLocalData.ts -> useCycleStore',
+  'utils/auth/clearAllLocalData.ts -> useExpensesStore',
+  'utils/auth/clearAllLocalData.ts -> useFoodStore',
+  'utils/auth/clearAllLocalData.ts -> useHabitsStore',
+  'utils/auth/clearAllLocalData.ts -> useHouseholdStore',
+  'utils/auth/clearAllLocalData.ts -> useIncomeStore',
+  'utils/auth/clearAllLocalData.ts -> useLifeGoalsStore',
+  'utils/auth/clearAllLocalData.ts -> useSavingsGoalsStore',
+  'utils/auth/clearAllLocalData.ts -> useTodoStore',
+  'utils/auth/clearAllLocalData.ts -> useTripsStore',
+  'utils/auth/clearAllLocalData.ts -> useWarrantiesStore',
+
+  // Backup-eksport læser hver store manuelt. Erstattes af exportHandler i APP-097.
+  'utils/shared/dataBackup.ts -> useCVStore',
+  'utils/shared/dataBackup.ts -> useCareerStore',
+  'utils/shared/dataBackup.ts -> useCategoriesStore',
+  'utils/shared/dataBackup.ts -> useExpensesStore',
+  'utils/shared/dataBackup.ts -> useFoodStore',
+  'utils/shared/dataBackup.ts -> useHabitsStore',
+  'utils/shared/dataBackup.ts -> useHouseholdStore',
+  'utils/shared/dataBackup.ts -> useIncomeStore',
+  'utils/shared/dataBackup.ts -> useLifeGoalsStore',
+  'utils/shared/dataBackup.ts -> useSavingsGoalsStore',
+  'utils/shared/dataBackup.ts -> useSkillCategoriesStore',
+  'utils/shared/dataBackup.ts -> useTodoStore',
+  'utils/shared/dataBackup.ts -> useTripsStore',
+  'utils/shared/dataBackup.ts -> useWarrantiesStore',
+];
 
 /**
  * Kendt kobling pr. 2026-09-07. Må kun skrumpe.
@@ -228,5 +283,67 @@ describe('R5 — domænelogik er fri for state', () => {
       for (const store of storesUsedBy(file)) violations.push(`${file} -> ${store}`);
     }
     expect(violations).toEqual([]);
+  });
+});
+
+describe('R6 — kernen er dependency-inward', () => {
+  /** Filer der hører til kernen i dag, uanset hvilken mappe de tilfældigvis ligger i. */
+  function coreFiles(): string[] {
+    const fromDirs = CORE_TRACK_DIRS.filter((dir) => fs.existsSync(path.join(REPO_ROOT, dir))).flatMap(listFiles);
+    const misplaced = CORE_TRACK_FILES.filter((file) => fs.existsSync(path.join(REPO_ROOT, file)));
+    return [...new Set([...fromDirs, ...misplaced])].sort();
+  }
+
+  const core = new Set(coreFiles());
+
+  /** En import ud af kernen og ind i et domæne. Kerne-til-kerne er i orden. */
+  function reachesIntoFeature(file: string): string[] {
+    const found: string[] = [];
+
+    for (const store of storesUsedBy(file)) {
+      if (!platformStores.has(store)) found.push(`${file} -> ${store}`);
+    }
+
+    for (const specifier of importsOf(file)) {
+      const domain = specifier.match(/^@\/utils\/([^/]+)\//)?.[1];
+      if (domain && !PLATFORM_UTILS_DIRS.includes(domain)) found.push(`${file} -> ${specifier}`);
+
+      if (/^@\/app\//.test(specifier)) found.push(`${file} -> ${specifier}`);
+
+      // components/ er feature-territorium, undtagen de kerne-primitiver der
+      // stadig ligger der.
+      const component = specifier.match(/^@\/(components\/.+)$/)?.[1];
+      if (component) {
+        const resolved = ['.ts', '.tsx'].map((ext) => `${component}${ext}`).find((candidate) => core.has(candidate));
+        if (!resolved) found.push(`${file} -> ${specifier}`);
+      }
+    }
+
+    return found;
+  }
+
+  const violations = [...core].flatMap(reachesIntoFeature).sort();
+  const baseline = new Set(CORE_BASELINE);
+
+  it('finder rent faktisk kernefiler at kontrollere', () => {
+    // Uden det her ville reglen stille og roligt kunne blive tom.
+    expect(core.size).toBeGreaterThan(20);
+  });
+
+  it('ingen ny import fra kernen ind i et domæne', () => {
+    const added = violations.filter((violation) => !baseline.has(violation));
+    if (added.length > 0) {
+      throw new Error(
+        'Kernen greb ud i et domæne:\n' +
+          added.map((line) => `  ${line}`).join('\n') +
+          '\n\nKernen må ikke kende sine forbrugere — se docs/core-contract.md.',
+      );
+    }
+    expect(added).toEqual([]);
+  });
+
+  it('CORE_BASELINE indeholder ingen forældede undtagelser', () => {
+    const stale = CORE_BASELINE.filter((entry) => !violations.includes(entry));
+    expect(stale).toEqual([]);
   });
 });

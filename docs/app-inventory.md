@@ -53,6 +53,7 @@ in the same change. Do not weaken the test to make a new file pass — add the r
 | Concern | Location |
 | --- | --- |
 | Routes | `app/` (Expo Router, file-based) |
+| Platform layer | `core/` — see [`docs/core-contract.md`](./core-contract.md) |
 | Client state | `store/` (Zustand, mostly `persist` + AsyncStorage) |
 | Domain logic | `utils/<domain>/` |
 | Domain types | `types/` |

@@ -26,6 +26,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0005](./0005-kill-switches-fail-closed.md) | Kill switches are server flags over compiled defaults, and fail closed | Accepted | 2026-09-07 | APP-006 |
 | [0006](./0006-auth-session-in-device-keychain.md) | The auth session lives in the device keychain, chunked | Accepted | 2026-09-07 | Pre-existing |
 | [0007](./0007-app-lock-pin-is-defence-in-depth.md) | The app-lock PIN is defence in depth, not an authorisation boundary | Accepted | 2026-09-07 | Pre-existing |
+| [0008](./0008-primitives-are-frozen-then-migrated.md) | Duplicated primitives are frozen now and migrated by the story that owns the semantics | Accepted | 2026-09-07 | APP-008 |
 
 ## When an ADR is required
 

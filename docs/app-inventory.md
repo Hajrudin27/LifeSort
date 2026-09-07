@@ -59,6 +59,7 @@ in the same change. Do not weaken the test to make a new file pass — add the r
 | Domain types | `types/` |
 | Shared UI | `components/`, `constants/`, `hooks/` |
 | Backend client | `lib/supabase.ts` (publishable/anon key from `EXPO_PUBLIC_*`) |
+| Database migrations | `supabase/migrations/` — only `module_flags` so far; see §8-F10 |
 | File storage | Supabase Storage bucket `attachments` |
 | Copy | `localization/locales/{da,en}/*.json` |
 | Seed content | `data/seedRecipes*.ts` |
@@ -228,6 +229,7 @@ All persisted stores currently use plain (unencrypted) AsyncStorage, including
 | `useThemeStore` | `store/useThemeStore.ts` | `core-shell` | `lifesort-theme` | AsyncStorage (plain) | `settings` | ordinary | Hajrudin Kardasevic |
 | `useSyncStatusStore` | `store/useSyncStatusStore.ts` | `core-shell` | `sync-status` | AsyncStorage (plain) | – | ordinary | Hajrudin Kardasevic |
 | `useTabBarStore` | `store/useTabBarStore.ts` | `core-shell` | – | memory only | – | ordinary | Hajrudin Kardasevic |
+| `useModuleFlagsStore` | `store/useModuleFlagsStore.ts` | `core-shell` | `lifesort-module-flags` | AsyncStorage (plain) | `module_flags` | ordinary | Hajrudin Kardasevic |
 | `useToastStore` | `store/useToastStore.ts` | `core-shell` | – | memory only | – | ordinary | Hajrudin Kardasevic |
 | `useExpensesStore` | `store/useExpensesStore.ts` | `economy` | `lifesort-expenses` | AsyncStorage (plain) | `expenses`, `expense_category_budgets` | financial, document | Hajrudin Kardasevic |
 | `useIncomeStore` | `store/useIncomeStore.ts` | `economy` | `lifesort-income-v2` | AsyncStorage (plain) | `income` | financial | Hajrudin Kardasevic |
@@ -262,6 +264,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | --- | --- | --- | --- | --- |
 | `profiles` | `account` | `store/useProfileStore.ts` | personal | Hajrudin Kardasevic |
 | `settings` | `core-shell` | `store/useSettingsStore.ts`, `store/useThemeStore.ts` | ordinary | Hajrudin Kardasevic |
+| `module_flags` | `core-shell` (shared read-only; operator kill switches) | `store/useModuleFlagsStore.ts` | ordinary | Hajrudin Kardasevic |
 | `expenses` | `economy` | `store/useExpensesStore.ts` | financial | Hajrudin Kardasevic |
 | `expense_category_budgets` | `economy` | `store/useExpensesStore.ts` | financial | Hajrudin Kardasevic |
 | `income` | `economy` | `store/useIncomeStore.ts` | financial | Hajrudin Kardasevic |
@@ -343,6 +346,7 @@ module that owns it.
 | `Themed` | `components/Themed.tsx` | shared | Hajrudin Kardasevic |
 | `Toast` | `components/Toast.tsx` | shared | Hajrudin Kardasevic |
 | `FloatingTabBar` | `components/FloatingTabBar.tsx` | `core-shell` | Hajrudin Kardasevic |
+| `ModuleGate` | `components/ModuleGate.tsx` | `core-shell` | Hajrudin Kardasevic |
 | `useClientOnlyValue` | `components/useClientOnlyValue.ts` | `core-shell` | Hajrudin Kardasevic |
 | `useClientOnlyValue` (web) | `components/useClientOnlyValue.web.ts` | `core-shell` | Hajrudin Kardasevic |
 | `useColorScheme` | `components/useColorScheme.ts` | `core-shell` | Hajrudin Kardasevic |
@@ -416,7 +420,7 @@ later story.
 | F7 | Sync is best-effort per store, with no outbox, revisions or tombstones. | `utils/shared/syncQueue.ts` swallows flush failures by design; stores upsert optimistically and report failures to `useSyncStatusStore`. | APP-031 – APP-035 |
 | F8 | Local backup export omits the health domain. | `utils/shared/dataBackup.ts` `STORE_REGISTRY` covers 15 stores but not `useCycleStore`; `utils/auth/clearAllLocalData.ts` does clear it. Intentional or not, it is undocumented behaviour. | APP-097 |
 | F9 | Two stores write the same table. | `store/useSettingsStore.ts` and `store/useThemeStore.ts` both upsert `settings`. | APP-009 |
-| F10 | No database migrations in the repo. | There is no `supabase/` directory; the schema in §4 is inferred from client calls only and is not version-controlled here. | APP-141 |
+| F10 | The schema is almost entirely unversioned. | `supabase/migrations/` now exists but holds only `module_flags` (added by APP-006). Every other table in §4 is inferred from client calls and lives only in the Supabase project. A baseline migration is still missing. | APP-141 |
 
 ## §9 Out of scope for APP-001
 

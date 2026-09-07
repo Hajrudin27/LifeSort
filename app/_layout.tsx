@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import LockScreen from "@/components/LockScreen";
+import ModuleGate from "@/components/ModuleGate";
 import PrivacyOverlay from "@/components/PrivacyOverlay";
 import Toast from "@/components/Toast";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -34,6 +35,7 @@ import { useHabitsStore } from "@/store/useHabitsStore";
 import { useHouseholdStore } from "@/store/useHouseholdStore";
 import { useIncomeStore } from "@/store/useIncomeStore";
 import { useLifeGoalsStore } from "@/store/useLifeGoalsStore";
+import { useModuleFlagsStore } from "@/store/useModuleFlagsStore";
 import { useProfileStore } from "@/store/useProfileStore";
 import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
@@ -104,6 +106,7 @@ export default function RootLayout() {
   const fetchCV = useCVStore((s) => s.fetchFromSupabase);
   const fetchFood = useFoodStore((s) => s.fetchFromSupabase);
   const fetchCycle = useCycleStore((s) => s.fetchFromSupabase);
+  const fetchModuleFlags = useModuleFlagsStore((s) => s.fetchFromSupabase);
 
   const appLockHasHydrated = useAppLockStore((s) => s.hasHydrated);
   const lockEnabled = useAppLockStore((s) => s.lockEnabled);
@@ -113,6 +116,13 @@ export default function RootLayout() {
 
   useEffect(() => {
     initAuth();
+  }, []);
+
+  // Kill switches hentes ved opstart, ikke ved login: et lukket modul skal også
+  // være lukket for en bruger der ikke er logget ind endnu. Fejler kaldet,
+  // beholder store'en det sidst kendte svar fra disk.
+  useEffect(() => {
+    fetchModuleFlags();
   }, []);
 
   useEffect(() => {
@@ -630,6 +640,7 @@ function RootLayoutNav({ language }: { language: string | null }) {
           <Stack.Screen name="cycle/log-day" options={{ presentation: 'modal', title: t('cycle.logAnotherDayLabel') }} />
         </Stack>
         <Toast />
+        <ModuleGate />
         {isLocked && <LockScreen />}
 
         {/* Skjuler indholdet i app-skifteren. Kun relevant når nogen er logget

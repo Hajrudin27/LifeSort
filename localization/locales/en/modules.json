@@ -1,0 +1,16 @@
+{
+  "unavailableTitle": "Temporarily closed",
+  "unavailableBody": "We have paused this area while we fix a problem. Your data is still here — we have not touched it.",
+  "maintenanceTitle": "Under maintenance",
+  "maintenanceBody": "You can see what you have already saved, but you cannot add or change anything right now.",
+  "retiredTitle": "This area has closed",
+  "retiredBody": "This area is no longer part of LifeSort. Your data is still yours — you can export or delete it under Settings.",
+  "unreleasedTitle": "Not ready yet",
+  "unreleasedBody": "This area has not been opened to users yet.",
+  "internalOnlyTitle": "Internal use only",
+  "internalOnlyBody": "This area is still being built and is not open yet.",
+  "betaOnlyTitle": "Beta testers only",
+  "betaOnlyBody": "This area is open to a small group of testers right now.",
+  "dataSafeNote": "You can always export or delete your data under Settings.",
+  "backButton": "Back"
+}

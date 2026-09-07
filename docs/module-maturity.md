@@ -1,6 +1,6 @@
 # LifeSort — Module Maturity States
 
-**Story:** APP-005 (E0 · Architecture & inventory, P0)
+**Story:** APP-005 (E0 · Architecture & inventory, P0), extended by APP-006
 **Owner:** Hajrudin Kardasevic
 **Code:** [`core/modules/moduleAvailability.ts`](../core/modules/moduleAvailability.ts)
 **Enforced by:** `__tests__/moduleAvailability.test.ts`, on every `npm test`.
@@ -86,11 +86,14 @@ Populating it for real belongs with entitlements and beta membership
 
 ## Not in this story
 
-- **Where the state comes from.** It is declared in code today. Remote flags and
-  kill switches that can change it without a release are **APP-006**.
-- **Consuming it.** Nothing calls the evaluator yet — every module is
-  `available`, so it would change no behaviour. APP-006 wires it, with the safe
-  fallback screen; APP-009 folds `availability` into `ModuleDefinition`.
+- **Where the state comes from.** APP-006 added remote flags on top: the
+  compiled-in table below is the default, and `module_flags` in Supabase can
+  override it without a release. See [`docs/kill-switches.md`](./kill-switches.md).
+- **Enforcing every capability.** `ModuleGate` enforces "can this module be
+  opened" everywhere, and blocks `new`/`edit` screens in maintenance. Screens
+  that read and write in one place still have to consult `canCreate`/`canEdit`
+  themselves — that is module work, and APP-009 folds `availability` into
+  `ModuleDefinition` to make it systematic.
 - **User-chosen modules.** Whether a user has *enabled* a module is a separate
   axis from whether it is *released*. That is **APP-010**, and it must not be
   collapsed into this one: disabling a module must never delete data either.

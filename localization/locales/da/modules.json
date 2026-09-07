@@ -1,0 +1,16 @@
+{
+  "unavailableTitle": "Midlertidigt lukket",
+  "unavailableBody": "Vi har sat området på pause, mens vi retter en fejl. Dine data er der stadig — vi rører dem ikke.",
+  "maintenanceTitle": "Under vedligeholdelse",
+  "maintenanceBody": "Du kan se det, du allerede har gemt, men ikke tilføje eller rette noget lige nu.",
+  "retiredTitle": "Området er lukket",
+  "retiredBody": "Området findes ikke længere i LifeSort. Dine data er stadig dine — du kan hente dem ud eller slette dem under Indstillinger.",
+  "unreleasedTitle": "Ikke klar endnu",
+  "unreleasedBody": "Området er ikke åbnet for brugere endnu.",
+  "internalOnlyTitle": "Kun til intern brug",
+  "internalOnlyBody": "Området er under udvikling og er ikke åbent endnu.",
+  "betaOnlyTitle": "Kun for beta-testere",
+  "betaOnlyBody": "Området er åbent for en mindre gruppe testere lige nu.",
+  "dataSafeNote": "Du kan altid hente dine data ud eller slette dem under Indstillinger.",
+  "backButton": "Tilbage"
+}

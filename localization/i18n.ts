@@ -21,6 +21,7 @@ import da_household from './locales/da/household.json';
 import da_language from './locales/da/language.json';
 import da_life from './locales/da/life.json';
 import da_lifeGoals from './locales/da/lifeGoals.json';
+import da_modules from './locales/da/modules.json';
 import da_profile from './locales/da/profile.json';
 import da_savings from './locales/da/savings.json';
 import da_search from "./locales/da/search.json";
@@ -50,6 +51,7 @@ import en_household from './locales/en/household.json';
 import en_language from './locales/en/language.json';
 import en_life from './locales/en/life.json';
 import en_lifeGoals from './locales/en/lifeGoals.json';
+import en_modules from './locales/en/modules.json';
 import en_profile from './locales/en/profile.json';
 import en_savings from './locales/en/savings.json';
 import en_search from "./locales/en/search.json";
@@ -73,6 +75,7 @@ const resources = {
       life: da_life,
       todos: da_todos,
       lifeGoals: da_lifeGoals,
+      modules: da_modules,
       habits: da_habits,
       household: da_household,
       career: da_career,
@@ -104,6 +107,7 @@ const resources = {
       life: en_life,
       todos: en_todos,
       lifeGoals: en_lifeGoals,
+      modules: en_modules,
       habits: en_habits,
       household: en_household,
       career: en_career,

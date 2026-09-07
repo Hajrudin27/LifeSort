@@ -1,152 +1,497 @@
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import Card from '@/components/Card';
+import MetricCard from '@/components/MetricCard';
+import QuickActionCard from '@/components/QuickActionCard';
+import Screen from '@/components/Screen';
+import SectionHeader from '@/components/SectionHeader';
 import { Text, useThemeColor, View } from '@/components/Themed';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useAccentTints } from '@/hooks/useAccentTints';
 import { useLifeModuleTints } from '@/hooks/useLifeModuleTints';
 import { useCareerStore } from '@/store/useCareerStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
 import { useLifeGoalsStore } from '@/store/useLifeGoalsStore';
 import { useTodoStore } from '@/store/useTodoStore';
-import { getCurrentStreak } from '@/utils/habit/habitStreak';
+import { getCurrentStreak, getLoggedThisWeek } from '@/utils/habit/habitStreak';
 import { daysUntilDue } from '@/utils/household/householdTaskSchedule';
+import { daysUntil } from '@/utils/shared/dateDays';
+
+type IconName = { ios: string; android: string; web: string };
+type LifeModuleKey = 'todos' | 'lifeGoals' | 'habits' | 'household' | 'career';
+
+type FocusCard = {
+  icon: IconName;
+  title: string;
+  subtitle: string;
+  route: Href;
+  tone: string;
+};
 
 export default function LifeScreen() {
   const { t } = useTranslation();
-  const colorScheme = useColorScheme();
   const tints = useLifeModuleTints();
-  const accentTints = useAccentTints();
-  const tint = accentTints.accent;
-  const textMuted = useThemeColor({}, 'textMuted');
   const backgroundColor = useThemeColor({}, 'background');
+  const borderColor = useThemeColor({}, 'border');
+  const surfaceMuted = useThemeColor({}, 'surfaceMuted');
+  const textMuted = useThemeColor({}, 'textMuted');
 
   const todos = useTodoStore((s) => s.todos);
-  const activeTodos = todos.filter((item) => !item.completed).length;
+  const activeTodos = todos.filter((item) => !item.completed);
+  const overdueTodos = activeTodos.filter((item) => item.dueDate && daysUntil(item.dueDate) < 0);
+  const dueTodayTodos = activeTodos.filter((item) => item.dueDate && daysUntil(item.dueDate) === 0);
+  const highPriorityTodos = activeTodos.filter((item) => item.importance === 'high');
 
   const lifeGoals = useLifeGoalsStore((s) => s.goals);
-  const activeGoals = lifeGoals.filter((g) => {
-    const total = g.subGoals.length;
-    const done = g.subGoals.filter((sg) => sg.completed).length;
+  const totalSubGoals = lifeGoals.reduce((sum, goal) => sum + goal.subGoals.length, 0);
+  const completedSubGoals = lifeGoals.reduce(
+    (sum, goal) => sum + goal.subGoals.filter((subGoal) => subGoal.completed).length,
+    0,
+  );
+  const goalProgress = totalSubGoals > 0 ? completedSubGoals / totalSubGoals : 0;
+  const activeGoals = lifeGoals.filter((goal) => {
+    const total = goal.subGoals.length;
+    const done = goal.subGoals.filter((subGoal) => subGoal.completed).length;
     return !(total > 0 && done === total);
   }).length;
 
   const habits = useHabitsStore((s) => s.habits);
-  const topStreak = habits
-    .map((h) => getCurrentStreak(h.logs))
-    .sort((a, b) => b - a)[0] ?? 0;
+  const topStreak = habits.map((habit) => getCurrentStreak(habit.logs)).sort((a, b) => b - a)[0] ?? 0;
+  const habitLogsThisWeek = habits.reduce((sum, habit) => sum + getLoggedThisWeek(habit.logs), 0);
 
   const householdTasks = useHouseholdStore((s) => s.tasks);
-  const dueHouseholdCount = householdTasks.filter((ht) => daysUntilDue(ht.lastDone, ht.frequency) <= 0).length;
+  const dueHouseholdCount = householdTasks.filter((task) => daysUntilDue(task.lastDone, task.frequency) <= 0).length;
 
   const applications = useCareerStore((s) => s.applications);
-  const interviewCount = applications.filter((a) => a.status === 'interview').length;
-  const appliedCount = applications.filter((a) => a.status === 'applied').length;
+  const interviewCount = applications.filter((application) => application.status === 'interview').length;
+  const openApplications = applications.filter((application) => application.status !== 'rejected').length;
 
-  const modules = [
+  const focusCard: FocusCard =
+    overdueTodos.length > 0
+      ? {
+          icon: { ios: 'exclamationmark.circle.fill', android: 'priority_high', web: 'priority_high' },
+          title: t('life.focusOverdueTitle'),
+          subtitle: t('life.focusOverdueSubtitle', { count: overdueTodos.length }),
+          route: '/todos',
+          tone: '#E11D48',
+        }
+      : dueTodayTodos.length > 0
+        ? {
+            icon: { ios: 'calendar.badge.exclamationmark', android: 'event_available', web: 'event_available' },
+            title: t('life.focusTodayTitle'),
+            subtitle: t('life.focusTodaySubtitle', { count: dueTodayTodos.length }),
+            route: '/todos',
+            tone: '#F59E0B',
+          }
+        : dueHouseholdCount > 0
+          ? {
+              icon: { ios: 'house.fill', android: 'home', web: 'home' },
+              title: t('life.focusHouseholdTitle'),
+              subtitle: t('life.focusHouseholdSubtitle', { count: dueHouseholdCount }),
+              route: '/household/tasks',
+              tone: '#2563EB',
+            }
+          : habits.length > 0 && topStreak === 0
+            ? {
+                icon: { ios: 'flame.fill', android: 'local_fire_department', web: 'local_fire_department' },
+                title: t('life.focusHabitTitle'),
+                subtitle: t('life.focusHabitSubtitle'),
+                route: '/habits',
+                tone: '#E11D48',
+              }
+            : activeGoals > 0 && goalProgress < 1
+              ? {
+                  icon: { ios: 'flag.fill', android: 'flag', web: 'flag' },
+                  title: t('life.focusGoalTitle'),
+                  subtitle: t('life.focusGoalSubtitle', { progress: Math.round(goalProgress * 100) }),
+                  route: '/life-goals',
+                  tone: '#F59E0B',
+                }
+              : {
+                  icon: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },
+                  title: t('life.focusDefaultTitle'),
+                  subtitle: t('life.focusDefaultSubtitle'),
+                  route: '/todos/new',
+                  tone: '#16A34A',
+                };
+
+  const modules: Array<{
+    key: LifeModuleKey;
+    icon: IconName;
+    title: string;
+    subtitle: string;
+    value: string;
+    helper: string;
+    route: Href;
+    tone: string;
+  }> = [
     {
       key: 'todos',
-      label: t('life.todosLabel'),
-      desc: t('life.todosDesc'),
       icon: { ios: 'checklist', android: 'checklist', web: 'checklist' },
-      count: activeTodos,
-      route: '/todos' as const,
-      color: tints.todos,
+      title: t('life.todosLabel'),
+      subtitle: t('life.todosDesc'),
+      value: String(activeTodos.length),
+      helper: t('life.todosHelper', { count: highPriorityTodos.length }),
+      route: '/todos',
+      tone: '#E11D48',
     },
     {
       key: 'lifeGoals',
-      label: t('life.lifeGoalsLabel'),
-      desc: t('life.lifeGoalsDesc'),
       icon: { ios: 'flag.fill', android: 'flag', web: 'flag' },
-      count: activeGoals,
-      route: '/life-goals' as const,
-      color: tints.lifeGoals,
+      title: t('life.lifeGoalsLabel'),
+      subtitle: t('life.lifeGoalsDesc'),
+      value: `${Math.round(goalProgress * 100)}%`,
+      helper: t('life.lifeGoalsHelper', { count: activeGoals }),
+      route: '/life-goals',
+      tone: '#F59E0B',
     },
     {
       key: 'habits',
-      label: t('life.habitsLabel'),
-      desc: t('life.habitsDesc'),
       icon: { ios: 'flame.fill', android: 'local_fire_department', web: 'local_fire_department' },
-      count: habits.length,
-      badge: topStreak > 0 ? `🔥${topStreak}` : undefined,
-      route: '/habits' as const,
-      color: tints.habits,
+      title: t('life.habitsLabel'),
+      subtitle: t('life.habitsDesc'),
+      value: String(topStreak),
+      helper: t('life.habitsHelper', { count: habitLogsThisWeek }),
+      route: '/habits',
+      tone: '#16A34A',
     },
     {
       key: 'household',
-      label: t('life.householdLabel'),
-      desc: t('life.householdDesc'),
       icon: { ios: 'house.fill', android: 'home', web: 'home' },
-      count: dueHouseholdCount,
-      route: '/household' as const,
-      color: tints.household,
+      title: t('life.householdLabel'),
+      subtitle: t('life.householdDesc'),
+      value: String(dueHouseholdCount),
+      helper: t('life.householdHelper'),
+      route: '/household',
+      tone: '#2563EB',
     },
     {
       key: 'career',
-      label: t('life.careerLabel'),
-      desc: t('life.careerDesc'),
       icon: { ios: 'briefcase.fill', android: 'work', web: 'work' },
-      count: appliedCount,
-      badge: interviewCount > 0 ? `🎤${interviewCount}` : undefined,
-      route: '/career' as const,
-      color: tints.career,
+      title: t('life.careerLabel'),
+      subtitle: t('life.careerDesc'),
+      value: String(openApplications),
+      helper: t('life.careerHelper', { count: interviewCount }),
+      route: '/career',
+      tone: '#7C3AED',
     },
   ];
 
   return (
-    <ScrollView style={{ backgroundColor }} contentContainerStyle={styles.container}>
-      <Card style={[styles.hero, { backgroundColor: tint, overflow: 'hidden' }]}>
-        <View style={[styles.heroCircleLarge, { backgroundColor: '#FFFFFF', opacity: 0.08 }]} />
-        <View style={[styles.heroCircleSmall, { backgroundColor: '#FFFFFF', opacity: 0.1 }]} />
+    <Screen contentContainerStyle={styles.content}>
+      <Card style={styles.hero}>
+        <View style={[styles.heroGlow, styles.heroGlowRose]} />
+        <View style={[styles.heroGlow, styles.heroGlowAmber]} />
+        <View style={styles.heroTopRow}>
+          <View style={styles.heroIcon}>
+            <SymbolView
+              name={{ ios: 'star.fill', android: 'star', web: 'star' }}
+              size={18}
+              tintColor="#FFFFFF"
+            />
+          </View>
+          <Text style={styles.heroKicker}>{t('life.heroKicker')}</Text>
+        </View>
         <Text style={styles.heroTitle}>{t('life.title')}</Text>
         <Text style={styles.heroSubtitle}>{t('life.heroSubtitle')}</Text>
+        <View style={styles.heroStats}>
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatLabel}>{t('life.openTasksLabel')}</Text>
+            <Text style={styles.heroStatValue}>{activeTodos.length + dueHouseholdCount}</Text>
+          </View>
+          <View style={styles.heroDivider} />
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatLabel}>{t('life.progressLabel')}</Text>
+            <Text style={styles.heroStatValue}>{Math.round(goalProgress * 100)}%</Text>
+          </View>
+        </View>
       </Card>
 
-      <View style={styles.grid}>
-        {modules.map((m) => (
-          <Pressable key={m.key} style={styles.gridCell} onPress={() => router.push(m.route)}>
-            <Card style={[styles.moduleCard, { backgroundColor: m.color }]}>
-              <View style={styles.moduleHeader}>
-                <View style={[styles.iconCircle, { backgroundColor: tint }]}>
-                  <SymbolView name={m.icon as any} size={16} tintColor="#FFFFFF" />
-                </View>
-                {m.badge ? (
-                  <Text style={styles.moduleBadge}>{m.badge}</Text>
-                ) : m.count > 0 ? (
-                  <View style={[styles.moduleCount, { backgroundColor: tint }]}>
-                    <Text style={styles.moduleCountText}>{m.count}</Text>
-                  </View>
-                ) : null}
+      <Card style={[styles.focusCard, { borderColor: `${focusCard.tone}33` }]}>
+        <View style={[styles.focusIcon, { backgroundColor: `${focusCard.tone}18` }]}>
+          <SymbolView name={focusCard.icon as any} size={20} tintColor={focusCard.tone} />
+        </View>
+        <View style={styles.focusText}>
+          <Text style={[styles.focusEyebrow, { color: focusCard.tone }]}>{t('life.focusEyebrow')}</Text>
+          <Text style={styles.focusTitle}>{focusCard.title}</Text>
+          <Text style={[styles.focusSubtitle, { color: textMuted }]}>{focusCard.subtitle}</Text>
+        </View>
+        <Pressable style={[styles.focusButton, { backgroundColor: focusCard.tone }]} onPress={() => router.push(focusCard.route)}>
+          <SymbolView name={{ ios: 'arrow.right', android: 'arrow_forward', web: 'arrow_forward' }} size={17} tintColor="#FFFFFF" />
+        </Pressable>
+      </Card>
+
+      <View style={styles.metricGrid}>
+        <MetricCard
+          icon={{ ios: 'flame.fill', android: 'local_fire_department', web: 'local_fire_department' }}
+          label={t('life.topStreakLabel')}
+          value={String(topStreak)}
+          helper={t('life.topStreakHelper')}
+          tone="#16A34A"
+          onPress={() => router.push('/habits')}
+          style={styles.metricItem}
+        />
+        <MetricCard
+          icon={{ ios: 'briefcase.fill', android: 'work', web: 'work' }}
+          label={t('life.careerMetricLabel')}
+          value={String(interviewCount)}
+          helper={t('life.careerMetricHelper')}
+          tone="#7C3AED"
+          onPress={() => router.push('/career/applications')}
+          style={styles.metricItem}
+        />
+      </View>
+
+      <SectionHeader
+        eyebrow={t('life.modulesEyebrow')}
+        title={t('life.modulesTitle')}
+        subtitle={t('life.modulesSubtitle')}
+      />
+
+      <View style={styles.moduleList}>
+        {modules.map((module) => (
+          <Pressable key={module.key} onPress={() => router.push(module.route)}>
+            <Card style={[styles.moduleCard, { borderColor: `${module.tone}33` }]}>
+              <View style={[styles.moduleAccent, { backgroundColor: tints[module.key] }]} />
+              <View style={[styles.moduleIcon, { backgroundColor: `${module.tone}18` }]}>
+                <SymbolView name={module.icon as any} size={19} tintColor={module.tone} />
               </View>
-              <Text style={styles.moduleLabel}>{m.label}</Text>
-              <Text style={[styles.moduleDesc, { color: textMuted }]}>{m.desc}</Text>
+              <View style={styles.moduleText}>
+                <Text style={styles.moduleTitle}>{module.title}</Text>
+                <Text style={[styles.moduleSubtitle, { color: textMuted }]} numberOfLines={2}>
+                  {module.subtitle}
+                </Text>
+              </View>
+              <View style={[styles.moduleValue, { backgroundColor: surfaceMuted, borderColor }]}>
+                <Text style={styles.moduleValueText} numberOfLines={1}>{module.value}</Text>
+                <Text style={[styles.moduleValueHelper, { color: textMuted }]} numberOfLines={1}>
+                  {module.helper}
+                </Text>
+              </View>
             </Card>
           </Pressable>
         ))}
       </View>
-    </ScrollView>
+
+      <SectionHeader eyebrow={t('life.quickEyebrow')} title={t('life.quickTitle')} />
+
+      <View style={styles.quickList}>
+        <QuickActionCard
+          icon={{ ios: 'plus.circle.fill', android: 'add_circle', web: 'add_circle' }}
+          title={t('life.quickTodoTitle')}
+          subtitle={t('life.quickTodoSubtitle')}
+          tone="#E11D48"
+          onPress={() => router.push('/todos/new')}
+        />
+        <QuickActionCard
+          icon={{ ios: 'flag.badge.ellipsis', android: 'outlined_flag', web: 'outlined_flag' }}
+          title={t('life.quickGoalTitle')}
+          subtitle={t('life.quickGoalSubtitle')}
+          tone="#F59E0B"
+          onPress={() => router.push('/life-goals/new')}
+        />
+        <QuickActionCard
+          icon={{ ios: 'house.badge.plus', android: 'add_home', web: 'add_home' }}
+          title={t('life.quickHouseholdTitle')}
+          subtitle={t('life.quickHouseholdSubtitle')}
+          tone="#2563EB"
+          onPress={() => router.push('/household/tasks/new')}
+        />
+      </View>
+    </Screen>
   );
 }
 
-const styles = {
-  container: { padding: 16, gap: 14, paddingBottom: 48 },
-  hero: { padding: 20, gap: 4, position: 'relative' as const },
-  heroCircleLarge: { position: 'absolute' as const, width: 160, height: 160, borderRadius: 80, top: -50, right: -40 },
-  heroCircleSmall: { position: 'absolute' as const, width: 80, height: 80, borderRadius: 40, bottom: -25, left: -15 },
-  heroTitle: { fontSize: 26, fontWeight: '800' as const, color: '#FFFFFF' },
-  heroSubtitle: { fontSize: 14, color: '#FFFFFF', opacity: 0.9, marginTop: 2 },
-  grid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12 },
-  gridCell: { width: '47%' as const },
-  moduleCard: { gap: 6, minHeight: 108 },
-  moduleHeader: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'flex-start' as const, backgroundColor: 'transparent' },
-  iconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center' as const, justifyContent: 'center' as const },
-  moduleCount: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center' as const, justifyContent: 'center' as const, paddingHorizontal: 6 },
-  moduleCountText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' as const },
-  moduleBadge: { fontSize: 13, fontWeight: '700' as const, backgroundColor: 'transparent' },
-  moduleLabel: { fontSize: 16, fontWeight: '800' as const, marginTop: 4 },
-  moduleDesc: { fontSize: 12 },
-};
+const styles = StyleSheet.create({
+  content: {
+    paddingBottom: 72,
+  },
+  hero: {
+    backgroundColor: '#16130F',
+    borderColor: 'rgba(255,255,255,0.08)',
+    gap: 12,
+    overflow: 'hidden',
+    padding: 20,
+  },
+  heroGlow: {
+    position: 'absolute',
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    opacity: 0.2,
+  },
+  heroGlowRose: {
+    backgroundColor: '#E11D48',
+    right: -48,
+    top: -54,
+  },
+  heroGlowAmber: {
+    backgroundColor: '#F59E0B',
+    bottom: -70,
+    left: -56,
+  },
+  heroTopRow: {
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  heroIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.13)',
+    borderRadius: 16,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  heroKicker: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 29,
+    fontWeight: '900',
+  },
+  heroSubtitle: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  heroStats: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 18,
+    flexDirection: 'row',
+    marginTop: 4,
+    padding: 14,
+  },
+  heroStat: {
+    backgroundColor: 'transparent',
+    flex: 1,
+    gap: 3,
+  },
+  heroStatLabel: {
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  heroStatValue: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  heroDivider: {
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    marginHorizontal: 14,
+    width: 1,
+  },
+  focusCard: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    borderWidth: 1.5,
+  },
+  focusIcon: {
+    alignItems: 'center',
+    borderRadius: 18,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  focusText: {
+    backgroundColor: 'transparent',
+    flex: 1,
+    gap: 2,
+  },
+  focusEyebrow: {
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  focusTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  focusSubtitle: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  focusButton: {
+    alignItems: 'center',
+    borderRadius: 17,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  metricGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  metricItem: {
+    flex: 1,
+  },
+  moduleList: {
+    gap: 10,
+  },
+  moduleCard: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 104,
+    overflow: 'hidden',
+  },
+  moduleAccent: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    top: 0,
+    width: 5,
+  },
+  moduleIcon: {
+    alignItems: 'center',
+    borderRadius: 16,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  moduleText: {
+    backgroundColor: 'transparent',
+    flex: 1,
+    gap: 3,
+  },
+  moduleTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  moduleSubtitle: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  moduleValue: {
+    alignItems: 'center',
+    borderRadius: 22,
+    borderWidth: 1,
+    height: 64,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    width: 74,
+  },
+  moduleValueText: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  moduleValueHelper: {
+    fontSize: 9,
+    fontWeight: '800',
+    marginTop: 1,
+    textAlign: 'center',
+  },
+  quickList: {
+    gap: 10,
+  },
+});

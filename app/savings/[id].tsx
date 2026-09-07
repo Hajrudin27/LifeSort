@@ -157,6 +157,7 @@ export default function SavingsGoalDetailScreen() {
           title: goal.name,
           headerRight: () => (
             <Pressable
+              accessibilityRole="button"
               onPress={() => setShowEdit(true)}
               style={styles.editButton}
             >
@@ -250,6 +251,7 @@ export default function SavingsGoalDetailScreen() {
           onChangeText={setContribution}
         />
         <Pressable
+          accessibilityRole="button"
           style={[
             styles.smallButton,
             { borderColor },
@@ -291,6 +293,7 @@ export default function SavingsGoalDetailScreen() {
 
       <View style={styles.row}>
         <Pressable
+          accessibilityRole="button"
           style={[
             styles.smallButton,
             styles.flexButton,
@@ -305,6 +308,7 @@ export default function SavingsGoalDetailScreen() {
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[
             styles.smallButton,
             styles.flexButton,
@@ -325,10 +329,12 @@ export default function SavingsGoalDetailScreen() {
         onRequestClose={() => setShowEdit(false)}
       >
         <Pressable
+          accessible={false}
           style={styles.modalBackdrop}
           onPress={() => setShowEdit(false)}
         >
           <Pressable
+            accessible={false}
             style={[styles.modalCard, { backgroundColor, borderColor }]}
             onPress={(e) => e.stopPropagation()}
           >

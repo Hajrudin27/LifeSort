@@ -29,17 +29,18 @@ export default function SelectField({ options, selected, onSelect, placeholder, 
 
   return (
     <>
-      <Pressable style={[styles.field, { borderColor, backgroundColor: surface }]} onPress={() => setIsOpen(true)}>
+      <Pressable accessibilityRole="button" style={[styles.field, { borderColor, backgroundColor: surface }]} onPress={() => setIsOpen(true)}>
         <Text style={styles.fieldText}>{selectedLabel}</Text>
         <SymbolView name={{ ios: 'chevron.down', android: 'expand_more', web: 'expand_more' }} size={16} tintColor={textMuted} />
       </Pressable>
 
       <Modal visible={isOpen} animationType="slide" transparent onRequestClose={() => setIsOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setIsOpen(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
+        <Pressable accessible={false} style={styles.backdrop} onPress={() => setIsOpen(false)}>
+          <Pressable accessible={false} style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>{modalTitle}</Text>
             {options.map((o) => (
               <Pressable
+                accessibilityRole="button"
                 key={o.id}
                 style={[styles.optionRow, { borderColor }]}
                 onPress={() => {

@@ -114,6 +114,7 @@ export default function SavingsGoalsScreen() {
         </View>
 
         <Pressable
+          accessibilityRole="button"
           onPress={() => router.push("/savings/allocate")}
           style={styles.heroAllocateRow}
         >
@@ -177,6 +178,7 @@ export default function SavingsGoalsScreen() {
 
           return (
             <Pressable
+              accessibilityRole="button"
               onPress={() =>
                 router.push({
                   pathname: "/savings/icon/[icon]",
@@ -273,10 +275,12 @@ export default function SavingsGoalsScreen() {
         onRequestClose={() => setShowAddModal(false)}
       >
         <Pressable
+          accessible={false}
           style={styles.modalBackdrop}
           onPress={() => setShowAddModal(false)}
         >
           <Pressable
+            accessible={false}
             style={[styles.modalCard, { backgroundColor, borderColor }]}
             onPress={(e) => e.stopPropagation()}
           >

@@ -47,7 +47,7 @@ export default function LifeGoalsScreen() {
           const progress = total > 0 ? done / total : 0;
 
           return (
-            <Pressable onPress={() => router.push(`/life-goals/${item.id}`)}>
+            <Pressable accessibilityRole="button" onPress={() => router.push(`/life-goals/${item.id}`)}>
               <Card style={styles.card}>
                 <View style={styles.row}>
                   <RingProgress progress={progress} size={48} strokeWidth={5} showLabel={false} />

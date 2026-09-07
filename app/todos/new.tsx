@@ -143,6 +143,7 @@ export default function NewTodoScreen() {
               const tone = level === "high" ? brand.glowPrimary : level === "medium" ? brand.glowSecondary : success;
               return (
                 <Pressable
+                  accessibilityRole="button"
                   key={level}
                   onPress={() => setImportance(level)}
                   style={[
@@ -172,6 +173,7 @@ export default function NewTodoScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t("todos.dueQuickLabel")}</Text>
             <Pressable
+              accessibilityRole="button"
               style={[styles.customDateButton, { backgroundColor: surfaceMuted }]}
               onPress={openCustomDate}
             >

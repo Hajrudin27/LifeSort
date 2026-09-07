@@ -103,7 +103,7 @@ export default function PackingListScreen() {
           );
         }}
         renderItem={({ item }) => (
-          <Pressable onPress={() => togglePackingItem(item.id)}>
+          <Pressable accessibilityRole="button" onPress={() => togglePackingItem(item.id)}>
             <View
               style={[
                 styles.row,
@@ -125,7 +125,7 @@ export default function PackingListScreen() {
               <Text style={[styles.label, item.checked && { color: textMuted, textDecorationLine: 'line-through' }]}>
                 {item.label}
               </Text>
-              <Pressable hitSlop={8} onPress={() => removePackingItem(item.id)}>
+              <Pressable accessibilityRole="button" hitSlop={8} onPress={() => removePackingItem(item.id)}>
                 <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} size={14} tintColor={borderColor} />
               </Pressable>
             </View>

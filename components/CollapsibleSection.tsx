@@ -16,7 +16,11 @@ export default function CollapsibleSection({ title, defaultOpen = false, childre
 
   return (
     <View>
-      <Pressable style={styles.header} onPress={() => setIsOpen(!isOpen)}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: isOpen }}
+        style={styles.header}
+        onPress={() => setIsOpen(!isOpen)}>
         <Text style={styles.title}>{title}</Text>
         <SymbolView
           name={{

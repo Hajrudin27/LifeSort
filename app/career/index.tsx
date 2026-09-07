@@ -15,19 +15,19 @@ export default function CareerScreen() {
 
   return (
     <View style={sharedStyles.formContainer}>
-      <Pressable onPress={() => router.push("/career/applications")}>
+      <Pressable accessibilityRole="button" onPress={() => router.push("/career/applications")}>
         <Card style={sharedStyles.rowBetween}>
           <Text style={styles.linkText}>{t("career.applicationsLabel")}</Text>
           <Text style={{ color: textMuted }}>{applications.length}</Text>
         </Card>
       </Pressable>
-      <Pressable onPress={() => router.push("/career/skills")}>
+      <Pressable accessibilityRole="button" onPress={() => router.push("/career/skills")}>
         <Card style={sharedStyles.rowBetween}>
           <Text style={styles.linkText}>{t("career.skillsLabel")}</Text>
           <Text style={{ color: textMuted }}>{skills.length}</Text>
         </Card>
       </Pressable>
-      <Pressable onPress={() => router.push('/career/cv')}>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/career/cv')}>
   <Card style={sharedStyles.rowBetween}>
     <Text style={styles.linkText}>{t('career.cvLabel')}</Text>
   </Card>

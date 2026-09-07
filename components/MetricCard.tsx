@@ -21,7 +21,7 @@ export default function MetricCard({ icon, label, value, helper, tone, style, ..
   const color = tone ?? accentTints.accent;
 
   return (
-    <Pressable style={[styles.pressable, style as object]} {...props}>
+    <Pressable accessibilityRole="button" style={[styles.pressable, style as object]} {...props}>
       <Card style={[styles.card, { borderColor: `${color}33` }]}>
         <View style={[styles.iconCircle, { backgroundColor: `${color}18` }]}>
           <SymbolView name={icon as any} size={17} tintColor={color} />

@@ -43,7 +43,7 @@ export default function SelectStoresScreen() {
         renderItem={({ item: store }) => {
           const isSelected = selectedStores.includes(store);
           return (
-            <Pressable onPress={() => toggleStoreSelection(store)}>
+            <Pressable accessibilityRole="button" onPress={() => toggleStoreSelection(store)}>
               <Card style={sharedStyles.rowBetween}>
                 <Text style={styles.name}>{store}</Text>
                 {isSelected && (

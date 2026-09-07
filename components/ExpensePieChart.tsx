@@ -85,6 +85,7 @@ export default function ExpensePieChart({
 
       {interactive && tooltip && (
         <Pressable
+          accessibilityRole="button"
           style={[styles.tooltip, { left: tooltip.x - 60, top: tooltip.y - 20 }]}
           onPress={() => setTooltip(null)}>
           <Text style={styles.tooltipText}>{tooltip.label}</Text>

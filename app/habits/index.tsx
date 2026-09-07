@@ -31,7 +31,7 @@ export default function HabitsScreen() {
           const streak = getCurrentStreak(item.logs);
           return (
             <Card style={styles.card}>
-              <Pressable onPress={() => router.push(`/habits/${item.id}`)}>
+              <Pressable accessibilityRole="button" onPress={() => router.push(`/habits/${item.id}`)}>
                 <Text style={styles.title}>{item.title}</Text>
                 <Text style={[styles.meta, { color: textMuted }]}>{t('habits.streakLabel', { count: streak })}</Text>
               </Pressable>

@@ -118,6 +118,7 @@ export default function SavingsIconScreen() {
           return (
             <SwipeableRow onDelete={() => removeGoal(item.id)}>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => router.push(`/savings/${item.id}`)}
                 onLongPress={() => {
                   if (item.archived) {

@@ -156,7 +156,7 @@ export default function TodosScreen() {
             />
           </Pressable>
 
-          <Pressable style={styles.todoTextGroup} onPress={() => router.push(`/todos/${item.id}`)}>
+          <Pressable accessibilityRole="button" style={styles.todoTextGroup} onPress={() => router.push(`/todos/${item.id}`)}>
             <View style={styles.todoTopLine}>
               <Text style={[styles.todoTitle, item.completed && { color: textMuted, textDecorationLine: 'line-through' }]} numberOfLines={2}>
                 {item.title}
@@ -180,6 +180,7 @@ export default function TodosScreen() {
               </View>
               {showCalendarAction && (
                 <Pressable
+                  accessibilityRole="button"
                   style={[styles.calendarButton, { backgroundColor: accentTints.accentSoft }]}
                   disabled={calendarLoadingId === item.id}
                   onPress={() => handleAddToCalendar(item)}

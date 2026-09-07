@@ -34,6 +34,8 @@ export default function HabitWeekRow({ habit }: Props) {
 
         return (
           <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: isDone, disabled: isDisabled }}
             key={day.key}
             disabled={isDisabled}
             onPress={() => toggleLogForDate(habit.id, day.key)}

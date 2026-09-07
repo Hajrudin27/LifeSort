@@ -161,7 +161,7 @@ export default function NewExpenseScreen() {
         <View style={styles.optionSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t("expenses.nextPaymentLabel")}</Text>
-            <Pressable style={[styles.customDateButton, { backgroundColor: surfaceMuted }]} onPress={openCustomDate}>
+            <Pressable accessibilityRole="button" style={[styles.customDateButton, { backgroundColor: surfaceMuted }]} onPress={openCustomDate}>
               <SymbolView name={{ ios: "calendar", android: "event", web: "event" }} size={14} tintColor={accentTints.accent} />
               <Text style={[styles.customDateText, { color: accentTints.accent }]}>{t("expenses.customDate")}</Text>
             </Pressable>
@@ -170,6 +170,7 @@ export default function NewExpenseScreen() {
           <View style={styles.paymentChips}>
             {paymentShortcuts.map((shortcut) => (
               <Pressable
+                accessibilityRole="button"
                 key={shortcut.key}
                 style={[
                   styles.paymentChip,
@@ -193,6 +194,7 @@ export default function NewExpenseScreen() {
         </View>
 
         <Pressable
+          accessibilityRole="button"
           style={[styles.recurringCard, { borderColor: isRecurring ? tint : borderColor, backgroundColor: surface }]}
           onPress={() => setIsRecurring((current) => !current)}
         >

@@ -18,11 +18,11 @@ export default function LanguageScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>{t('language.chooseTitle')}</Text>
 
-      <Pressable style={styles.button} onPress={() => choose('da')}>
+      <Pressable accessibilityRole="radio" style={styles.button} onPress={() => choose('da')}>
         <Text style={styles.buttonText}>🇩🇰 Dansk</Text>
       </Pressable>
 
-      <Pressable style={styles.button} onPress={() => choose('en')}>
+      <Pressable accessibilityRole="radio" style={styles.button} onPress={() => choose('en')}>
         <Text style={styles.buttonText}>🇬🇧 English</Text>
       </Pressable>
     </View>

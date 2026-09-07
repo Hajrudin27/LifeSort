@@ -117,7 +117,7 @@ export default function NewRecipeScreen() {
             )}
           </View>
         ))}
-        <Pressable onPress={addIngredientRow}>
+        <Pressable accessibilityRole="button" onPress={addIngredientRow}>
           <Text style={[styles.addLink, { color: textMuted }]}>{t("food.addIngredient")}</Text>
         </Pressable>
 
@@ -160,7 +160,7 @@ export default function NewRecipeScreen() {
             </View>
           </>
         ) : (
-          <Pressable onPress={() => setShowMacros(true)}>
+          <Pressable accessibilityRole="button" onPress={() => setShowMacros(true)}>
             <Text style={[styles.addLink, { color: textMuted }]}>+ {t("food.showMacros")}</Text>
           </Pressable>
         )}

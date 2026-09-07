@@ -14,6 +14,7 @@ export default function EconomyModuleCard({ label, tintColor, onPress }: Props) 
 
   return (
     <Pressable
+      accessibilityRole="button"
       style={[styles.card, { backgroundColor: tintColor ?? defaultBackground, borderColor }]}
       onPress={onPress}>
       <Text style={styles.label}>{label}</Text>

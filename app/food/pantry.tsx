@@ -65,7 +65,7 @@ export default function PantryScreen() {
           const days = item.expiryDate ? daysUntil(item.expiryDate) : null;
           const isWarning = days !== null && days <= 3;
           return (
-            <Pressable onLongPress={() => confirmRemove(item.id)}>
+            <Pressable accessibilityRole="button" onLongPress={() => confirmRemove(item.id)}>
               <Card style={sharedStyles.rowBetween}>
                 <View style={styles.rowText}>
                   <Text style={styles.name}>{item.name}</Text>
@@ -104,7 +104,7 @@ export default function PantryScreen() {
             <DatePickerField value={expiryDate || new Date().toISOString().split("T")[0]} onChange={setExpiryDate} />
           </>
         ) : (
-          <Pressable onPress={() => setShowExpiryPicker(true)}>
+          <Pressable accessibilityRole="button" onPress={() => setShowExpiryPicker(true)}>
             <Text style={[styles.addExpiryLink, { color: textMuted }]}>+ {t("food.pantryExpiryLabel")}</Text>
           </Pressable>
         )}

@@ -57,7 +57,7 @@ export default function NewLifeGoalScreen() {
             <DatePickerField value={deadline || new Date().toISOString().split('T')[0]} onChange={setDeadline} />
           </>
         ) : (
-          <Pressable onPress={() => setShowDeadlinePicker(true)}>
+          <Pressable accessibilityRole="button" onPress={() => setShowDeadlinePicker(true)}>
             <Text style={[styles.addLink, { color: textMuted }]}>+ {t('lifeGoals.deadlineLabel')}</Text>
           </Pressable>
         )}

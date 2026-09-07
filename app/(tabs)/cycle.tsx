@@ -403,7 +403,7 @@ export default function CycleScreen() {
               months: patterns[0].monthsInARow,
             })}
           </Text>
-          <Pressable onPress={() => setDismissedPattern(true)}>
+          <Pressable accessibilityRole="button" onPress={() => setDismissedPattern(true)}>
             <Text style={[styles.patternDismiss, { color: textMuted }]}>
               {t("cycle.patternObservationDismiss")}
             </Text>
@@ -458,7 +458,7 @@ export default function CycleScreen() {
       </View>
       <View style={[styles.linkGroup, { borderColor: cycleTints.accentSoft }]}>
         {linkItems.map((item, index) => (
-          <Pressable key={item.key} onPress={item.onPress}>
+          <Pressable accessibilityRole="button" key={item.key} onPress={item.onPress}>
             <View
               style={[
                 styles.linkRowItem,

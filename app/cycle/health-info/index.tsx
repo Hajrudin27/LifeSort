@@ -55,7 +55,7 @@ export default function HealthInfoScreen() {
       ) : tab === 'conditions' ? (
         <View style={sharedStyles.list}>
           {filteredConditions.map((c) => (
-            <Pressable key={c.id} onPress={() => router.push(`/cycle/health-info/${c.id}`)}>
+            <Pressable accessibilityRole="button" key={c.id} onPress={() => router.push(`/cycle/health-info/${c.id}`)}>
               <Card style={[styles.conditionCard, { borderColor: cycleTints.accentSoft }]}>
                 <View style={[styles.conditionIcon, { backgroundColor: cycleTints.accent }]}>
                   <SymbolView name={getConditionIconName(c.id) as any} size={18} tintColor="#FFFFFF" />
@@ -82,7 +82,7 @@ export default function HealthInfoScreen() {
                     <Text style={[styles.relatedLabel, { color: cycleTints.accent }]}>{t('healthInfo.relatedConditionsLabel')}</Text>
                     <View style={sharedStyles.chipRow}>
                       {relatedConditions.map((c) => (
-                        <Pressable key={c.id} onPress={() => router.push(`/cycle/health-info/${c.id}`)}>
+                        <Pressable accessibilityRole="button" key={c.id} onPress={() => router.push(`/cycle/health-info/${c.id}`)}>
                           <View style={[styles.relatedChip, { backgroundColor: cycleTints.accentSoft, borderColor: cycleTints.accent }]}>
                             <Text style={[styles.relatedChipText, { color: cycleTints.accent }]}>{isDa ? c.nameDa : c.nameEn}</Text>
                           </View>

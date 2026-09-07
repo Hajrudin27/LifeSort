@@ -155,6 +155,7 @@ export default function ExpensesScreen() {
 
               <View style={styles.heroMetaRow}>
                 <Pressable
+                  accessibilityRole="button"
                   style={styles.heroMetaPill}
                   onPress={() => router.push({ pathname: "/expenses/income", params: { month: monthKey } })}
                 >
@@ -189,6 +190,7 @@ export default function ExpensesScreen() {
 
             <View style={styles.insightGrid}>
               <Pressable
+                accessibilityRole="button"
                 style={[styles.insightCard, { backgroundColor: surface, borderColor: border }]}
                 onPress={() => router.push({ pathname: "/expenses/income", params: { month: monthKey } })}
               >
@@ -212,6 +214,7 @@ export default function ExpensesScreen() {
               </Pressable>
 
               <Pressable
+                accessibilityRole="button"
                 style={[styles.insightCard, { backgroundColor: accentTints.accentSoft, borderColor: accentTints.accentSoft }]}
                 onPress={() => router.push("/expenses/upcoming")}
               >
@@ -272,7 +275,7 @@ export default function ExpensesScreen() {
           const isOverBudget = budget !== undefined && subtotal > budget;
 
           return (
-            <Pressable onPress={() => router.push({ pathname: "/expenses/[category]", params: { category, month: monthKey } })}>
+            <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: "/expenses/[category]", params: { category, month: monthKey } })}>
               <View style={[styles.categoryCard, { backgroundColor: surface, borderColor: isSpike || isOverBudget ? danger : border }]}>
                 <View style={styles.folderTopRow}>
                   <View style={[styles.iconCircle, { backgroundColor: isSpike || isOverBudget ? danger : accentTints.accentSoft }]}>

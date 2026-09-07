@@ -108,6 +108,7 @@ export default function ApplicationDetailScreen() {
           title: application.position,
           headerRight: () => (
             <Pressable
+              accessibilityRole="button"
               onPress={() => setShowEdit(true)}
               style={styles.editButton}
             >
@@ -151,10 +152,12 @@ export default function ApplicationDetailScreen() {
         onRequestClose={() => setShowEdit(false)}
       >
         <Pressable
+          accessible={false}
           style={styles.modalBackdrop}
           onPress={() => setShowEdit(false)}
         >
           <Pressable
+            accessible={false}
             style={[styles.modalCard, { backgroundColor, borderColor }]}
             onPress={(e) => e.stopPropagation()}
           >

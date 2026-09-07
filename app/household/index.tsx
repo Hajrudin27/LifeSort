@@ -75,7 +75,7 @@ export default function HouseholdScreen() {
   return (
     <View style={sharedStyles.formContainer}>
       {rows.map((row) => (
-        <Pressable key={row.key} onPress={row.onPress}>
+        <Pressable accessibilityRole="button" key={row.key} onPress={row.onPress}>
           <Card style={styles.row}>
             <View style={styles.left}>
               <View style={[styles.iconCircle, { backgroundColor: accentTints.accentSoft }]}>

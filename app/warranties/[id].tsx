@@ -102,6 +102,7 @@ export default function WarrantyDetailScreen() {
           title: warranty.name,
           headerRight: () => (
             <Pressable
+              accessibilityRole="button"
               onPress={() => setShowEdit(true)}
               style={styles.editButton}
             >
@@ -153,10 +154,12 @@ export default function WarrantyDetailScreen() {
         onRequestClose={() => setShowEdit(false)}
       >
         <Pressable
+          accessible={false}
           style={styles.modalBackdrop}
           onPress={() => setShowEdit(false)}
         >
           <Pressable
+            accessible={false}
             style={[styles.modalCard, { backgroundColor, borderColor }]}
             onPress={(e) => e.stopPropagation()}
           >

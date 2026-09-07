@@ -46,7 +46,11 @@ export default function ShoppingListScreen() {
         }
         renderItem={({ item }) => (
           <Card style={sharedStyles.rowBetween}>
-            <Pressable style={styles.checkRow} onPress={() => toggleShoppingItem(item.id)}>
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: item.checked }}
+              style={styles.checkRow}
+              onPress={() => toggleShoppingItem(item.id)}>
               <SymbolView
                 name={{
                   ios: item.checked ? "checkmark.square.fill" : "square",
@@ -80,7 +84,7 @@ export default function ShoppingListScreen() {
           onChangeText={setNewLabel}
           onSubmitEditing={addItem}
         />
-        <Pressable style={[styles.addButton, { borderColor }]} onPress={addItem}>
+        <Pressable accessibilityRole="button" style={[styles.addButton, { borderColor }]} onPress={addItem}>
           <Text style={styles.addButtonText}>{t("food.add")}</Text>
         </Pressable>
       </View>

@@ -31,6 +31,7 @@ export default function TripExpensesScreen() {
         ListEmptyComponent={<Text style={[styles.empty, { color: textMuted }]}>{t('expenses.emptyState')}</Text>}
         renderItem={({ item }) => (
           <Pressable
+            accessibilityRole="button"
             onPress={() =>
               router.push({
                 pathname: '/travel/[id]/expenses/edit/[expenseId]',

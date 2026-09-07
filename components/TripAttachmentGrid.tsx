@@ -118,12 +118,14 @@ export default function TripAttachmentGrid({
 
       <View style={styles.buttonRow}>
         <Pressable
+          accessibilityRole="button"
           style={[styles.actionButton, { borderColor }]}
           onPress={() => addImage(true)}
         >
           <Text style={styles.actionText}>{t("warranties.addPhoto")}</Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[styles.actionButton, { borderColor }]}
           onPress={() => addImage(false)}
         >
@@ -132,6 +134,7 @@ export default function TripAttachmentGrid({
           </Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           style={[styles.actionButton, { borderColor }]}
           onPress={addDocument}
         >

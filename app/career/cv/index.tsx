@@ -22,28 +22,28 @@ export default function CvHubScreen() {
 
   return (
     <ScrollView style={{ backgroundColor }} contentContainerStyle={sharedStyles.formContainerScroll} keyboardShouldPersistTaps="handled">
-      <Pressable onPress={() => router.push('/career/cv/personal-info')}>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/career/cv/personal-info')}>
         <Card style={sharedStyles.rowBetween}>
           <Text style={styles.linkText}>{t('cv.personalInfoLabel')}</Text>
           <Text style={{ color: textMuted }}>{personalInfo.fullName ? '✓' : ''}</Text>
         </Card>
       </Pressable>
 
-      <Pressable onPress={() => router.push('/career/cv/experience')}>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/career/cv/experience')}>
         <Card style={sharedStyles.rowBetween}>
           <Text style={styles.linkText}>{t('cv.experienceLabel')}</Text>
           <Text style={{ color: textMuted }}>{experience.length}</Text>
         </Card>
       </Pressable>
 
-      <Pressable onPress={() => router.push('/career/cv/education')}>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/career/cv/education')}>
         <Card style={sharedStyles.rowBetween}>
           <Text style={styles.linkText}>{t('cv.educationLabel')}</Text>
           <Text style={{ color: textMuted }}>{education.length}</Text>
         </Card>
       </Pressable>
 
-      <Pressable onPress={() => router.push('/career/cv/languages')}>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/career/cv/languages')}>
         <Card style={sharedStyles.rowBetween}>
           <Text style={styles.linkText}>{t('cv.languagesLabel')}</Text>
           <Text style={{ color: textMuted }}>{languages.length}</Text>

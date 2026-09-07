@@ -167,7 +167,7 @@ export default function LockScreen() {
       <Text style={styles.title}>{t('appLock.lockedTitle')}</Text>
 
       {!showPinInput ? (
-        <Pressable style={[styles.retryButton, { borderColor: accentTints.accent }]} onPress={attemptBiometric}>
+        <Pressable accessibilityRole="button" style={[styles.retryButton, { borderColor: accentTints.accent }]} onPress={attemptBiometric}>
           <Text style={[styles.retryText, { color: accentTints.accent }]}>{t('appLock.tryBiometricAgain')}</Text>
         </Pressable>
       ) : (
@@ -202,7 +202,7 @@ export default function LockScreen() {
             </Text>
           )}
 
-          <Pressable onPress={attemptBiometric}>
+          <Pressable accessibilityRole="button" onPress={attemptBiometric}>
             <Text style={[styles.switchBack, { color: accentTints.accent }]}>{t('appLock.tryBiometricAgain')}</Text>
           </Pressable>
         </View>

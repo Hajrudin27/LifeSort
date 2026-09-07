@@ -80,7 +80,7 @@ export default function UpcomingExpensesScreen() {
         renderItem={({ item }) => {
           const color = urgencyColor(item.days);
           return (
-            <Pressable onPress={() => router.push(`/expenses/edit/${item.id}`)}>
+            <Pressable accessibilityRole="button" onPress={() => router.push(`/expenses/edit/${item.id}`)}>
               <View style={[styles.row, { borderColor: accentTints.accentSoft }]}>
                 <View style={styles.iconWrap}>
                   <View style={[styles.iconGlow, { backgroundColor: color + '22' }]} />

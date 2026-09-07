@@ -22,7 +22,7 @@ export default function QuickActionCard({ icon, title, subtitle, actionLabel, to
   const color = tone ?? accentTints.accent;
 
   return (
-    <Pressable style={style as object} {...props}>
+    <Pressable accessibilityRole="button" style={style as object} {...props}>
       <Card style={[styles.card, { borderColor: `${color}33` }]}>
         <View style={[styles.iconCircle, { backgroundColor: `${color}18` }]}>
           <SymbolView name={icon as any} size={18} tintColor={color} />

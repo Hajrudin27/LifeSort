@@ -25,7 +25,7 @@ export default function EducationListScreen() {
         contentContainerStyle={sharedStyles.list}
         ListEmptyComponent={<Text style={[sharedStyles.emptyState, { color: textMuted }]}>{t('cv.emptyEducation')}</Text>}
         renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(`/career/cv/education/${item.id}`)}>
+          <Pressable accessibilityRole="button" onPress={() => router.push(`/career/cv/education/${item.id}`)}>
             <Card>
               <Text style={styles.title}>{item.degree}{item.fieldOfStudy ? `, ${item.fieldOfStudy}` : ''}</Text>
               <Text style={{ color: textMuted }}>{item.school}</Text>

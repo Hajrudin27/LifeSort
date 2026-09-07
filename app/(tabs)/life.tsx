@@ -258,7 +258,7 @@ export default function LifeScreen() {
 
       <View style={styles.moduleList}>
         {modules.map((module) => (
-          <Pressable key={module.key} onPress={() => router.push(module.route)}>
+          <Pressable accessibilityRole="button" key={module.key} onPress={() => router.push(module.route)}>
             <Card style={[styles.moduleCard, { borderColor: `${module.tone}33` }]}>
               <View style={[styles.moduleAccent, { backgroundColor: tints[module.key] }]} />
               <View style={[styles.moduleIcon, { backgroundColor: `${module.tone}18` }]}>

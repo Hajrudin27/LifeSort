@@ -130,7 +130,7 @@ export default function FoodScreen() {
         }
       >
         {monthlyBudget !== null && (
-          <Pressable onPress={() => router.push("/food/budget")}>
+          <Pressable accessibilityRole="button" onPress={() => router.push("/food/budget")}>
             <View style={styles.heroProgressWrap}>
               <View style={styles.heroProgressTrack}>
                 <View
@@ -152,7 +152,7 @@ export default function FoodScreen() {
           </Pressable>
         )}
         {monthlyBudget === null && (
-          <Pressable onPress={() => router.push("/food/budget")} style={styles.heroSetBudgetLink}>
+          <Pressable accessibilityRole="button" onPress={() => router.push("/food/budget")} style={styles.heroSetBudgetLink}>
             <Text style={styles.heroSetBudgetText}>{t("food.setBudgetLink")}</Text>
             <SymbolView name={{ ios: "arrow.right", android: "arrow_forward", web: "arrow_forward" }} size={12} tintColor="#FFFFFF" />
           </Pressable>
@@ -164,10 +164,10 @@ export default function FoodScreen() {
           <Text style={styles.reuseTitle}>{t("food.reuseLastWeekTitle")}</Text>
           <Text style={[styles.reuseBody, { color: textMuted }]}>{t("food.reuseLastWeekBody")}</Text>
           <View style={styles.reuseButtonRow}>
-            <Pressable style={[styles.reuseButton, { backgroundColor: accentTints.accent }]} onPress={reuseLastWeek}>
+            <Pressable accessibilityRole="button" style={[styles.reuseButton, { backgroundColor: accentTints.accent }]} onPress={reuseLastWeek}>
               <Text style={styles.reuseButtonText}>{t("food.reuseLastWeekButton")}</Text>
             </Pressable>
-            <Pressable style={styles.dismissButton} onPress={() => setDismissedReuse(true)}>
+            <Pressable accessibilityRole="button" style={styles.dismissButton} onPress={() => setDismissedReuse(true)}>
               <Text style={[styles.dismissText, { color: textMuted }]}>{t("food.dismiss")}</Text>
             </Pressable>
           </View>
@@ -197,7 +197,7 @@ export default function FoodScreen() {
 
       <View style={styles.grid}>
         {modules.map((m) => (
-          <Pressable key={m.key} style={styles.gridCell} onPress={() => router.push(m.route as any)}>
+          <Pressable accessibilityRole="button" key={m.key} style={styles.gridCell} onPress={() => router.push(m.route as any)}>
             <View style={[styles.moduleCard, { borderColor: accentTints.accentSoft }]}>
               <IconGlowCircle
                 icon={m.icon}

@@ -145,6 +145,7 @@ export default function NewWarrantyScreen() {
               const active = type === item;
               return (
                 <Pressable
+                  accessibilityRole="button"
                   key={item}
                   style={[
                     styles.typeCard,
@@ -172,7 +173,7 @@ export default function NewWarrantyScreen() {
         <View style={styles.optionSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('warranties.expiryLabel')}</Text>
-            <Pressable style={[styles.customDateButton, { backgroundColor: surfaceMuted }]} onPress={openCustomDate}>
+            <Pressable accessibilityRole="button" style={[styles.customDateButton, { backgroundColor: surfaceMuted }]} onPress={openCustomDate}>
               <SymbolView name={{ ios: 'calendar', android: 'event', web: 'event' }} size={14} tintColor={accentTints.accent} />
               <Text style={[styles.customDateText, { color: accentTints.accent }]}>{t('warranties.customDate')}</Text>
             </Pressable>
@@ -181,6 +182,7 @@ export default function NewWarrantyScreen() {
           <View style={styles.expiryChips}>
             {expiryShortcuts.map((shortcut) => (
               <Pressable
+                accessibilityRole="button"
                 key={shortcut.key}
                 style={[
                   styles.expiryChip,

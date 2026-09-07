@@ -54,13 +54,13 @@ export default function DatePickerField({ value, onChange, yearsBack = 80, years
 
   return (
     <>
-      <Pressable style={[styles.field, { borderColor, backgroundColor: surface }]} onPress={() => setIsOpen(true)}>
+      <Pressable accessibilityRole="button" style={[styles.field, { borderColor, backgroundColor: surface }]} onPress={() => setIsOpen(true)}>
         <Text style={styles.fieldText}>{displayLabel}</Text>
       </Pressable>
 
       <Modal visible={isOpen} animationType="slide" transparent onRequestClose={() => setIsOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setIsOpen(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
+        <Pressable accessible={false} style={styles.backdrop} onPress={() => setIsOpen(false)}>
+          <Pressable accessible={false} style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.row}>
               <Picker style={styles.picker} selectedValue={month} onValueChange={(m) => update(year, Number(m), day)}>
                 {monthNames.map((name, i) => (

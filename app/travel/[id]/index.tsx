@@ -134,7 +134,7 @@ export default function TripDetailScreen() {
         options={{
           title: trip.name,
           headerRight: () => (
-            <Pressable onPress={() => setShowEdit(true)} style={styles.editButton}>
+            <Pressable accessibilityRole="button" onPress={() => setShowEdit(true)} style={styles.editButton}>
               <SymbolView
                 name={{ ios: "pencil", android: "edit", web: "edit" }}
                 size={20}
@@ -178,6 +178,7 @@ export default function TripDetailScreen() {
         <View style={{ gap: 8 }}>
           {participants.map((p) => (
             <Pressable
+              accessibilityRole="button"
               key={p.userId}
               onLongPress={isOwner ? () => confirmRemoveParticipant(p.userId, p.invitedEmail) : undefined}
             >
@@ -198,15 +199,15 @@ export default function TripDetailScreen() {
       )}
 
       {isOwner && (
-        <Pressable style={[styles.inviteButton, { borderColor: accentTints.accent }]} onPress={() => setShowInvite(true)}>
+        <Pressable accessibilityRole="button" style={[styles.inviteButton, { borderColor: accentTints.accent }]} onPress={() => setShowInvite(true)}>
           <SymbolView name={{ ios: 'person.badge.plus', android: 'person_add', web: 'person_add' }} size={16} tintColor={accentTints.accent} />
           <Text style={[styles.inviteButtonText, { color: accentTints.accent }]}>{t('travel.inviteButton')}</Text>
         </Pressable>
       )}
 
       <Modal visible={showEdit} animationType="slide" transparent onRequestClose={() => setShowEdit(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setShowEdit(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
+        <Pressable accessible={false} style={styles.modalBackdrop} onPress={() => setShowEdit(false)}>
+          <Pressable accessible={false} style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
             <ScrollView>
               <Card style={sharedStyles.card}>
                 <TextInput
@@ -239,8 +240,8 @@ export default function TripDetailScreen() {
       </Modal>
 
       <Modal visible={showInvite} animationType="slide" transparent onRequestClose={() => setShowInvite(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setShowInvite(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
+        <Pressable accessible={false} style={styles.modalBackdrop} onPress={() => setShowInvite(false)}>
+          <Pressable accessible={false} style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
             <View style={[styles.kicker, { backgroundColor: accentTints.accentSoft }]}>
               <Text style={[styles.kickerText, { color: accentTints.accent }]}>{t('travel.inviteButton')}</Text>
             </View>

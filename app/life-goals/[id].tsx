@@ -94,6 +94,7 @@ export default function LifeGoalDetailScreen() {
           title: goal.title,
           headerRight: () => (
             <Pressable
+              accessibilityRole="button"
               onPress={() => setShowEdit(true)}
               style={styles.editButton}
             >
@@ -129,6 +130,7 @@ export default function LifeGoalDetailScreen() {
           {goal.subGoals.map((sg) => (
             <Card key={sg.id} style={sharedStyles.rowBetween}>
               <Pressable
+                accessibilityRole="button"
                 style={styles.subGoalRow}
                 onPress={() => toggleSubGoal(goal.id, sg.id)}
               >
@@ -186,7 +188,7 @@ export default function LifeGoalDetailScreen() {
           onChangeText={setNewSubGoal}
           onSubmitEditing={addSub}
         />
-        <Pressable style={[styles.addButton, { borderColor }]} onPress={addSub}>
+        <Pressable accessibilityRole="button" style={[styles.addButton, { borderColor }]} onPress={addSub}>
           <Text style={styles.addButtonText}>{t("lifeGoals.addSubGoal")}</Text>
         </Pressable>
       </View>
@@ -198,10 +200,12 @@ export default function LifeGoalDetailScreen() {
         onRequestClose={() => setShowEdit(false)}
       >
         <Pressable
+          accessible={false}
           style={styles.modalBackdrop}
           onPress={() => setShowEdit(false)}
         >
           <Pressable
+            accessible={false}
             style={[styles.modalCard, { backgroundColor, borderColor }]}
             onPress={(e) => e.stopPropagation()}
           >

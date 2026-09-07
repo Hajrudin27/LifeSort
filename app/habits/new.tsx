@@ -64,7 +64,7 @@ export default function NewHabitScreen() {
             onChangeText={setTarget}
           />
         ) : (
-          <Pressable onPress={() => setShowTarget(true)}>
+          <Pressable accessibilityRole="button" onPress={() => setShowTarget(true)}>
             <Text style={[styles.addLink, { color: textMuted }]}>+ {t('habits.targetLabel')}</Text>
           </Pressable>
         )}

@@ -182,7 +182,7 @@ export default function WeeklyPlanScreen() {
       </View>
 
       <View style={styles.actionGrid}>
-        <Pressable style={[styles.actionCard, { backgroundColor: surface, borderColor }]} onPress={() => router.push("/food/select-stores")}>
+        <Pressable accessibilityRole="button" style={[styles.actionCard, { backgroundColor: surface, borderColor }]} onPress={() => router.push("/food/select-stores")}>
           <SymbolView name={{ ios: "storefront.fill", android: "storefront", web: "storefront" }} size={18} tintColor={accentTints.accent} />
           <View style={styles.actionTextGroup}>
             <Text style={styles.actionTitle}>{t("food.selectStoresLabel")}</Text>
@@ -192,7 +192,7 @@ export default function WeeklyPlanScreen() {
           </View>
         </Pressable>
 
-        <Pressable style={[styles.actionCard, { backgroundColor: surface, borderColor }]} onPress={() => router.push("/food/budget")}>
+        <Pressable accessibilityRole="button" style={[styles.actionCard, { backgroundColor: surface, borderColor }]} onPress={() => router.push("/food/budget")}>
           <SymbolView name={{ ios: "chart.pie.fill", android: "pie_chart", web: "pie_chart" }} size={18} tintColor={brand.glowSecondary} />
           <View style={styles.actionTextGroup}>
             <Text style={styles.actionTitle}>{t("food.budgetLabel")}</Text>
@@ -229,6 +229,7 @@ export default function WeeklyPlanScreen() {
               const lockedRecipe = lockedId ? recipes.find((r) => r.id === lockedId) : null;
               return (
                 <Pressable
+                  accessibilityRole="button"
                   key={mealType}
                   style={[styles.lockRow, { backgroundColor: lockedRecipe ? accentTints.accentSoft : surfaceMuted }]}
                   onPress={() => (lockedRecipe ? unlock(day, mealType) : openPicker(day, mealType, "lock"))}
@@ -284,7 +285,7 @@ export default function WeeklyPlanScreen() {
             <Card key={day} style={styles.dayCard}>
               <Text style={styles.dayName}>{weekdayNames[day]}</Text>
               {daySlots.map((slot) => (
-                <Pressable key={slot.mealType} style={styles.slotRow} onPress={() => slot.recipe && openPicker(slot.day, slot.mealType, "swap")}>
+                <Pressable accessibilityRole="button" key={slot.mealType} style={styles.slotRow} onPress={() => slot.recipe && openPicker(slot.day, slot.mealType, "swap")}>
                   <Text style={[styles.mealTypeLabel, { color: textMuted }]}>{t(`food.mealTypes.${slot.mealType}`)}</Text>
                   <View style={styles.slotRight}>
                     <Text style={styles.slotRecipe} numberOfLines={1}>
@@ -344,8 +345,8 @@ export default function WeeklyPlanScreen() {
       )}
 
       <Modal visible={pickerSlot !== null} animationType="slide" transparent onRequestClose={() => setPickerSlot(null)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setPickerSlot(null)}>
-          <Pressable style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
+        <Pressable accessible={false} style={styles.modalBackdrop} onPress={() => setPickerSlot(null)}>
+          <Pressable accessible={false} style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <View style={[styles.modalIcon, { backgroundColor: accentTints.accentSoft }]}>
@@ -364,7 +365,7 @@ export default function WeeklyPlanScreen() {
                 <Text style={[styles.emptyPickerText, { color: textMuted }]}>{t("food.noRecipesForMealType")}</Text>
               ) : (
                 pickerCandidates.map((recipe) => (
-                  <Pressable key={recipe.id} onPress={() => pickRecipe(recipe.id)}>
+                  <Pressable accessibilityRole="button" key={recipe.id} onPress={() => pickRecipe(recipe.id)}>
                     <Card style={styles.modalRecipeRow}>
                       <View style={styles.modalRecipeText}>
                         <Text style={styles.modalRecipeName}>{recipe.name}</Text>

@@ -67,7 +67,7 @@ export default function LanguagesScreen() {
           </Card>
         }
         renderItem={({ item }) => (
-          <Pressable onLongPress={() => handleLongPress(item)}>
+          <Pressable accessibilityRole="button" onLongPress={() => handleLongPress(item)}>
             <Card style={sharedStyles.rowBetween}>
               <Text style={styles.name}>{item.name}</Text>
               <Text style={{ color: textMuted }}>{t(`cv.proficiency.${item.proficiency}`)}</Text>

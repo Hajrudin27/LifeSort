@@ -23,6 +23,8 @@ export default function Chip({ label, active, icon, stacked, style, ...props }: 
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!active }}
       style={[
         styles.chip,
         stacked && styles.chipStacked,

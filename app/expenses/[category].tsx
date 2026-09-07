@@ -56,7 +56,7 @@ export default function CategoryExpensesScreen() {
   };
 
   const renderExpense = ({ item }: { item: Expense }) => (
-    <Pressable onPress={() => router.push(`/expenses/edit/${item.id}`)} onLongPress={() => showActions(item)}>
+    <Pressable accessibilityRole="button" onPress={() => router.push(`/expenses/edit/${item.id}`)} onLongPress={() => showActions(item)}>
       <View style={[styles.expenseRow, { backgroundColor: surface, borderColor: border }]}>
         <View style={[styles.dateBadge, { backgroundColor: accentTints.accentSoft }]}>
           <Text style={[styles.dateText, { color: accentTints.accent }]} numberOfLines={1}>

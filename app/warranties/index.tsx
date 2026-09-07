@@ -125,7 +125,7 @@ export default function WarrantiesScreen() {
 
           return (
             <SwipeableRow onDelete={() => removeWarranty(item.id)}>
-              <Pressable onPress={() => router.push(`/warranties/${item.id}`)}>
+              <Pressable accessibilityRole="button" onPress={() => router.push(`/warranties/${item.id}`)}>
                 <Card style={[styles.card, { borderColor: accentTints.accentSoft }]}>
                   <View style={styles.iconWrap}>
                     <View style={[styles.iconGlow, { backgroundColor: accentTints.accentSoft }]} />

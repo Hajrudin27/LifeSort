@@ -165,7 +165,7 @@ export default function CycleWheel({
       </View>
 
       {dayOffset !== 0 && (
-        <Pressable onPress={() => setDayOffset(0)} style={styles.resetLink}>
+        <Pressable accessibilityRole="button" onPress={() => setDayOffset(0)} style={styles.resetLink}>
           <SymbolView name={{ ios: 'arrow.uturn.left', android: 'undo', web: 'undo' }} size={13} tintColor={tint} />
           <Text style={[styles.resetLinkText, { color: tint }]}>{t('cycle.wheelBackToToday')}</Text>
         </Pressable>

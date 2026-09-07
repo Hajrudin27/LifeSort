@@ -137,6 +137,7 @@ export default function SettingsScreen() {
 
     return (
       <Pressable
+        accessibilityRole="button"
         onPress={onPress}
         style={({ pressed }) => [styles.settingsRow, pressed && styles.pressedRow]}
       >
@@ -153,6 +154,7 @@ export default function SettingsScreen() {
       scrollEventThrottle={16}
     >
       <Pressable
+        accessibilityRole="button"
         onPress={() => router.push("/settings/profile")}
         style={({ pressed }) => [styles.profileCard, { backgroundColor: brand.ink }, pressed && styles.pressedCard]}
       >
@@ -265,6 +267,7 @@ export default function SettingsScreen() {
               const selected = mode === option;
               return (
                 <Pressable
+                  accessibilityRole="button"
                   key={option}
                   onPress={() => setMode(option)}
                   style={[styles.segment, selected && { backgroundColor: theme.text }]}
@@ -300,6 +303,7 @@ export default function SettingsScreen() {
               const selected = language === option;
               return (
                 <Pressable
+                  accessibilityRole="button"
                   key={option}
                   onPress={() => changeLanguage(option)}
                   style={[styles.segment, selected && { backgroundColor: theme.text }]}

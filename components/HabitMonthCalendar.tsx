@@ -91,6 +91,7 @@ export default function HabitMonthCalendar({ habit }: Props) {
 
             return (
               <Pressable
+                accessibilityRole="button"
                 key={di}
                 disabled={isDisabled}
                 onPress={() => toggleLogForDate(habit.id, day.key!)}

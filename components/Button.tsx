@@ -26,6 +26,8 @@ export default function Button({ label, variant = 'primary', disabled, style, ..
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       style={[
         styles.button,

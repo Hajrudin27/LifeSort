@@ -75,7 +75,7 @@ export default function HabitDetailScreen() {
         options={{
           title: habit.title,
           headerRight: () => (
-            <Pressable onPress={() => setShowEdit(true)} style={styles.editButton}>
+            <Pressable accessibilityRole="button" onPress={() => setShowEdit(true)} style={styles.editButton}>
               <SymbolView name={{ ios: 'pencil', android: 'edit', web: 'edit' }} size={20} tintColor={textMuted} />
               <Text style={{ color: textMuted }}>{t('habits.edit')}</Text>
             </Pressable>
@@ -98,8 +98,8 @@ export default function HabitDetailScreen() {
       </Card>
 
       <Modal visible={showEdit} animationType="slide" transparent onRequestClose={() => setShowEdit(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setShowEdit(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
+        <Pressable accessible={false} style={styles.modalBackdrop} onPress={() => setShowEdit(false)}>
+          <Pressable accessible={false} style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
             <Card style={sharedStyles.card}>
               <TextInput
                 style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}

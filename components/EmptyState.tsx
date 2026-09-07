@@ -26,7 +26,7 @@ export default function EmptyState({ icon, title, subtitle, actionLabel, onActio
       <Text style={styles.title}>{title}</Text>
       {subtitle && <Text style={[styles.subtitle, { color: textMuted }]}>{subtitle}</Text>}
       {actionLabel && onAction && (
-        <Pressable onPress={onAction} style={[styles.actionButton, { backgroundColor: accentTints.accentSoft }]}>
+        <Pressable accessibilityRole="button" onPress={onAction} style={[styles.actionButton, { backgroundColor: accentTints.accentSoft }]}>
           <Text style={[styles.actionText, { color: accentTints.accent }]}>{actionLabel}</Text>
         </Pressable>
       )}

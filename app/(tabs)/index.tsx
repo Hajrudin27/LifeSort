@@ -332,7 +332,7 @@ export default function HomeScreen() {
           <SectionHeader title={t('home.attentionTitle')} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attentionRow}>
             {attentionItems.map((item) => (
-              <Pressable key={item.key} onPress={() => router.push(item.route)}>
+              <Pressable accessibilityRole="button" key={item.key} onPress={() => router.push(item.route)}>
                 <Card style={[styles.attentionCard, { borderColor: item.color, borderWidth: 1.5 }]}>
                   <SymbolView name={item.icon} size={20} tintColor={item.color} />
                   <Text style={[styles.attentionLabel, { color: item.color }]}>{item.label}</Text>
@@ -396,7 +396,7 @@ export default function HomeScreen() {
             ) : (
               <View style={styles.todoList}>
                 {todosToday.map((td) => (
-                  <Pressable key={td.id} style={styles.todoRow} onPress={() => toggleTodo(td.id)}>
+                  <Pressable accessibilityRole="button" key={td.id} style={styles.todoRow} onPress={() => toggleTodo(td.id)}>
                     <SymbolView
                       name={{
                         ios: td.completed ? 'checkmark.circle.fill' : 'circle',
@@ -424,14 +424,14 @@ export default function HomeScreen() {
             </Card>
           ) : (
             <>
-              <Pressable onPress={() => router.push({ pathname: '/todos', params: { from: 'home' } } as any)}>
+              <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/todos', params: { from: 'home' } } as any)}>
                 <Card style={styles.weekRow}>
                   <SymbolView name={{ ios: 'checklist', android: 'checklist', web: 'checklist' }} size={18} tintColor={tint} />
                   <Text style={styles.weekRowText}>{t('home.weekTodosLabel', { count: todosThisWeek.length })}</Text>
                 </Card>
               </Pressable>
 
-              <Pressable onPress={() => router.push({ pathname: '/household', params: { from: 'home' } } as any)}>
+              <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/household', params: { from: 'home' } } as any)}>
                 <Card style={styles.weekRow}>
                   <SymbolView name={{ ios: 'wrench.fill', android: 'build', web: 'build' }} size={18} tintColor={tint} />
                   <Text style={styles.weekRowText}>{t('home.weekHouseholdLabel', { count: householdThisWeekCount })}</Text>

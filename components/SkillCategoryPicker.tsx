@@ -53,12 +53,12 @@ export default function SkillCategoryPicker({ selected, onSelect }: Props) {
               autoFocus
               onSubmitEditing={confirmAdd}
             />
-            <Pressable style={[styles.confirmBtn, { borderColor }]} onPress={confirmAdd}>
+            <Pressable accessibilityRole="button" style={[styles.confirmBtn, { borderColor }]} onPress={confirmAdd}>
               <Text>{t('career.addCategoryConfirm')}</Text>
             </Pressable>
           </View>
         ) : (
-          <Pressable style={[styles.addLinkRow, { borderColor }]} onPress={() => setIsAdding(true)}>
+          <Pressable accessibilityRole="button" style={[styles.addLinkRow, { borderColor }]} onPress={() => setIsAdding(true)}>
             <Text>+ {t('career.addCategory')}</Text>
           </Pressable>
         )

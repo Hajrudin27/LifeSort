@@ -106,7 +106,7 @@ export default function TravelScreen() {
           const packingProgress = itemsForTrip.length > 0 ? packedCount / itemsForTrip.length : null;
 
           return (
-            <Pressable onPress={() => router.push({ pathname: '/travel/[id]', params: { id: item.id } })}>
+            <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/travel/[id]', params: { id: item.id } })}>
               <View style={[styles.card, { borderColor: accentTints.accentSoft }, isPast && styles.cardPast]}>
                 <View style={styles.cardTopRow}>
                   <View style={styles.ringWrap}>
@@ -159,7 +159,7 @@ export default function TravelScreen() {
         }}
       />
 
-      <Pressable style={[styles.addButton, { backgroundColor: accentTints.accent }]} onPress={() => router.push('/travel/new')}>
+      <Pressable accessibilityRole="button" style={[styles.addButton, { backgroundColor: accentTints.accent }]} onPress={() => router.push('/travel/new')}>
         <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={18} tintColor="#FFFFFF" />
         <Text style={styles.addButtonText}>{t('travel.addButton')}</Text>
       </Pressable>

@@ -49,7 +49,7 @@ export default function RecipesScreen() {
           const matchedCount = matches.filter((m) => m.offer !== null).length;
 
           return (
-            <Pressable onPress={() => router.push({ pathname: "/food/recipes/[id]", params: { id: item.id } })}>
+            <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: "/food/recipes/[id]", params: { id: item.id } })}>
               <Card style={sharedStyles.card}>
                 <Text style={styles.name}>{item.name}</Text>
                 <View style={styles.metaRow}>

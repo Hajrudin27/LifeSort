@@ -47,7 +47,7 @@ export default function CycleHistoryScreen() {
         }
         renderItem={({ item }) => (
           <SwipeableRow onDelete={() => confirmDelete(item.id)}>
-            <Pressable onPress={() => router.push(`/cycle/${item.id}`)}>
+            <Pressable accessibilityRole="button" onPress={() => router.push(`/cycle/${item.id}`)}>
               <Card style={[styles.card, { borderColor: cycleTints.accentSoft }]}>
                 <View style={styles.iconWrap}>
                   <View style={[styles.iconGlow, { backgroundColor: cycleTints.accentSoft }]} />

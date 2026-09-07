@@ -81,6 +81,7 @@ export default function AllocateSavingsScreen() {
 
       {goals.length > 1 && available > 0 && (
         <Pressable
+          accessibilityRole="button"
           style={[
             styles.autoButton,
             {

@@ -54,6 +54,7 @@ export default function SearchExpensesScreen() {
         }
         renderItem={({ item }) => (
           <Pressable
+            accessibilityRole="button"
             onPress={() =>
               router.push({
                 pathname: "/expenses/[category]",

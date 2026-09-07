@@ -44,7 +44,7 @@ export default function HouseholdTasksScreen() {
 
           return (
             <Card style={styles.row}>
-              <Pressable style={styles.titleWrap} onPress={() => router.push(`/household/tasks/${item.id}`)}>
+              <Pressable accessibilityRole="button" style={styles.titleWrap} onPress={() => router.push(`/household/tasks/${item.id}`)}>
                 <View style={styles.titleRow}>
                   <AssigneeAvatar assignee={item.assignedTo} size={26} />
                   <View style={{ flex: 1 }}>
@@ -53,7 +53,7 @@ export default function HouseholdTasksScreen() {
                   </View>
                 </View>
               </Pressable>
-              <Pressable style={[styles.doneButton]} onPress={() => markTaskDone(item.id)}>
+              <Pressable accessibilityRole="button" style={[styles.doneButton]} onPress={() => markTaskDone(item.id)}>
                 <Text style={styles.doneButtonText}>{t('household.markDone')}</Text>
               </Pressable>
             </Card>

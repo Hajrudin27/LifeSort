@@ -59,6 +59,7 @@ export default function AssigneeSelector({ assignedTo, onChangeAssignee, rotates
           const active = assignedTo === opt.key;
           return (
             <Pressable
+              accessibilityRole="button"
               key={opt.key}
               onPress={() => onChangeAssignee(opt.key)}
               style={[
@@ -77,6 +78,7 @@ export default function AssigneeSelector({ assignedTo, onChangeAssignee, rotates
       </View>
 
       <Pressable
+        accessibilityRole="button"
         onPress={() => onChangeRotates(!rotates)}
         style={[
           styles.rotateRow,

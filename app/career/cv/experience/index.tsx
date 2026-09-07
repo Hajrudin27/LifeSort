@@ -25,7 +25,7 @@ export default function ExperienceListScreen() {
         contentContainerStyle={sharedStyles.list}
         ListEmptyComponent={<Text style={[sharedStyles.emptyState, { color: textMuted }]}>{t('cv.emptyExperience')}</Text>}
         renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(`/career/cv/experience/${item.id}`)}>
+          <Pressable accessibilityRole="button" onPress={() => router.push(`/career/cv/experience/${item.id}`)}>
             <Card>
               <Text style={styles.title}>{item.position}</Text>
               <Text style={{ color: textMuted }}>{item.company}</Text>

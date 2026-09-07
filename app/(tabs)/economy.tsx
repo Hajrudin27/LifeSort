@@ -203,6 +203,7 @@ export default function EconomyScreen() {
               />
             </View>
             <Pressable
+              accessibilityRole="button"
               style={styles.insightsButton}
               onPress={() => router.push("/economy/insights")}
             >
@@ -261,6 +262,7 @@ export default function EconomyScreen() {
         <View style={styles.moduleList}>
           {modules.map((module) => (
             <Pressable
+              accessibilityRole="button"
               key={module.key}
               onPress={() => router.push(module.route)}
             >
@@ -338,10 +340,12 @@ export default function EconomyScreen() {
         onRequestClose={() => setShowExpiringModal(false)}
       >
         <Pressable
+          accessible={false}
           style={styles.modalBackdrop}
           onPress={() => setShowExpiringModal(false)}
         >
           <Pressable
+            accessible={false}
             style={[styles.modalCard, { backgroundColor, borderColor }]}
             onPress={(e) => e.stopPropagation()}
           >
@@ -356,6 +360,7 @@ export default function EconomyScreen() {
                 const days = daysUntil(item.expiryDate);
                 return (
                   <Pressable
+                    accessibilityRole="button"
                     style={[styles.modalRow, { borderColor }]}
                     onPress={() => goToWarranty(item.id)}
                   >
@@ -378,10 +383,12 @@ export default function EconomyScreen() {
         onRequestClose={() => setShowSavingsModal(false)}
       >
         <Pressable
+          accessible={false}
           style={styles.modalBackdrop}
           onPress={() => setShowSavingsModal(false)}
         >
           <Pressable
+            accessible={false}
             style={[styles.modalCard, { backgroundColor, borderColor }]}
             onPress={(e) => e.stopPropagation()}
           >
@@ -400,6 +407,7 @@ export default function EconomyScreen() {
                     : 0;
                 return (
                   <Pressable
+                    accessibilityRole="button"
                     style={[styles.modalRow, styles.goalRow, { borderColor }]}
                     onPress={() => goToGoal(item.id)}
                   >

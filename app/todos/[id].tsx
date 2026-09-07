@@ -99,7 +99,7 @@ export default function TodoDetailScreen() {
             <DatePickerField value={dueDate || new Date().toISOString().split('T')[0]} onChange={setDueDate} />
           </>
         ) : (
-          <Pressable onPress={() => setShowDuePicker(true)}>
+          <Pressable accessibilityRole="button" onPress={() => setShowDuePicker(true)}>
             <Text style={[styles.addLink, { color: textMuted }]}>+ {t('todos.dueDateLabel')}</Text>
           </Pressable>
         )}

@@ -74,7 +74,7 @@ export default function SymptomHistoryScreen() {
           </Card>
         }
         renderItem={({ item }) => (
-          <Pressable onPress={() => openEdit(item)} onLongPress={() => confirmRemove(item.id)}>
+          <Pressable accessibilityRole="button" onPress={() => openEdit(item)} onLongPress={() => confirmRemove(item.id)}>
             <Card style={[styles.card, { borderColor: cycleTints.accentSoft }]}>
               <View style={styles.rowHeader}>
                 <View style={[styles.iconCircle, { backgroundColor: cycleTints.accent }]}>
@@ -99,8 +99,8 @@ export default function SymptomHistoryScreen() {
       />
 
       <Modal visible={editTarget !== null} animationType="slide" transparent onRequestClose={() => setEditTarget(null)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setEditTarget(null)}>
-          <Pressable style={[styles.modalCard, { backgroundColor, borderColor: cycleTints.accentSoft }]} onPress={(e) => e.stopPropagation()}>
+        <Pressable accessible={false} style={styles.modalBackdrop} onPress={() => setEditTarget(null)}>
+          <Pressable accessible={false} style={[styles.modalCard, { backgroundColor, borderColor: cycleTints.accentSoft }]} onPress={(e) => e.stopPropagation()}>
             <ScrollView>
               <Text style={styles.modalTitle}>{editTarget?.date}</Text>
 

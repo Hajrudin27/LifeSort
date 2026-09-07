@@ -63,7 +63,7 @@ export default function ApplicationsScreen() {
         }
         renderItem={({ item }) => (
           <SwipeableRow onDelete={() => removeApplication(item.id)}>
-            <Pressable onPress={() => router.push(`/career/applications/${item.id}`)}>
+            <Pressable accessibilityRole="button" onPress={() => router.push(`/career/applications/${item.id}`)}>
               <Card style={sharedStyles.rowBetween}>
                 <View style={styles.textWrap}>
                   <Text style={styles.title}>{item.position}</Text>

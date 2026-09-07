@@ -107,13 +107,14 @@ export default function GenerateCvScreen() {
         <>
           <Text style={sharedStyles.sectionLabel}>{t('cv.savedVersionsLabel')}</Text>
           {versions.map((v) => (
-            <Pressable key={v.id} onLongPress={() => confirmDeleteVersion(v.id)}>
+            <Pressable accessibilityRole="button" key={v.id} onLongPress={() => confirmDeleteVersion(v.id)}>
               <Card style={sharedStyles.rowBetween}>
                 <View style={styles.versionInfo}>
                   <Text style={styles.versionName}>{v.name}</Text>
                   <Text style={{ color: textMuted, fontSize: 12 }}>{t(`cv.theme.${v.theme}`)}</Text>
                 </View>
                 <Pressable
+                  accessibilityRole="button"
                   onPress={() =>
                     runPreview(
                       { experienceIds: v.experienceIds, educationIds: v.educationIds, languageIds: v.languageIds, skillIds: v.skillIds },

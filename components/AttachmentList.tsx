@@ -104,19 +104,19 @@ export default function AttachmentList({ attachments, onAdd, onRemove }: Props) 
   return (
     <View>
       <View style={styles.row}>
-        <Pressable style={[styles.actionButton, { borderColor: accentTints.accentSoft, backgroundColor: accentTints.accentSoft }]} onPress={addFromCamera}>
+        <Pressable accessibilityRole="button" style={[styles.actionButton, { borderColor: accentTints.accentSoft, backgroundColor: accentTints.accentSoft }]} onPress={addFromCamera}>
           <View style={[styles.actionIconCircle, { backgroundColor: tint }]}>
             <SymbolView name={{ ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' }} size={16} tintColor="#FFFFFF" />
           </View>
           <Text style={[styles.actionText, { color: tint }]}>{t('warranties.addPhoto')}</Text>
         </Pressable>
-        <Pressable style={[styles.actionButton, { borderColor: accentTints.accentSoft, backgroundColor: accentTints.accentSoft }]} onPress={addFromLibrary}>
+        <Pressable accessibilityRole="button" style={[styles.actionButton, { borderColor: accentTints.accentSoft, backgroundColor: accentTints.accentSoft }]} onPress={addFromLibrary}>
           <View style={[styles.actionIconCircle, { backgroundColor: tint }]}>
             <SymbolView name={{ ios: 'photo.fill', android: 'image', web: 'image' }} size={16} tintColor="#FFFFFF" />
           </View>
           <Text style={[styles.actionText, { color: tint }]}>{t('warranties.addFromLibrary')}</Text>
         </Pressable>
-        <Pressable style={[styles.actionButton, { borderColor: accentTints.accentSoft, backgroundColor: accentTints.accentSoft }]} onPress={addDocument}>
+        <Pressable accessibilityRole="button" style={[styles.actionButton, { borderColor: accentTints.accentSoft, backgroundColor: accentTints.accentSoft }]} onPress={addDocument}>
           <View style={[styles.actionIconCircle, { backgroundColor: tint }]}>
             <SymbolView name={{ ios: 'doc.fill', android: 'description', web: 'description' }} size={16} tintColor="#FFFFFF" />
           </View>

@@ -117,7 +117,7 @@ export default function SearchScreen() {
           )
         }
         renderItem={({ item }) => (
-          <Pressable onPress={() => navigateTo(item)}>
+          <Pressable accessibilityRole="button" onPress={() => navigateTo(item)}>
             <Card style={styles.resultRow}>
               <View style={[styles.iconCircle, { backgroundColor: accentTints.accentSoft }]}>
                 <SymbolView name={KIND_ICON[item.kind] as any} size={16} tintColor={accentTints.accent} />

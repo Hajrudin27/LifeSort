@@ -6,6 +6,8 @@ import { Dimensions, NativeScrollEvent, NativeSyntheticEvent, Pressable, Refresh
 
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
+import { useHomeSnapshots } from '@/core/modules/homeSnapshots';
+import { HOME_SNAPSHOT_PROVIDERS } from '@/features/homeSnapshots';
 import MetricCard from '@/components/MetricCard';
 import QuickActionCard from '@/components/QuickActionCard';
 import Screen from '@/components/Screen';
@@ -15,19 +17,13 @@ import { sharedStyles } from '@/constants/sharedStyles';
 import Kicker from '@/components/Kicker';
 import { useAccentTints } from '@/hooks/useAccentTints';
 import { useBrandTints } from '@/hooks/useBrandTints';
-import { useCycleStore } from '@/store/useCycleStore';
-import { useExpensesStore } from '@/store/useExpensesStore';
 import { useFoodStore } from '@/store/useFoodStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
-import { useIncomeStore } from '@/store/useIncomeStore';
 import { useProfileStore } from '@/store/useProfileStore';
-import { useSavingsGoalsStore } from '@/store/useSavingsGoalsStore';
 import { useTodoStore } from '@/store/useTodoStore';
 import { useTripsStore } from '@/store/useTripsStore';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
-import { getCurrentCycleDay, getDaysUntilNextPeriod } from '@/utils/cycle/cyclePredictions';
-import { getISOWeekKey, getWeeksInMonth } from '@/utils/food/foodWeek';
 import { getCurrentStreak, hasLoggedToday } from '@/utils/habit/habitStreak';
 import { isDateInCurrentWeek } from '@/utils/habit/habitWeek';
 import { daysUntilDue } from '@/utils/household/householdTaskSchedule';
@@ -38,6 +34,15 @@ import { toLocalIsoDate } from '@/utils/shared/localDate';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PAGE_WIDTH = SCREEN_WIDTH - 32;
+
+/** Ikoner er skallens ansvar — et modul leverer data, ikke udseende. */
+const SNAPSHOT_ICONS: Record<string, { ios: string; android: string; web: string }> = {
+  economy: { ios: 'banknote', android: 'payments', web: 'payments' },
+  food: { ios: 'cart.fill', android: 'shopping_cart', web: 'shopping_cart' },
+  travel: { ios: 'airplane', android: 'flight', web: 'flight' },
+  cycle: { ios: 'drop.fill', android: 'water_drop', web: 'water_drop' },
+  default: { ios: 'square.grid.2x2', android: 'grid_view', web: 'grid_view' },
+};
 
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
@@ -51,7 +56,6 @@ export default function HomeScreen() {
 
   const now = new Date();
   const monthKey = getMonthKey(now);
-  const weekKey = getISOWeekKey(now);
   const todayKey = toLocalIsoDate(now);
   const greetingPeriod = getGreetingPeriod(now);
   const dateLabel = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
@@ -61,6 +65,9 @@ export default function HomeScreen() {
 
   const onRefresh = () => {
     setIsRefreshing(true);
+    // Modulernes kort hentes på ny — de er et øjebliksbillede, ikke en levende
+    // binding til en store, og skal derfor bedes om at opdatere sig.
+    reloadSnapshots();
     setTimeout(() => setIsRefreshing(false), 600);
   };
 
@@ -70,36 +77,19 @@ export default function HomeScreen() {
   };
 
   // ---- Data ----
+  // Home beder modulerne om små, typede kort. Den kender ikke længere en
+  // eneste domæne-store til det — se docs/home-snapshots.md.
+  const { snapshots, reload: reloadSnapshots } = useHomeSnapshots(HOME_SNAPSHOT_PROVIDERS);
+
   const profileName = useProfileStore((s) => s.profile.name);
   const gender = useProfileStore((s) => s.profile.gender);
 
-  const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
-  const netIncome = incomeByMonth[monthKey] ?? 0;
-  const allExpenses = useExpensesStore((s) => s.expenses);
-  const monthExpensesTotal = allExpenses
-    .filter((e) => e.nextPaymentDate.slice(0, 7) === monthKey)
-    .reduce((sum, e) => sum + e.amount, 0);
-  const moneyAvailable = netIncome - monthExpensesTotal;
-
-  const foodMonthlyBudgetByMonth = useFoodStore((s) => s.monthlyBudgetByMonth);
-  const foodPurchases = useFoodStore((s) => s.purchases);
-  const foodMonthlyBudget = foodMonthlyBudgetByMonth[monthKey] ?? null;
-  const foodWeeklyBudget = foodMonthlyBudget !== null ? foodMonthlyBudget / getWeeksInMonth(monthKey).length : null;
-  const foodSpentThisWeek = foodPurchases
-    .filter((p) => getISOWeekKey(new Date(p.date)) === weekKey)
-    .reduce((sum, p) => sum + p.amount, 0);
-  const foodRemaining = foodWeeklyBudget !== null ? foodWeeklyBudget - foodSpentThisWeek : null;
-
-  const savingsGoals = useSavingsGoalsStore((s) => s.goals);
-  const totalSaved = savingsGoals.reduce((sum, g) => sum + g.savedAmount, 0);
-  const totalTarget = savingsGoals.reduce((sum, g) => sum + g.targetAmount, 0);
-  const savingsProgress = totalTarget > 0 ? totalSaved / totalTarget : 0;
+  // Økonomi, mad og opsparing læses ikke længere her — modulerne leverer deres
+  // egne kort (APP-011). Kun madbudgettets tilstedeværelse bruges stadig, af
+  // "næste handling" nedenfor.
+  const foodMonthlyBudget = useFoodStore((s) => s.monthlyBudgetByMonth)[monthKey] ?? null;
 
   const trips = useTripsStore((s) => s.trips);
-  const upcomingTrip = [...trips]
-    .filter((tr) => daysUntil(tr.startDate) >= 0)
-    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0];
-
   const tripParticipants = useTripsStore((s) => s.participants);
   const respondToInvitation = useTripsStore((s) => s.respondToInvitation);
   const pendingInvitations = tripParticipants.filter((p) => p.status === 'pending');
@@ -131,10 +121,6 @@ export default function HomeScreen() {
     .filter((x) => x.streak > 0)
     .sort((a, b) => b.streak - a.streak)[0];
 
-  const cycles = useCycleStore((s) => s.cycles);
-  const cycleAvgLength = useCycleStore((s) => s.avgCycleLength);
-  const cycleDay = getCurrentCycleDay(cycles, now);
-  const cycleDaysUntilNext = getDaysUntilNextPeriod(cycles, cycleAvgLength, now);
 
   // ---- Attention items ----
   const attentionItems = [
@@ -474,57 +460,21 @@ export default function HomeScreen() {
       {/* Overview snapshot grid */}
       <SectionHeader title={t('home.overviewTitle')} subtitle={t('home.overviewSubtitle')} />
       <View style={styles.grid}>
-        <MetricCard
-          style={styles.gridCell}
-          icon={{ ios: 'banknote', android: 'payments', web: 'payments' }}
-          label={t('home.moneySnapshotLabel')}
-          value={`${moneyAvailable.toFixed(0)} kr.`}
-          helper={t('home.moneySnapshotHelper')}
-          tone={moneyAvailable < 0 ? danger : brand.glowPrimary}
-          onPress={() => router.push({ pathname: '/economy' } as any)}
-        />
-
-        <MetricCard
-          style={styles.gridCell}
-          icon={{ ios: 'cart.fill', android: 'shopping_cart', web: 'shopping_cart' }}
-          label={t('home.foodSnapshotLabel')}
-          value={foodRemaining !== null ? `${foodRemaining.toFixed(0)} kr.` : '—'}
-          helper={foodRemaining !== null ? t('home.foodSnapshotHelper') : t('home.foodSnapshotMissing')}
-          tone={foodRemaining !== null && foodRemaining < 0 ? danger : brand.glowSecondary}
-          onPress={() => router.push({ pathname: '/food', params: { from: 'home' } } as any)}
-        />
-
-        <MetricCard
-          style={styles.gridCell}
-          icon={{ ios: 'target', android: 'track_changes', web: 'track_changes' }}
-          label={t('home.savingsSnapshotLabel')}
-          value={`${totalSaved.toFixed(0)} kr.`}
-          helper={totalTarget > 0 ? t('home.savingsSnapshotHelper', { percent: Math.round(savingsProgress * 100) }) : t('home.savingsSnapshotMissing')}
-          tone={accentTints.accent}
-          onPress={() => router.push({ pathname: '/savings', params: { from: 'home' } } as any)}
-        />
-
-        <MetricCard
-          style={styles.gridCell}
-          icon={{ ios: 'airplane', android: 'flight', web: 'flight' }}
-          label={t('home.tripSnapshotLabel')}
-          value={upcomingTrip ? t('home.tripDaysUntil', { days: daysUntil(upcomingTrip.startDate) }) : t('home.noUpcomingTrip')}
-          helper={upcomingTrip?.name ?? t('home.tripSnapshotMissing')}
-          tone={brand.glowPrimary}
-          onPress={() => router.push({ pathname: '/travel', params: { from: 'home' } } as any)}
-        />
-
-        {gender === 'female' && (
+        {snapshots.map((snapshot) => (
           <MetricCard
+            key={snapshot.moduleId}
             style={styles.gridCell}
-            icon={{ ios: 'drop.fill', android: 'water_drop', web: 'water_drop' }}
-            label={t('cycle.title')}
-            value={cycleDay !== null ? t('cycle.heroDayLabel', { day: cycleDay }) : t('cycle.heroNoData')}
-            helper={cycleDaysUntilNext !== null ? t('cycle.daysUntilNext', { days: cycleDaysUntilNext }) : t('home.cycleSnapshotMissing')}
-            tone={accentTints.accent}
-            onPress={() => router.push('/cycle' as any)}
+            icon={SNAPSHOT_ICONS[snapshot.moduleId] ?? SNAPSHOT_ICONS.default}
+            label={t(snapshot.titleKey)}
+            value={
+              snapshot.value ??
+              (snapshot.valueKey ? t(snapshot.valueKey, snapshot.valueParams) : '—')
+            }
+            helper={snapshot.helperKey ? t(snapshot.helperKey, snapshot.helperParams) : undefined}
+            tone={snapshot.priority === 'urgent' ? danger : snapshot.priority === 'important' ? warning : accentTints.accent}
+            onPress={() => router.push(snapshot.route as any)}
           />
-        )}
+        ))}
       </View>
     </Screen>
   );

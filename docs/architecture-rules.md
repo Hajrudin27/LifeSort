@@ -42,7 +42,7 @@ R2, R3 and R5 hold today with no exceptions. R1, R4 and R6 have frozen baselines
 
 | Instead of | Do this | Story |
 | --- | --- | --- |
-| Home reading a domain store | Ask the module for a typed `homeSnapshot()` | APP-011 |
+| Home reading a domain store | Ask the module for a typed `homeSnapshot()` — done for the overview cards in APP-011, see [`docs/home-snapshots.md`](./home-snapshots.md) | APP-011, APP-012 |
 | Search crawling stores | Ask the module for `searchEntries()` | APP-077 |
 | A hub screen counting another module's items | Read through a typed selector the module exports | APP-009 |
 | The root layout hydrating every domain | Iterate the module registry | APP-009 |
@@ -53,7 +53,7 @@ R2, R3 and R5 hold today with no exceptions. R1, R4 and R6 have frozen baselines
 
 `BASELINE` in `__tests__/architectureBoundaries.test.ts` lists the couplings that
 existed when this rule was introduced: 38 route edges across six files, and 3
-component edges. Each entry carries the story that will remove it.
+component edges. APP-011 removed the first four. Each entry carries the story that will remove it.
 
 Two properties make it a ratchet rather than a rug:
 

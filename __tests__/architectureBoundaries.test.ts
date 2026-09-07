@@ -92,14 +92,13 @@ const CORE_BASELINE = [
  * Se docs/app-inventory.md §8-F4, §8-F5 og §8-F6.
  */
 const BASELINE = [
-  // Home læser elleve domæner direkte. Erstattes af homeSnapshot() i APP-011.
-  'app/(tabs)/index.tsx -> useCycleStore',
-  'app/(tabs)/index.tsx -> useExpensesStore',
+  // Home læste elleve domæner direkte. APP-011 flyttede de FIRE aflæsninger, der
+  // kun fodrede oversigtskortene, ud i modulernes egne homeSnapshot(). Tilbage
+  // står dem, der ikke er et øjebliksbillede: "kræver din opmærksomhed" og de
+  // rækker, man kan trykke på direkte. De hører til APP-012.
   'app/(tabs)/index.tsx -> useFoodStore',
   'app/(tabs)/index.tsx -> useHabitsStore',
   'app/(tabs)/index.tsx -> useHouseholdStore',
-  'app/(tabs)/index.tsx -> useIncomeStore',
-  'app/(tabs)/index.tsx -> useSavingsGoalsStore',
   'app/(tabs)/index.tsx -> useTodoStore',
   'app/(tabs)/index.tsx -> useTripsStore',
   'app/(tabs)/index.tsx -> useWarrantiesStore',

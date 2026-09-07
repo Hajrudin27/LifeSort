@@ -55,7 +55,6 @@ const ATTACHMENT_TYPE_FILES = ['types/attachment.ts', 'types/trip.ts'];
 /** Skærme der formaterer beløb selv, i stedet for gennem et Money-primitiv. */
 const MONEY_FORMATTING_FILES = [
   'app/(tabs)/economy.tsx',
-  'app/(tabs)/index.tsx',
   'app/economy/insights.tsx',
   'app/expenses/search.tsx',
   'app/expenses/upcoming.tsx',
@@ -71,6 +70,10 @@ const MONEY_FORMATTING_FILES = [
   'app/travel/[id]/index.tsx',
   'app/travel/index.tsx',
   'components/ExpensePieChart.tsx',
+  // APP-011 flyttede Homes beløbsformatering herind. Den forsvandt ikke —
+  // den flyttede, og skal med i frysningen, hvor den nu står.
+  'features/economy/homeSnapshot.ts',
+  'features/food/homeSnapshot.ts',
 ];
 
 function sourceFiles(dirs: string[]): string[] {
@@ -167,7 +170,7 @@ describe('AttachmentRef', () => {
 
 describe('Money', () => {
   it('får ikke flere skærme der formaterer beløb selv', () => {
-    const actual = filesMatching(['app', 'components'], /toFixed\(/);
+    const actual = filesMatching(['app', 'components', 'features'], /toFixed\(/);
     expectFrozen(actual, MONEY_FORMATTING_FILES, 'lokal beløbsformatering (`toFixed`)');
   });
 });

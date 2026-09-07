@@ -59,6 +59,9 @@ Specification §8.1 forbids floating point as canonical persisted money.
 | `value.toFixed(2)` | 18 | `app/(tabs)/economy.tsx` |
 | `Math.round(value).toLocaleString(locale)` | 3 | `app/expenses/index.tsx` |
 
+APP-011 moved Home's share of these into `features/*/homeSnapshot.ts`; the
+duplication moved rather than shrank, and the freeze list follows it.
+
 Plus two separate local `formatCurrency` helpers, in `app/expenses/index.tsx`
 and `app/expenses/[category].tsx`, which are not quite the same: one hardcodes
 `kr.`, the other reads `t('expenses.currency')`.

@@ -54,6 +54,7 @@ in the same change. Do not weaken the test to make a new file pass — add the r
 | --- | --- |
 | Routes | `app/` (Expo Router, file-based) |
 | Platform layer | `core/` — see [`docs/core-contract.md`](./core-contract.md) |
+| Module-side code | `features/<module>/` — new code follows the target structure (ADR-0003) |
 | Client state | `store/` (Zustand, mostly `persist` + AsyncStorage) |
 | Domain logic | `utils/<domain>/` |
 | Domain types | `types/` |

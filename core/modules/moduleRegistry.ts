@@ -51,8 +51,25 @@ export type EntitlementKey = 'bank_sync' | 'advanced_insights' | 'ai_monthly_quo
 export interface HomeSnapshot {
   moduleId: ModuleId;
   titleKey: string;
+  /**
+   * Færdigformateret værdi — til tal og beløb, der ser ens ud på alle sprog.
+   * Skal værdien oversættes ("Om 5 dage"), bruges `valueKey` i stedet: et modul
+   * må ikke gætte brugerens sprog, og skallen skal ikke parse strenge.
+   * Højst ét af de to felter må være sat.
+   */
   value?: string;
+  valueKey?: string;
+  valueParams?: Record<string, string | number>;
   helperKey?: string;
+  /**
+   * Værdier til hjælpeteksten. Nødvendig fordi hjælpeteksten er en i18n-nøgle:
+   * uden den kunne et modul kun sende færdigoversat tekst, og så ville det
+   * skulle kende brugerens sprog for at lave et kort.
+   *
+   * Bemærk: her kan brugerindhold havne (fx et rejsenavn). Se
+   * docs/home-snapshots.md §3 — det er derfor kortet også bærer sensitivity.
+   */
+  helperParams?: Record<string, string | number>;
   priority: 'normal' | 'important' | 'urgent';
   sensitivity: DataSensitivity;
   route: string;

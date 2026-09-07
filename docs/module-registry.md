@@ -48,7 +48,7 @@ the rest of a module's metadata rather than in a second table.
 | `id`, `availability`, `sensitivity`, `routeRoots` | Populated for all twelve modules |
 | `notificationCategory` | Set for the four modules that schedule reminders today |
 | `requiredEntitlements` | Typed, unused — there is no entitlement model yet (APP-131) |
-| `homeSnapshot` | **Undefined.** APP-011 |
+| `homeSnapshot` | Implemented for four modules by APP-011, supplied by the shell rather than stored on the definition — see [`docs/home-snapshots.md`](./home-snapshots.md) |
 | `searchEntries` | **Undefined.** APP-077 |
 | `exportHandler`, `deleteHandler` | **Undefined.** APP-097, APP-098 |
 

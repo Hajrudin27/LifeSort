@@ -1,17 +1,46 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { SymbolView } from "expo-symbols";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, Switch, TextInput } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
 import AttachmentList from "@/components/AttachmentList";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import CategoryPicker from "@/components/CategoryPicker";
 import DatePickerField from "@/components/DatePickerField";
-import { Text, useThemeColor, View } from "@/components/Themed";
-import { sharedStyles } from "@/constants/sharedStyles";
+import { Text, useThemeColor } from "@/components/Themed";
+import { useAccentTints } from "@/hooks/useAccentTints";
 import { useExpensesStore } from "@/store/useExpensesStore";
+import { useToastStore } from "@/store/useToastStore";
 import { ExpenseCategory } from "@/types/expense";
+
+const BRAND_INK = "#16130F";
+const BRAND_ROSE = "#E11D48";
+const BRAND_AMBER = "#F59E0B";
+
+const pad = (value: number) => value.toString().padStart(2, "0");
+
+function toISODate(date: Date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function addDays(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return toISODate(date);
+}
+
+function addMonths(months: number) {
+  const date = new Date();
+  date.setMonth(date.getMonth() + months);
+  return toISODate(date);
+}
+
+function parseAmount(value: string) {
+  const normalized = value.replace(",", ".").replace(/\s/g, "");
+  return Number.parseFloat(normalized);
+}
 
 export default function NewExpenseScreen() {
   const { t } = useTranslation();
@@ -19,23 +48,54 @@ export default function NewExpenseScreen() {
   const allExpenses = useExpensesStore((s) => s.expenses);
   const addAttachment = useExpensesStore((s) => s.addAttachment);
   const removeAttachment = useExpensesStore((s) => s.removeAttachment);
+  const showToast = useToastStore((s) => s.show);
+  const accentTints = useAccentTints();
   const borderColor = useThemeColor({}, "border");
-  const surface = useThemeColor({}, "surface");
-  const tint = useThemeColor({}, "tint");
   const backgroundColor = useThemeColor({}, "background");
+  const surface = useThemeColor({}, "surface");
+  const surfaceMuted = useThemeColor({}, "surfaceMuted");
+  const textMuted = useThemeColor({}, "textMuted");
+  const tint = useThemeColor({}, "tint");
 
+  const todayIso = useMemo(() => toISODate(new Date()), []);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<ExpenseCategory>("subscription");
-  const todayIso = new Date().toISOString().split("T")[0];
   const [nextPaymentDate, setNextPaymentDate] = useState(todayIso);
+  const [paymentMode, setPaymentMode] = useState<"today" | "tomorrow" | "week" | "month" | "custom">("today");
   const [isRecurring, setIsRecurring] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
-  const canSave = name.trim().length > 0 && !isNaN(parseFloat(amount));
+  const amountNumber = parseAmount(amount);
+  const canSave = name.trim().length > 0 && Number.isFinite(amountNumber) && amountNumber > 0;
+  const createdExpense = allExpenses.find((e) => e.id === createdId);
+  const paymentShortcuts = [
+    { key: "today", label: t("expenses.paymentToday"), value: addDays(0) },
+    { key: "tomorrow", label: t("expenses.paymentTomorrow"), value: addDays(1) },
+    { key: "week", label: t("expenses.paymentWeek"), value: addDays(7) },
+    { key: "month", label: t("expenses.paymentMonth"), value: addMonths(1) },
+  ] as const;
+
+  const selectPaymentShortcut = (mode: (typeof paymentShortcuts)[number]["key"]) => {
+    setPaymentMode(mode);
+    setNextPaymentDate(paymentShortcuts.find((item) => item.key === mode)?.value ?? todayIso);
+  };
+
+  const openCustomDate = () => {
+    setPaymentMode("custom");
+    setNextPaymentDate((current) => current || todayIso);
+  };
 
   const save = () => {
-    const id = addExpense({ name: name.trim(), amount: parseFloat(amount), category, nextPaymentDate, isRecurring });
+    if (!canSave) return;
+    const id = addExpense({
+      name: name.trim(),
+      amount: amountNumber,
+      category,
+      nextPaymentDate,
+      isRecurring,
+    });
+    showToast(t("expenses.createdToast"));
     setCreatedId(id);
   };
 
@@ -44,44 +104,135 @@ export default function NewExpenseScreen() {
     router.back();
   };
 
-  const createdExpense = allExpenses.find((e) => e.id === createdId);
-
   return (
-    <View style={sharedStyles.formContainer}>
-      <Card style={sharedStyles.card}>
-        <TextInput
-          style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
-          placeholder={t("expenses.namePlaceholder")}
-          placeholderTextColor={borderColor}
-          value={name}
-          onChangeText={setName}
-        />
-        <TextInput
-          style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
-          placeholder={t("expenses.amountPlaceholder")}
-          placeholderTextColor={borderColor}
-          keyboardType="decimal-pad"
-          value={amount}
-          onChangeText={setAmount}
-        />
+    <KeyboardAvoidingView
+      style={[styles.root, { backgroundColor }]}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.container}
+      >
+        <Card style={[styles.hero, { backgroundColor: BRAND_INK, overflow: "hidden" }]}>
+          <View style={[styles.heroRoseGlow, { backgroundColor: BRAND_ROSE }]} />
+          <View style={[styles.heroAmberGlow, { backgroundColor: BRAND_AMBER }]} />
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroIcon}>
+              <SymbolView name={{ ios: "creditcard.fill", android: "credit_card", web: "credit_card" }} size={24} tintColor="#FFFFFF" />
+            </View>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>{t("expenses.currency")}</Text>
+            </View>
+          </View>
+          <Text style={styles.heroKicker}>{t("expenses.quickKicker")}</Text>
+          <Text style={styles.heroTitle}>{t("expenses.quickTitle")}</Text>
+          <Text style={styles.heroSubtitle}>{t("expenses.quickSubtitle")}</Text>
+        </Card>
 
-        <Text style={sharedStyles.fieldLabel}>{t("expenses.nextPaymentLabel")}</Text>
-        <DatePickerField value={nextPaymentDate} onChange={setNextPaymentDate} />
+        <View style={styles.amountPanel}>
+          <Text style={styles.sectionEyebrow}>{t("expenses.amountLabel")}</Text>
+          <View style={[styles.amountInputWrap, { backgroundColor: surface, borderColor }]}>
+            <TextInput
+              style={styles.amountInput}
+              placeholder="0"
+              placeholderTextColor={textMuted}
+              keyboardType="decimal-pad"
+              value={amount}
+              onChangeText={setAmount}
+            />
+            <Text style={[styles.currencySuffix, { color: textMuted }]}>{t("expenses.currency")}</Text>
+          </View>
 
-        <CategoryPicker selected={category} onSelect={setCategory} />
-
-        <View style={sharedStyles.rowBetween}>
-          <Text>{t("expenses.recurring")}</Text>
-          <Switch value={isRecurring} onValueChange={setIsRecurring} trackColor={{ true: tint }} />
+          <Text style={styles.sectionEyebrow}>{t("expenses.nameLabel")}</Text>
+          <TextInput
+            style={[styles.nameInput, { borderColor, backgroundColor: surface }]}
+            placeholder={t("expenses.namePlaceholder")}
+            placeholderTextColor={textMuted}
+            value={name}
+            onChangeText={setName}
+          />
         </View>
-      </Card>
 
-      <Button label={t("expenses.save")} disabled={!canSave} onPress={save} />
+        <View style={styles.optionSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t("expenses.categoryLabel")}</Text>
+            <Text style={[styles.sectionMeta, { color: textMuted }]}>{t("expenses.categoryHelper")}</Text>
+          </View>
+          <CategoryPicker selected={category} onSelect={setCategory} />
+        </View>
+
+        <View style={styles.optionSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t("expenses.nextPaymentLabel")}</Text>
+            <Pressable style={[styles.customDateButton, { backgroundColor: surfaceMuted }]} onPress={openCustomDate}>
+              <SymbolView name={{ ios: "calendar", android: "event", web: "event" }} size={14} tintColor={accentTints.accent} />
+              <Text style={[styles.customDateText, { color: accentTints.accent }]}>{t("expenses.customDate")}</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.paymentChips}>
+            {paymentShortcuts.map((shortcut) => (
+              <Pressable
+                key={shortcut.key}
+                style={[
+                  styles.paymentChip,
+                  {
+                    backgroundColor: paymentMode === shortcut.key ? accentTints.accent : surface,
+                    borderColor: paymentMode === shortcut.key ? accentTints.accent : borderColor,
+                  },
+                ]}
+                onPress={() => selectPaymentShortcut(shortcut.key)}
+              >
+                <Text style={[styles.paymentChipText, { color: paymentMode === shortcut.key ? "#FFFFFF" : undefined }]}>
+                  {shortcut.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {paymentMode === "custom" && (
+            <DatePickerField value={nextPaymentDate} onChange={setNextPaymentDate} yearsBack={0} />
+          )}
+        </View>
+
+        <Pressable
+          style={[styles.recurringCard, { borderColor: isRecurring ? tint : borderColor, backgroundColor: surface }]}
+          onPress={() => setIsRecurring((current) => !current)}
+        >
+          <View style={[styles.recurringIcon, { backgroundColor: isRecurring ? tint : surfaceMuted }]}>
+            <SymbolView
+              name={{ ios: "arrow.triangle.2.circlepath", android: "sync", web: "sync" }}
+              size={19}
+              tintColor={isRecurring ? "#FFFFFF" : tint}
+            />
+          </View>
+          <View style={styles.recurringTextGroup}>
+            <Text style={styles.recurringTitle}>{t("expenses.recurring")}</Text>
+            <Text style={[styles.recurringSubtitle, { color: textMuted }]}>{t("expenses.recurringHelper")}</Text>
+          </View>
+          <View style={[styles.toggleTrack, { backgroundColor: isRecurring ? tint : surfaceMuted }]}>
+            <View style={[styles.toggleKnob, isRecurring && styles.toggleKnobActive]} />
+          </View>
+        </Pressable>
+
+        <Button label={t("expenses.save")} disabled={!canSave} onPress={save} style={styles.saveButton} />
+      </ScrollView>
 
       <Modal visible={createdId !== null} animationType="slide" transparent onRequestClose={finish}>
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, { backgroundColor, borderColor }]}>
-            <Text style={sharedStyles.sectionLabel}>{t("expenses.attachmentsLabel")}</Text>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <View style={[styles.modalIcon, { backgroundColor: accentTints.accentSoft }]}>
+                <SymbolView name={{ ios: "receipt.fill", android: "receipt_long", web: "receipt_long" }} size={20} tintColor={accentTints.accent} />
+              </View>
+              <View style={styles.modalTitleGroup}>
+                <Text style={styles.modalTitle}>{t("expenses.receiptTitle")}</Text>
+                <Text style={[styles.modalSubtitle, { color: textMuted }]}>{t("expenses.receiptSubtitle")}</Text>
+              </View>
+            </View>
+
             {createdExpense && (
               <AttachmentList
                 attachments={createdExpense.attachments}
@@ -93,21 +244,120 @@ export default function NewExpenseScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = {
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  container: { padding: 16, gap: 16, paddingBottom: 44 },
+  hero: { borderRadius: 24, gap: 8, padding: 20, position: "relative" },
+  heroRoseGlow: { position: "absolute", width: 190, height: 190, borderRadius: 95, top: -86, right: -58, opacity: 0.25 },
+  heroAmberGlow: { position: "absolute", width: 130, height: 130, borderRadius: 65, bottom: -48, left: -34, opacity: 0.18 },
+  heroTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "transparent" },
+  heroIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  heroBadge: {
+    minHeight: 28,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  heroBadgeText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800", backgroundColor: "transparent" },
+  heroKicker: {
+    color: "#FFE4EA",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    backgroundColor: "transparent",
+  },
+  heroTitle: { color: "#FFFFFF", fontSize: 27, fontWeight: "800", backgroundColor: "transparent" },
+  heroSubtitle: { color: "#FFFFFF", fontSize: 14, lineHeight: 20, opacity: 0.85, backgroundColor: "transparent" },
+  amountPanel: { gap: 9 },
+  sectionEyebrow: { fontSize: 12, fontWeight: "800", letterSpacing: 0.4, textTransform: "uppercase", opacity: 0.62 },
+  amountInputWrap: {
+    minHeight: 76,
+    borderWidth: 1.5,
+    borderRadius: 22,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  amountInput: { flex: 1, fontSize: 34, fontWeight: "800", paddingVertical: 12 },
+  currencySuffix: { fontSize: 15, fontWeight: "800" },
+  nameInput: {
+    borderWidth: 1,
+    borderRadius: 18,
+    fontSize: 17,
+    fontWeight: "700",
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+  },
+  optionSection: { gap: 12 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  sectionTitle: { fontSize: 17, fontWeight: "800" },
+  sectionMeta: { flex: 1, textAlign: "right", fontSize: 12, fontWeight: "700" },
+  customDateButton: {
+    minHeight: 34,
+    borderRadius: 17,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  customDateText: { fontSize: 12, fontWeight: "800" },
+  paymentChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  paymentChip: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
+  paymentChipText: { fontSize: 13, fontWeight: "800" },
+  recurringCard: {
+    borderWidth: 1.5,
+    borderRadius: 20,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  recurringIcon: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
+  recurringTextGroup: { flex: 1, gap: 2 },
+  recurringTitle: { fontSize: 15, fontWeight: "800" },
+  recurringSubtitle: { fontSize: 12, lineHeight: 17 },
+  toggleTrack: { width: 45, height: 28, borderRadius: 14, padding: 3 },
+  toggleKnob: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#FFFFFF" },
+  toggleKnobActive: { transform: [{ translateX: 17 }] },
+  saveButton: { marginTop: 2 },
   modalBackdrop: {
     flex: 1,
-    justifyContent: "flex-end" as const,
+    justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.4)",
   },
   modalCard: {
     borderTopWidth: 1,
-    borderRadius: 20,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 16,
     paddingBottom: 32,
-    gap: 12,
+    gap: 14,
   },
-};  
+  modalHandle: {
+    width: 42,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(120,110,100,0.28)",
+    alignSelf: "center",
+    marginBottom: 2,
+  },
+  modalHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  modalIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  modalTitleGroup: { flex: 1, gap: 2 },
+  modalTitle: { fontSize: 18, fontWeight: "800" },
+  modalSubtitle: { fontSize: 13, lineHeight: 18 },
+});

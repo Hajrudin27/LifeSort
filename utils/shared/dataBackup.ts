@@ -17,8 +17,7 @@ import { useSkillCategoriesStore } from '@/store/useSkillCategoriesStore';
 import { useTodoStore } from '@/store/useTodoStore';
 import { useTripsStore } from '@/store/useTripsStore';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
-
-const BACKUP_VERSION = 1;
+import { BACKUP_VERSION, type BackupParseError, parseBackupFile } from '@/utils/shared/backupValidation';
 
 // Rækkefølgen her definerer, hvad der eksporteres/importeres — tilføj en ny linje,
 // når I bygger et nyt modul med sin egen store.
@@ -73,7 +72,7 @@ export interface ImportResult {
   success: boolean;
   restoredKeys: string[];
   skippedKeys: string[];
-  error?: string;
+  error?: BackupParseError;
 }
 
 export async function importBackup(): Promise<ImportResult | null> {
@@ -82,31 +81,35 @@ export async function importBackup(): Promise<ImportResult | null> {
 
   const asset = picked.assets[0];
 
+  let content: string;
   try {
-    const content = await FileSystem.readAsStringAsync(asset.uri);
-    const parsed = JSON.parse(content);
-
-    if (!parsed || typeof parsed !== 'object' || !parsed.data) {
-      return { success: false, restoredKeys: [], skippedKeys: [], error: 'invalid_format' };
-    }
-
-    const restoredKeys: string[] = [];
-    const skippedKeys: string[] = [];
-
-    for (const key of Object.keys(STORE_REGISTRY) as StoreKey[]) {
-      const storedState = parsed.data[key];
-      if (storedState === undefined) {
-        skippedKeys.push(key);
-        continue;
-      }
-      // setState med partial=true (anden parameter) merger ind i eksisterende state
-      // i stedet for at overskrive hele storen — bevarer actions/funktioner intakte.
-      (STORE_REGISTRY[key] as any).setState(storedState);
-      restoredKeys.push(key);
-    }
-
-    return { success: true, restoredKeys, skippedKeys };
+    content = await FileSystem.readAsStringAsync(asset.uri);
   } catch {
     return { success: false, restoredKeys: [], skippedKeys: [], error: 'parse_failed' };
   }
+
+  // Filen valideres HELT igennem, før der skrives noget som helst. Slår bare ét
+  // felt fejl, afvises hele importen — en halvt gendannet tilstand ville være
+  // værre end ingen gendannelse, og handlingen kan ikke fortrydes.
+  const parsed = parseBackupFile(content);
+  if (!parsed.ok) {
+    return { success: false, restoredKeys: [], skippedKeys: [], error: parsed.error };
+  }
+
+  const restoredKeys: string[] = [];
+  const skippedKeys: string[] = [];
+
+  for (const key of Object.keys(STORE_REGISTRY) as StoreKey[]) {
+    const partial = parsed.data[key];
+    if (partial === undefined) {
+      skippedKeys.push(key);
+      continue;
+    }
+    // setState uden `replace` merger de validerede felter ind i eksisterende
+    // state, så storens actions bevares. Kun felter fra whitelisten når hertil.
+    (STORE_REGISTRY[key] as any).setState(partial);
+    restoredKeys.push(key);
+  }
+
+  return { success: true, restoredKeys, skippedKeys };
 }

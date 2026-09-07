@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import LockScreen from "@/components/LockScreen";
+import PrivacyOverlay from "@/components/PrivacyOverlay";
 import Toast from "@/components/Toast";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
@@ -630,6 +631,10 @@ function RootLayoutNav({ language }: { language: string | null }) {
         </Stack>
         <Toast />
         {isLocked && <LockScreen />}
+
+        {/* Skjuler indholdet i app-skifteren. Kun relevant når nogen er logget
+            ind — der er intet følsomt at dække på login-skærmen. */}
+        {session && <PrivacyOverlay />}
       </ThemeProvider>
     </GestureHandlerRootView>
   );

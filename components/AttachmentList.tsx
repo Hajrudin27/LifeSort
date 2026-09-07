@@ -8,9 +8,45 @@ import { Alert, Pressable, StyleSheet } from 'react-native';
 
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { useAccentTints } from '@/hooks/useAccentTints';
+import { useAttachmentUri } from '@/hooks/useAttachmentUri';
 import { Attachment } from '@/types/attachment';
 import { persistFile } from '@/utils/shared/attachmentStorage';
 import { compressImage } from '@/utils/shared/imageCompression';
+
+type ThumbProps = {
+  attachment: Attachment;
+  borderColor: string;
+  iconBackground: string;
+  iconTint: string;
+  onRemove: () => void;
+};
+
+/**
+ * Egen komponent, fordi hver vedhæftning skal slå sin egen URI op, og hooks ikke
+ * må kaldes inde i en .map.
+ */
+function AttachmentThumb({ attachment, borderColor, iconBackground, iconTint, onRemove }: ThumbProps) {
+  const uri = useAttachmentUri(attachment);
+
+  return (
+    <Pressable
+      style={[styles.thumb, { borderColor }]}
+      onPress={() => attachment.kind === 'image' && uri && router.push({ pathname: '/warranties/view-image', params: { uri } })}
+      onLongPress={onRemove}>
+      {attachment.kind === 'image' ? (
+        uri ? (
+          <Image source={{ uri }} style={styles.thumbImage} cachePolicy="disk" transition={150} />
+        ) : (
+          <View style={[styles.docIconWrap, { backgroundColor: iconBackground }]} />
+        )
+      ) : (
+        <View style={[styles.docIconWrap, { backgroundColor: iconBackground }]}>
+          <SymbolView name={{ ios: 'doc.fill', android: 'description', web: 'description' }} size={26} tintColor={iconTint} />
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
 type Props = {
   attachments: Attachment[];
@@ -90,19 +126,14 @@ export default function AttachmentList({ attachments, onAdd, onRemove }: Props) 
       ) : (
         <View style={styles.grid}>
           {attachments.map((a) => (
-            <Pressable
+            <AttachmentThumb
               key={a.id}
-              style={[styles.thumb, { borderColor: accentTints.accentSoft }]}
-              onPress={() => a.kind === 'image' && router.push({ pathname: '/warranties/view-image', params: { uri: a.uri } })}
-              onLongPress={() => confirmRemove(a.id)}>
-              {a.kind === 'image' ? (
-                 <Image source={{ uri: a.uri }} style={styles.thumbImage} cachePolicy="disk" transition={150} />
-              ) : (
-                <View style={[styles.docIconWrap, { backgroundColor: accentTints.accentSoft }]}>
-                  <SymbolView name={{ ios: 'doc.fill', android: 'description', web: 'description' }} size={26} tintColor={tint} />
-                </View>
-              )}
-            </Pressable>
+              attachment={a}
+              borderColor={accentTints.accentSoft}
+              iconBackground={accentTints.accentSoft}
+              iconTint={tint}
+              onRemove={() => confirmRemove(a.id)}
+            />
           ))}
         </View>
       )}

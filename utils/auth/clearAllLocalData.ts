@@ -16,6 +16,7 @@ import { useTodoStore } from '@/store/useTodoStore';
 import { useTripsStore } from '@/store/useTripsStore';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
 import { clearLocalPin } from '@/utils/auth/pinAuth';
+import { clearSignedUrlCache } from '@/utils/shared/attachmentSync';
 
 // Rydder al lokal, bruger-specifik data ved log ud — kaldes FØR en ny bruger
 // logger ind, så ingen data fra den forrige bruger "lækker" ind i den nye session.
@@ -65,6 +66,10 @@ export async function clearAllLocalData() {
 
   useThemeStore.setState({ mode: 'system' });
   useAppLockStore.setState({ lockEnabled: false, isLocked: false });
+
+  // Signerede URL'er er kortlivede, men må under ingen omstændigheder følge med
+  // over i den næste brugers session.
+  clearSignedUrlCache();
 
   await clearLocalPin();
 }

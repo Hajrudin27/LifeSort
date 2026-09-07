@@ -1,16 +1,17 @@
 {
-    "title": "Backup",
-    "exportLabel": "Export data",
-    "exportDescription": "Save all your data into one file you can share or keep somewhere safe.",
-    "exportSuccess": "Backup created",
-    "importLabel": "Restore from backup",
-    "importDescription": "Choose a previously saved backup file to restore your data.",
-    "importConfirmTitle": "Restore data?",
-    "importConfirmMessage": "This will overwrite your current data with the contents of the backup file. This action cannot be undone.",
-    "importConfirmButton": "Restore",
-    "importSuccess": "Data restored",
-    "importErrorTitle": "Could not restore",
-    "importErrorInvalidFormat": "This file doesn't look like a valid LifeSort backup.",
-    "importErrorParseFailed": "The file could not be read. Try a different file.",
-    "lastExportLabel": "Last exported: {{date}}"
-  }
+  "title": "Backup",
+  "exportLabel": "Export data",
+  "exportDescription": "Save all your data into one file you can share or keep somewhere safe.",
+  "exportSuccess": "Backup created",
+  "importLabel": "Restore from backup",
+  "importDescription": "Choose a previously saved backup file to restore your data.",
+  "importConfirmTitle": "Restore data?",
+  "importConfirmMessage": "This will overwrite your current data with the contents of the backup file. This action cannot be undone.",
+  "importConfirmButton": "Restore",
+  "importSuccess": "Data restored",
+  "importErrorTitle": "Could not restore",
+  "importErrorInvalidFormat": "This file doesn't look like a valid LifeSort backup.",
+  "importErrorParseFailed": "The file could not be read. Try a different file.",
+  "importErrorUnsupportedVersion": "This file was made with a newer version of LifeSort. Update the app and try again.",
+  "lastExportLabel": "Last exported: {{date}}"
+}

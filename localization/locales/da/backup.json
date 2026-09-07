@@ -1,16 +1,17 @@
 {
-    "title": "Backup",
-    "exportLabel": "Eksportér data",
-    "exportDescription": "Gem alle dine data i én fil, du kan dele eller gemme et sikkert sted.",
-    "exportSuccess": "Backup oprettet",
-    "importLabel": "Gendan fra backup",
-    "importDescription": "Vælg en tidligere gemt backup-fil for at gendanne dine data.",
-    "importConfirmTitle": "Gendan data?",
-    "importConfirmMessage": "Dette overskriver dine nuværende data med indholdet fra backup-filen. Denne handling kan ikke fortrydes.",
-    "importConfirmButton": "Gendan",
-    "importSuccess": "Data gendannet",
-    "importErrorTitle": "Kunne ikke gendanne",
-    "importErrorInvalidFormat": "Filen ser ikke ud til at være en gyldig LifeSort-backup.",
-    "importErrorParseFailed": "Filen kunne ikke læses. Prøv en anden fil.",
-    "lastExportLabel": "Sidst eksporteret: {{date}}"
-  }
+  "title": "Backup",
+  "exportLabel": "Eksportér data",
+  "exportDescription": "Gem alle dine data i én fil, du kan dele eller gemme et sikkert sted.",
+  "exportSuccess": "Backup oprettet",
+  "importLabel": "Gendan fra backup",
+  "importDescription": "Vælg en tidligere gemt backup-fil for at gendanne dine data.",
+  "importConfirmTitle": "Gendan data?",
+  "importConfirmMessage": "Dette overskriver dine nuværende data med indholdet fra backup-filen. Denne handling kan ikke fortrydes.",
+  "importConfirmButton": "Gendan",
+  "importSuccess": "Data gendannet",
+  "importErrorTitle": "Kunne ikke gendanne",
+  "importErrorInvalidFormat": "Filen ser ikke ud til at være en gyldig LifeSort-backup.",
+  "importErrorParseFailed": "Filen kunne ikke læses. Prøv en anden fil.",
+  "importErrorUnsupportedVersion": "Filen er lavet med en nyere version af LifeSort. Opdatér appen og prøv igen.",
+  "lastExportLabel": "Sidst eksporteret: {{date}}"
+}

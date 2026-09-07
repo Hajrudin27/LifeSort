@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import { supabase } from "@/lib/supabase";
 import { Gender, UserProfile } from "@/types/profile";
-import { hashPin, savePinLocally } from "@/utils/auth/pinAuth";
+import { savePin } from "@/utils/auth/pinAuth";
 
 interface ProfileState {
   profile: UserProfile;
@@ -21,7 +21,7 @@ interface ProfileState {
 }
 
 async function syncProfileField(
-  fields: Partial<{ name: string; age: number; gender: Gender; partner_name: string; pin_hash: string }>,
+  fields: Partial<{ name: string; age: number; gender: Gender; partner_name: string }>,
 ) {
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id;
@@ -56,11 +56,11 @@ export const useProfileStore = create<ProfileState>()(
         syncProfileField({ partner_name: trimmed ?? "" });
       },
       setPin: async (pin) => {
-        const hash = await hashPin(pin);
-        // Gem lokalt FØRST — appen kan altid verificere PIN-koden offline,
-        // uafhængigt af om Supabase-skrivningen lykkes med det samme.
-        await savePinLocally(hash);
-        await syncProfileField({ pin_hash: hash });
+        // PIN-koden bliver udelukkende på enheden. Den blev tidligere også sendt
+        // til Supabase, men verifikationen er altid sket lokalt, så hashen på
+        // serveren havde ingen funktion — den var kun en risiko, fordi en
+        // 4-cifret kode kan gennemprøves på ingen tid, hvis databasen lækker.
+        await savePin(pin);
       },
 
       fetchFromSupabase: async () => {

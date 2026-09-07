@@ -35,9 +35,13 @@ export default function BackupScreen() {
       if (!result) return; // brugeren annullerede filvalget
 
       if (!result.success) {
-        const message =
-          result.error === 'invalid_format' ? t('backup.importErrorInvalidFormat') : t('backup.importErrorParseFailed');
-        Alert.alert(t('backup.importErrorTitle'), message);
+        const messageKey =
+          result.error === 'invalid_format'
+            ? 'backup.importErrorInvalidFormat'
+            : result.error === 'unsupported_version'
+              ? 'backup.importErrorUnsupportedVersion'
+              : 'backup.importErrorParseFailed';
+        Alert.alert(t('backup.importErrorTitle'), t(messageKey));
         return;
       }
 

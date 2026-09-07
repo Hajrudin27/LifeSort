@@ -6,7 +6,10 @@ import { Dimensions, NativeScrollEvent, NativeSyntheticEvent, Pressable, Refresh
 
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
-import RingProgress from '@/components/RingProgress';
+import MetricCard from '@/components/MetricCard';
+import QuickActionCard from '@/components/QuickActionCard';
+import Screen from '@/components/Screen';
+import SectionHeader from '@/components/SectionHeader';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useAccentTints } from '@/hooks/useAccentTints';
@@ -32,6 +35,9 @@ import { getMonthKey } from '@/utils/shared/monthKey';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PAGE_WIDTH = SCREEN_WIDTH - 32;
+const BRAND_INK = '#16130F';
+const BRAND_ROSE = '#E11D48';
+const BRAND_AMBER = '#F59E0B';
 
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
@@ -162,15 +168,96 @@ export default function HomeScreen() {
   ].filter(Boolean) as { key: string; label: string; color: string; icon: any; route: any }[];
 
   const totalAttentionCount = overdueTodosCount + todosToday.length + expiringWarrantiesCount + overdueHouseholdCount;
+  const nextAction =
+    overdueTodosCount > 0
+      ? {
+          title: t('home.nextActionOverdueTodosTitle'),
+          subtitle: t('home.nextActionOverdueTodosSubtitle', { count: overdueTodosCount }),
+          icon: { ios: 'exclamationmark.circle.fill', android: 'error', web: 'error' },
+          route: { pathname: '/todos', params: { from: 'home' } } as any,
+          tone: danger,
+        }
+      : todosToday.length > 0
+        ? {
+            title: t('home.nextActionTodosTodayTitle'),
+            subtitle: t('home.nextActionTodosTodaySubtitle', { count: todosToday.length }),
+            icon: { ios: 'calendar', android: 'event', web: 'event' },
+            route: { pathname: '/todos', params: { from: 'home' } } as any,
+            tone: warning,
+          }
+        : expiringWarrantiesCount > 0
+          ? {
+              title: t('home.nextActionWarrantyTitle'),
+              subtitle: t('home.nextActionWarrantySubtitle', { count: expiringWarrantiesCount }),
+              icon: { ios: 'shield.lefthalf.filled', android: 'shield', web: 'shield' },
+              route: { pathname: '/warranties', params: { from: 'home' } } as any,
+              tone: warning,
+            }
+          : foodMonthlyBudget === null
+            ? {
+                title: t('home.nextActionFoodBudgetTitle'),
+                subtitle: t('home.nextActionFoodBudgetSubtitle'),
+                icon: { ios: 'cart.fill.badge.plus', android: 'shopping_cart', web: 'shopping_cart' },
+                route: '/food/budget' as any,
+                tone: BRAND_ROSE,
+              }
+            : {
+                title: t('home.nextActionAllGoodTitle'),
+                subtitle: t('home.nextActionAllGoodSubtitle'),
+                icon: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' },
+                route: '/search' as any,
+                tone: BRAND_ROSE,
+              };
+
+  const quickActions = [
+    {
+      key: 'todo',
+      title: t('home.quickTodoTitle'),
+      subtitle: t('home.quickTodoSubtitle'),
+      icon: { ios: 'checklist', android: 'checklist', web: 'checklist' },
+      route: '/todos/new' as any,
+      tone: BRAND_ROSE,
+    },
+    {
+      key: 'expense',
+      title: t('home.quickExpenseTitle'),
+      subtitle: t('home.quickExpenseSubtitle'),
+      icon: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
+      route: '/expenses/new' as any,
+      tone: accentTints.accent,
+    },
+    {
+      key: 'food',
+      title: t('home.quickFoodTitle'),
+      subtitle: t('home.quickFoodSubtitle'),
+      icon: { ios: 'calendar.badge.plus', android: 'event', web: 'event' },
+      route: '/food/weekly-plan' as any,
+      tone: BRAND_AMBER,
+    },
+    {
+      key: 'warranty',
+      title: t('home.quickWarrantyTitle'),
+      subtitle: t('home.quickWarrantySubtitle'),
+      icon: { ios: 'shield.fill', android: 'shield', web: 'shield' },
+      route: '/warranties/new' as any,
+      tone: accentTints.accent,
+    },
+  ];
 
   return (
-    <ScrollView
+    <Screen
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={tint} />}>
       {/* Hero */}
-      <Card style={[styles.hero, { backgroundColor: tint, overflow: 'hidden' }]}>
-        <View style={[styles.heroCircleLarge, { backgroundColor: '#FFFFFF', opacity: 0.08 }]} />
-        <View style={[styles.heroCircleSmall, { backgroundColor: '#FFFFFF', opacity: 0.1 }]} />
+      <Card style={[styles.hero, { backgroundColor: BRAND_INK, overflow: 'hidden' }]}>
+        <View style={[styles.heroRoseGlow, { backgroundColor: BRAND_ROSE }]} />
+        <View style={[styles.heroAmberGlow, { backgroundColor: BRAND_AMBER }]} />
+        <View style={styles.heroTopLine}>
+          <Text style={styles.heroKicker}>{t('home.commandCenterLabel')}</Text>
+          <View style={styles.heroStatusPill}>
+            <Text style={styles.heroStatusText}>{totalAttentionCount > 0 ? totalAttentionCount : t('home.zeroAttention')}</Text>
+          </View>
+        </View>
         <Text style={styles.heroGreeting}>
           {t(`home.greeting.${greetingPeriod}`)}{profileName ? `, ${profileName}` : ''}
         </Text>
@@ -220,10 +307,24 @@ export default function HomeScreen() {
         </View>
       )}
 
+      <SectionHeader
+        eyebrow={t('home.nextActionEyebrow')}
+        title={t('home.nextActionTitle')}
+        subtitle={t('home.nextActionHelper')}
+      />
+      <QuickActionCard
+        icon={nextAction.icon}
+        title={nextAction.title}
+        subtitle={nextAction.subtitle}
+        actionLabel={t('home.openAction')}
+        tone={nextAction.tone}
+        onPress={() => router.push(nextAction.route)}
+      />
+
       {/* Attention */}
       {attentionItems.length > 0 && (
         <>
-          <Text style={sharedStyles.sectionLabel}>{t('home.attentionTitle')}</Text>
+          <SectionHeader title={t('home.attentionTitle')} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attentionRow}>
             {attentionItems.map((item) => (
               <Pressable key={item.key} onPress={() => router.push(item.route)}>
@@ -236,6 +337,23 @@ export default function HomeScreen() {
           </ScrollView>
         </>
       )}
+
+      <SectionHeader
+        title={t('home.quickActionsTitle')}
+        subtitle={t('home.quickActionsSubtitle')}
+      />
+      <View style={styles.quickActions}>
+        {quickActions.map((action) => (
+          <QuickActionCard
+            key={action.key}
+            icon={action.icon}
+            title={action.title}
+            subtitle={action.subtitle}
+            tone={action.tone}
+            onPress={() => router.push(action.route)}
+          />
+        ))}
+      </View>
 
       {/* Swipeable: I dag / Denne uge */}
       <ScrollView
@@ -345,73 +463,77 @@ export default function HomeScreen() {
       </View>
 
       {/* Overview snapshot grid */}
-      <Text style={sharedStyles.sectionLabel}>{t('home.overviewTitle')}</Text>
+      <SectionHeader title={t('home.overviewTitle')} subtitle={t('home.overviewSubtitle')} />
       <View style={styles.grid}>
-        <Pressable style={styles.gridCell} onPress={() => router.push({ pathname: '/economy' } as any)}>
-          <Card style={styles.snapshotCard}>
-            <SymbolView name={{ ios: 'banknote', android: 'payments', web: 'payments' }} size={18} tintColor={tint} />
-            <Text style={[styles.snapshotLabel, { color: textMuted }]}>{t('home.moneySnapshotLabel')}</Text>
-            <Text style={[styles.snapshotValue, moneyAvailable < 0 && { color: danger }]}>
-              {moneyAvailable.toFixed(0)} kr.
-            </Text>
-          </Card>
-        </Pressable>
+        <MetricCard
+          style={styles.gridCell}
+          icon={{ ios: 'banknote', android: 'payments', web: 'payments' }}
+          label={t('home.moneySnapshotLabel')}
+          value={`${moneyAvailable.toFixed(0)} kr.`}
+          helper={t('home.moneySnapshotHelper')}
+          tone={moneyAvailable < 0 ? danger : BRAND_ROSE}
+          onPress={() => router.push({ pathname: '/economy' } as any)}
+        />
 
-        <Pressable style={styles.gridCell} onPress={() => router.push({ pathname: '/food', params: { from: 'home' } } as any)}>
-          <Card style={styles.snapshotCard}>
-            <SymbolView name={{ ios: 'cart.fill', android: 'shopping_cart', web: 'shopping_cart' }} size={18} tintColor={tint} />
-            <Text style={[styles.snapshotLabel, { color: textMuted }]}>{t('home.foodSnapshotLabel')}</Text>
-            <Text style={[styles.snapshotValue, foodRemaining !== null && foodRemaining < 0 && { color: danger }]}>
-              {foodRemaining !== null ? `${foodRemaining.toFixed(0)} kr.` : '—'}
-            </Text>
-          </Card>
-        </Pressable>
+        <MetricCard
+          style={styles.gridCell}
+          icon={{ ios: 'cart.fill', android: 'shopping_cart', web: 'shopping_cart' }}
+          label={t('home.foodSnapshotLabel')}
+          value={foodRemaining !== null ? `${foodRemaining.toFixed(0)} kr.` : '—'}
+          helper={foodRemaining !== null ? t('home.foodSnapshotHelper') : t('home.foodSnapshotMissing')}
+          tone={foodRemaining !== null && foodRemaining < 0 ? danger : BRAND_AMBER}
+          onPress={() => router.push({ pathname: '/food', params: { from: 'home' } } as any)}
+        />
 
-        <Pressable style={styles.gridCell} onPress={() => router.push({ pathname: '/savings', params: { from: 'home' } } as any)}>
-          <Card style={styles.snapshotCardRow}>
-            <RingProgress progress={savingsProgress} size={44} strokeWidth={5} showLabel={false} />
-            <View style={styles.snapshotTextWrap}>
-              <Text style={[styles.snapshotLabel, { color: textMuted }]}>{t('home.savingsSnapshotLabel')}</Text>
-              <Text style={styles.snapshotValueSmall}>{totalSaved.toFixed(0)} kr.</Text>
-            </View>
-          </Card>
-        </Pressable>
+        <MetricCard
+          style={styles.gridCell}
+          icon={{ ios: 'target', android: 'track_changes', web: 'track_changes' }}
+          label={t('home.savingsSnapshotLabel')}
+          value={`${totalSaved.toFixed(0)} kr.`}
+          helper={totalTarget > 0 ? t('home.savingsSnapshotHelper', { percent: Math.round(savingsProgress * 100) }) : t('home.savingsSnapshotMissing')}
+          tone={accentTints.accent}
+          onPress={() => router.push({ pathname: '/savings', params: { from: 'home' } } as any)}
+        />
 
-        <Pressable style={styles.gridCell} onPress={() => router.push({ pathname: '/travel', params: { from: 'home' } } as any)}>
-          <Card style={styles.snapshotCard}>
-            <SymbolView name={{ ios: 'airplane', android: 'flight', web: 'flight' }} size={18} tintColor={tint} />
-            <Text style={[styles.snapshotLabel, { color: textMuted }]}>{t('home.tripSnapshotLabel')}</Text>
-            <Text style={styles.snapshotValueSmall}>
-              {upcomingTrip ? t('home.tripDaysUntil', { days: daysUntil(upcomingTrip.startDate) }) : t('home.noUpcomingTrip')}
-            </Text>
-          </Card>
-        </Pressable>
+        <MetricCard
+          style={styles.gridCell}
+          icon={{ ios: 'airplane', android: 'flight', web: 'flight' }}
+          label={t('home.tripSnapshotLabel')}
+          value={upcomingTrip ? t('home.tripDaysUntil', { days: daysUntil(upcomingTrip.startDate) }) : t('home.noUpcomingTrip')}
+          helper={upcomingTrip?.name ?? t('home.tripSnapshotMissing')}
+          tone={BRAND_ROSE}
+          onPress={() => router.push({ pathname: '/travel', params: { from: 'home' } } as any)}
+        />
 
         {gender === 'female' && (
-          <Pressable style={styles.gridCell} onPress={() => router.push('/cycle' as any)}>
-            <Card style={styles.snapshotCard}>
-              <SymbolView name={{ ios: 'drop.fill', android: 'water_drop', web: 'water_drop' }} size={18} tintColor={tint} />
-              <Text style={[styles.snapshotLabel, { color: textMuted }]}>{t('cycle.title')}</Text>
-              <Text style={styles.snapshotValueSmall}>
-                {cycleDay !== null ? t('cycle.heroDayLabel', { day: cycleDay }) : t('cycle.heroNoData')}
-              </Text>
-            </Card>
-          </Pressable>
+          <MetricCard
+            style={styles.gridCell}
+            icon={{ ios: 'drop.fill', android: 'water_drop', web: 'water_drop' }}
+            label={t('cycle.title')}
+            value={cycleDay !== null ? t('cycle.heroDayLabel', { day: cycleDay }) : t('cycle.heroNoData')}
+            helper={cycleDaysUntilNext !== null ? t('cycle.daysUntilNext', { days: cycleDaysUntilNext }) : t('home.cycleSnapshotMissing')}
+            tone={accentTints.accent}
+            onPress={() => router.push('/cycle' as any)}
+          />
         )}
       </View>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = {
-  container: { padding: 16, gap: 14, paddingBottom: 48 },
-  hero: { padding: 20, gap: 4, position: 'relative' as const },
-  heroCircleLarge: { position: 'absolute' as const, width: 180, height: 180, borderRadius: 90, top: -60, right: -50 },
-  heroCircleSmall: { position: 'absolute' as const, width: 90, height: 90, borderRadius: 45, bottom: -30, left: -20 },
-  heroGreeting: { fontSize: 24, fontWeight: '800' as const, color: '#FFFFFF' },
+  container: { padding: 16, gap: 16, paddingBottom: 48 },
+  hero: { padding: 20, gap: 4, position: 'relative' as const, borderRadius: 24 },
+  heroRoseGlow: { position: 'absolute' as const, width: 220, height: 220, borderRadius: 110, top: -92, right: -62, opacity: 0.24 },
+  heroAmberGlow: { position: 'absolute' as const, width: 140, height: 140, borderRadius: 70, bottom: -58, left: -36, opacity: 0.14 },
+  heroTopLine: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, marginBottom: 12, backgroundColor: 'transparent' },
+  heroKicker: { color: '#FFE4EA', fontSize: 11, fontWeight: '800' as const, textTransform: 'uppercase' as const, letterSpacing: 0.6, backgroundColor: 'transparent' },
+  heroStatusPill: { minWidth: 34, height: 26, borderRadius: 13, alignItems: 'center' as const, justifyContent: 'center' as const, paddingHorizontal: 10, backgroundColor: 'rgba(255,255,255,0.12)' },
+  heroStatusText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' as const, backgroundColor: 'transparent' },
+  heroGreeting: { fontSize: 26, fontWeight: '800' as const, color: '#FFFFFF', backgroundColor: 'transparent' },
   heroDate: { fontSize: 14, color: '#FFFFFF', opacity: 0.9, textTransform: 'capitalize' as const, marginTop: 2 },
-  heroSubtitle: { fontSize: 13, color: '#FFFFFF', opacity: 0.85, marginTop: 10 },
-  heroStreak: { fontSize: 13, color: '#FFFFFF', fontWeight: '700' as const, marginTop: 8 },
+  heroSubtitle: { fontSize: 13, color: '#FFFFFF', opacity: 0.85, marginTop: 10, backgroundColor: 'transparent' },
+  heroStreak: { fontSize: 13, color: '#FFFFFF', fontWeight: '700' as const, marginTop: 8, backgroundColor: 'transparent' },
   invitationsSection: { gap: 8 },
   invitationsKicker: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5, alignSelf: 'flex-start' as const, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 10 },
   invitationsKickerText: { fontSize: 11, fontWeight: '800' as const, textTransform: 'uppercase' as const, letterSpacing: 0.4 },
@@ -423,6 +545,7 @@ const styles = {
   attentionRow: { gap: 10, paddingRight: 8 },
   attentionCard: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8, paddingVertical: 10, paddingHorizontal: 14 },
   attentionLabel: { fontSize: 13, fontWeight: '700' as const },
+  quickActions: { gap: 10 },
   todayCard: { gap: 8 },
   todaySubLabel: { fontSize: 12, fontWeight: '700' as const, textTransform: 'uppercase' as const, letterSpacing: 0.4 },
   todoList: { gap: 8 },
@@ -436,10 +559,4 @@ const styles = {
   dot: { width: 6, height: 6, borderRadius: 3 },
   grid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 10 },
   gridCell: { width: '47%' as const },
-  snapshotCard: { gap: 4, alignItems: 'flex-start' as const },
-  snapshotCardRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
-  snapshotTextWrap: { flex: 1 },
-  snapshotLabel: { fontSize: 12 },
-  snapshotValue: { fontSize: 18, fontWeight: '800' as const, marginTop: 2 },
-  snapshotValueSmall: { fontSize: 14, fontWeight: '700' as const, marginTop: 1 },
 };

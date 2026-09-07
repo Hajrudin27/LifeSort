@@ -4,6 +4,7 @@
 **Status:** As-is inventory of the repository. Descriptive, not aspirational.
 **Owner of this document:** Hajrudin Kardasevic
 **Last verified:** by `__tests__/appInventory.test.ts` on every test run.
+**Companion document:** [`docs/data-sdk-inventory.md`](./data-sdk-inventory.md) (APP-002) — data types, SDKs, vendors, retention and store disclosure mapping.
 
 ## Purpose
 

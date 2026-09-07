@@ -6,13 +6,16 @@ import {
   FlatList,
   Modal,
   Pressable,
-  View as RNView,
   StyleSheet,
 } from "react-native";
 
-import EconomyModuleCard from "@/components/EconomyModuleCard";
+import Card from "@/components/Card";
 import ExpensePieChart from "@/components/ExpensePieChart";
+import MetricCard from "@/components/MetricCard";
+import QuickActionCard from "@/components/QuickActionCard";
 import RingProgress from "@/components/RingProgress";
+import Screen from "@/components/Screen";
+import SectionHeader from "@/components/SectionHeader";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useModuleTints } from "@/hooks/useModuleTints";
 import { useExpensesStore } from "@/store/useExpensesStore";
@@ -26,11 +29,12 @@ import { daysUntil } from "@/utils/shared/dateDays";
 import { getMonthKey } from "@/utils/shared/monthKey";
 
 export default function EconomyScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const moduleTints = useModuleTints();
   const borderColor = useThemeColor({}, "border");
   const backgroundColor = useThemeColor({}, "background");
   const surfaceMuted = useThemeColor({}, "surfaceMuted");
+  const textMuted = useThemeColor({}, "textMuted");
   const WARRANTY_ALERT_COLOR = useThemeColor({}, "warning");
 
   const allExpenses = useExpensesStore((s) => s.expenses);
@@ -52,6 +56,8 @@ export default function EconomyScreen() {
       .filter((e) => e.category === category)
       .reduce((sum, e) => sum + e.amount, 0),
   }));
+  const monthTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const monthBalance = netIncome !== null ? netIncome - monthTotal : null;
 
   const warranties = useWarrantiesStore((s) => s.warranties);
   const expiringSoon = warranties.filter((w) => {
@@ -101,153 +107,227 @@ export default function EconomyScreen() {
       (a, b) =>
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     )[0];
+  const daysToTrip = upcomingTrip ? daysUntil(upcomingTrip.startDate) : null;
+  const locale = i18n.language === "da" ? "da-DK" : "en-US";
+  const currency = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "DKK",
+    maximumFractionDigits: 0,
+  });
+  const percent = new Intl.NumberFormat(locale, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  });
+
+  const modules = [
+    {
+      key: "expenses",
+      title: t("economy.expenses"),
+      subtitle: t("economy.expensesSubtitle", {
+        amount: currency.format(monthTotal),
+      }),
+      icon: { ios: "creditcard.fill", android: "credit_card", web: "credit_card" },
+      route: "/expenses" as const,
+      tone: "#E11D48",
+      visual: "pie",
+    },
+    {
+      key: "savings",
+      title: t("economy.savings"),
+      subtitle: t("economy.savingsSubtitle", {
+        progress: percent.format(savingsProgress),
+      }),
+      icon: { ios: "target", android: "track_changes", web: "track_changes" },
+      route: "/savings" as const,
+      tone: "#F59E0B",
+      visual: "savings",
+    },
+    {
+      key: "warranties",
+      title: t("economy.warranties"),
+      subtitle: t("economy.warrantiesSubtitle", {
+        count: expiringSoonCount,
+      }),
+      icon: {
+        ios: expiringSoonCount > 0 ? "exclamationmark.shield.fill" : "checkmark.shield.fill",
+        android: expiringSoonCount > 0 ? "warning" : "verified_user",
+        web: expiringSoonCount > 0 ? "warning" : "verified_user",
+      },
+      route: "/warranties" as const,
+      tone: WARRANTY_ALERT_COLOR,
+      visual: "warranties",
+    },
+    {
+      key: "food",
+      title: t("economy.food"),
+      subtitle:
+        foodWeeklyBudget !== null
+          ? t("economy.foodSubtitle", {
+              amount: currency.format(foodSpentThisWeek),
+              budget: currency.format(foodWeeklyBudget),
+            })
+          : t("economy.foodMissingBudget"),
+      icon: { ios: "fork.knife", android: "restaurant", web: "restaurant" },
+      route: "/food" as const,
+      tone: "#16A34A",
+      visual: "food",
+    },
+    {
+      key: "travel",
+      title: t("economy.travel"),
+      subtitle:
+        daysToTrip !== null
+          ? t("economy.travelSubtitle", { days: daysToTrip })
+          : t("economy.travelEmpty"),
+      icon: { ios: "airplane", android: "flight", web: "flight" },
+      route: "/travel" as const,
+      tone: "#2563EB",
+      visual: "travel",
+    },
+  ];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.grid}>
-        {}
-        <View style={styles.row}>
-          <EconomyModuleCard
-            label={t("economy.warranties")}
-            tintColor={moduleTints.warranties}
-            onPress={() => router.push("/warranties")}
-          />
-          <RNView style={styles.emptyCell} />
-          <Pressable
-            style={[
-              styles.diagramPlaceholder,
-              {
-                backgroundColor: surfaceMuted,
-                borderColor:
-                  expiringSoonCount > 0 ? WARRANTY_ALERT_COLOR : borderColor,
-                  borderWidth: expiringSoonCount  > 0 ? 2 : 1,
-              },
-            ]}
-            onPress={() => expiringSoonCount > 0 && setShowExpiringModal(true)}
-          >
-            <SymbolView
-              name={{
-                ios:
-                  expiringSoonCount > 0
-                    ? "exclamationmark.triangle.fill"
-                    : "shield",
-                android: expiringSoonCount > 0 ? "warning" : "shield",
-                web: expiringSoonCount > 0 ? "warning" : "shield",
-              }}
-              tintColor={
-                expiringSoonCount > 0 ? WARRANTY_ALERT_COLOR : borderColor
-              }
-              size={50}
-            />
-
-            {expiringSoonCount > 0 && (
-              <View style={[styles.badge, { backgroundColor: WARRANTY_ALERT_COLOR }]}>
-                <Text style={styles.badgeText}>{expiringSoonCount}</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
-
-        {}
-        <View style={styles.row}>
-          <EconomyModuleCard
-            label={t("economy.savings")}
-            tintColor={moduleTints.savings}
-            onPress={() => router.push("/savings")}
-          />
-          <RNView style={styles.emptyCell} />
-          <Pressable
-            style={[styles.diagramPlaceholder, { backgroundColor: surfaceMuted }]}
-            onPress={() => goals.length > 0 && setShowSavingsModal(true)}
-          >
-            {goals.length > 0 ? (
-              <RingProgress
-                progress={savingsProgress}
-                size={70}
-                strokeWidth={7}
+    <View style={[styles.root, { backgroundColor }]}>
+      <Screen contentContainerStyle={styles.content}>
+        <Card style={styles.hero}>
+          <View style={[styles.heroGlow, styles.heroGlowRose]} />
+          <View style={[styles.heroGlow, styles.heroGlowAmber]} />
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroIcon}>
+              <SymbolView
+                name={{ ios: "chart.pie.fill", android: "pie_chart", web: "pie_chart" }}
+                tintColor="#FFFFFF"
+                size={18}
               />
-            ) : (
-              <RNView
-                style={[
-                  StyleSheet.absoluteFill,
-                  styles.emptyRing,
-                  { borderColor },
-                ]}
+            </View>
+            <Pressable
+              style={styles.insightsButton}
+              onPress={() => router.push("/economy/insights")}
+            >
+              <Text style={styles.insightsButtonText}>{t("economy.insightsTitle")}</Text>
+              <SymbolView
+                name={{ ios: "arrow.up.right", android: "north_east", web: "north_east" }}
+                tintColor="#FFFFFF"
+                size={13}
               />
-            )}
-          </Pressable>
-        </View>
-
-        {}
-        <View style={styles.row}>
-          <EconomyModuleCard
-            label={t("economy.expenses")}
-            tintColor={moduleTints.expenses}
-            onPress={() => router.push("/expenses")}
-          />
-          <RNView style={styles.emptyCell} />
-          <View
-            style={[styles.diagramPlaceholder, { backgroundColor: surfaceMuted }]}
-            onLayout={(e) => setChartSize(e.nativeEvent.layout.width)}
-          >
-            {chartSize > 0 && netIncome !== null && netIncome > 0 && (
-              <ExpensePieChart
-                netIncome={netIncome}
-                categoryTotals={categoryTotals}
-                size={chartSize}
-                interactive={true}
-              />
-            )}
+            </Pressable>
           </View>
-        </View>
-
-        {}
-        <View style={styles.row}>
-          <EconomyModuleCard
-            label={t("economy.travel")}
-            tintColor={moduleTints.travel}
-            onPress={() => router.push("/travel")}
-          />
-          <RNView style={styles.emptyCell} />
-          <View style={[styles.diagramPlaceholder, { backgroundColor: surfaceMuted, borderColor }]}>
-            {upcomingTrip && (
-              <Text style={styles.warrantyCount}>
-                {t("travel.daysUntil", {
-                  days: daysUntil(upcomingTrip.startDate),
-                })}
+          <Text style={styles.heroTitle}>{t("economy.title")}</Text>
+          <Text style={styles.heroSubtitle}>{t("economy.heroSubtitle")}</Text>
+          <View style={styles.heroStats}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>{t("economy.monthSpendLabel")}</Text>
+              <Text style={styles.heroStatValue}>{currency.format(monthTotal)}</Text>
+            </View>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>{t("economy.balanceLabel")}</Text>
+              <Text style={styles.heroStatValue}>
+                {monthBalance !== null ? currency.format(monthBalance) : t("economy.noIncome")}
               </Text>
-            )}
+            </View>
           </View>
+        </Card>
+
+        <View style={styles.metricGrid}>
+          <MetricCard
+            icon={{ ios: "banknote.fill", android: "payments", web: "payments" }}
+            label={t("economy.incomeLabel")}
+            value={netIncome !== null ? currency.format(netIncome) : t("economy.noIncome")}
+            helper={t("economy.incomeHelper")}
+            tone="#16A34A"
+            onPress={() => router.push("/expenses/income")}
+            style={styles.metricItem}
+          />
+          <MetricCard
+            icon={{ ios: "target", android: "track_changes", web: "track_changes" }}
+            label={t("economy.savingsProgressLabel")}
+            value={goals.length > 0 ? percent.format(savingsProgress) : "0%"}
+            helper={t("economy.savingsProgressHelper", { count: goals.length })}
+            tone="#F59E0B"
+            onPress={() => goals.length > 0 ? setShowSavingsModal(true) : router.push("/savings/new")}
+            style={styles.metricItem}
+          />
         </View>
 
-        {}
-        <View style={styles.row}>
-          <EconomyModuleCard
-            label={t("economy.food")}
-            tintColor={moduleTints.food}
-            onPress={() => router.push("/food")}
-          />
-          <RNView style={styles.emptyCell} />
-          <View style={[styles.diagramPlaceholder, { backgroundColor: surfaceMuted }]}>
-            {foodWeeklyBudget !== null ? (
-              <RingProgress
-                progress={foodProgress}
-                size={70}
-                strokeWidth={7}
-                showLabel={false}
-              />
-            ) : (
-              <RNView
-                style={[
-                  StyleSheet.absoluteFill,
-                  styles.emptyRing,
-                  { borderColor },
-                ]}
-              />
-            )}
-          </View>
+        <SectionHeader
+          eyebrow={t("economy.dashboardEyebrow")}
+          title={t("economy.modulesTitle")}
+          subtitle={t("economy.modulesSubtitle")}
+        />
+
+        <View style={styles.moduleList}>
+          {modules.map((module) => (
+            <Pressable
+              key={module.key}
+              onPress={() => router.push(module.route)}
+            >
+              <Card style={[styles.moduleCard, { borderColor: `${module.tone}33` }]}>
+                <View style={[styles.moduleAccent, { backgroundColor: moduleTints[module.key as keyof typeof moduleTints] ?? surfaceMuted }]} />
+                <View style={[styles.moduleIcon, { backgroundColor: `${module.tone}18` }]}>
+                  <SymbolView name={module.icon as any} tintColor={module.tone} size={19} />
+                </View>
+                <View style={styles.moduleText}>
+                  <Text style={styles.moduleTitle}>{module.title}</Text>
+                  <Text style={[styles.moduleSubtitle, { color: textMuted }]} numberOfLines={2}>
+                    {module.subtitle}
+                  </Text>
+                </View>
+                <View
+                  style={[styles.modulePreview, { backgroundColor: surfaceMuted, borderColor }]}
+                  onLayout={module.visual === "pie" ? (e) => setChartSize(e.nativeEvent.layout.width) : undefined}
+                >
+                  {module.visual === "pie" && chartSize > 0 && netIncome !== null && netIncome > 0 ? (
+                    <ExpensePieChart
+                      netIncome={netIncome}
+                      categoryTotals={categoryTotals}
+                      size={Math.min(chartSize, 72)}
+                      interactive={false}
+                    />
+                  ) : module.visual === "savings" && goals.length > 0 ? (
+                    <RingProgress progress={savingsProgress} size={62} strokeWidth={6} />
+                  ) : module.visual === "food" && foodWeeklyBudget !== null ? (
+                    <RingProgress progress={foodProgress} size={62} strokeWidth={6} showLabel={false} />
+                  ) : module.visual === "warranties" && expiringSoonCount > 0 ? (
+                    <Text style={[styles.previewCount, { color: WARRANTY_ALERT_COLOR }]}>{expiringSoonCount}</Text>
+                  ) : module.visual === "travel" && daysToTrip !== null ? (
+                    <Text style={styles.previewCount}>{daysToTrip}</Text>
+                  ) : (
+                    <SymbolView
+                      name={module.icon as any}
+                      tintColor={borderColor}
+                      size={26}
+                    />
+                  )}
+                </View>
+              </Card>
+            </Pressable>
+          ))}
         </View>
-      </View>
+
+        <SectionHeader
+          eyebrow={t("economy.shortcutEyebrow")}
+          title={t("economy.quickTitle")}
+        />
+        <View style={styles.quickGrid}>
+          <QuickActionCard
+            icon={{ ios: "plus.circle.fill", android: "add_circle", web: "add_circle" }}
+            title={t("economy.newExpenseTitle")}
+            subtitle={t("economy.newExpenseSubtitle")}
+            tone="#E11D48"
+            onPress={() => router.push("/expenses/new")}
+            style={styles.quickItem}
+          />
+          <QuickActionCard
+            icon={{ ios: "calendar.badge.clock", android: "event", web: "event" }}
+            title={t("economy.upcomingTitle")}
+            subtitle={t("economy.upcomingSubtitle")}
+            tone="#2563EB"
+            onPress={() => router.push("/expenses/upcoming")}
+            style={styles.quickItem}
+          />
+        </View>
+      </Screen>
 
       <Modal
         visible={showExpiringModal}
@@ -346,62 +426,164 @@ export default function EconomyScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 1,
-    paddingHorizontal: 1,
-  },
-  title: {
-    fontSize: 2,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  grid: {
+  root: {
     flex: 1,
   },
-  row: {
-    flexDirection: "row",
-    flex: 1,
+  content: {
+    paddingBottom: 72,
   },
-  emptyCell: {
-    flex: 1,
-    margin: 2,
+  hero: {
+    backgroundColor: "#16130F",
+    borderColor: "rgba(255,255,255,0.08)",
+    gap: 12,
+    overflow: "hidden",
+    padding: 20,
   },
-  diagramPlaceholder: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: 999,
-    borderWidth: 1,
-    margin: 5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyRing: {
-    borderRadius: 999,
-    borderWidth: 1,
-    margin: 5,
-  },
-  badge: {
+  heroGlow: {
     position: "absolute",
-    top: 4,
-    right: 4,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    paddingHorizontal: 4,
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    opacity: 0.2,
+  },
+  heroGlowRose: {
+    backgroundColor: "#E11D48",
+    right: -48,
+    top: -54,
+  },
+  heroGlowAmber: {
+    backgroundColor: "#F59E0B",
+    bottom: -70,
+    left: -56,
+  },
+  heroTopRow: {
     alignItems: "center",
+    backgroundColor: "transparent",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  heroIcon: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.13)",
+    borderRadius: 16,
+    height: 42,
     justifyContent: "center",
+    width: 42,
   },
-  badgeText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
+  insightsButton: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 999,
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  warrantyCount: {
+  insightsButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  heroTitle: {
+    color: "#FFFFFF",
+    fontSize: 29,
+    fontWeight: "900",
+  },
+  heroSubtitle: {
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  heroStats: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 18,
+    flexDirection: "row",
+    marginTop: 4,
+    padding: 14,
+  },
+  heroStat: {
+    backgroundColor: "transparent",
+    flex: 1,
+    gap: 3,
+  },
+  heroStatLabel: {
+    color: "rgba(255,255,255,0.62)",
     fontSize: 11,
-    textAlign: "center",
-    paddingHorizontal: 4,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  heroStatValue: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  heroDivider: {
+    backgroundColor: "rgba(255,255,255,0.16)",
+    marginHorizontal: 14,
+    width: 1,
+  },
+  metricGrid: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  metricItem: {
+    flex: 1,
+  },
+  moduleList: {
+    gap: 10,
+  },
+  moduleCard: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+    minHeight: 104,
+    overflow: "hidden",
+  },
+  moduleAccent: {
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    top: 0,
+    width: 5,
+  },
+  moduleIcon: {
+    alignItems: "center",
+    borderRadius: 16,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
+  },
+  moduleText: {
+    backgroundColor: "transparent",
+    flex: 1,
+    gap: 3,
+  },
+  moduleTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  moduleSubtitle: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  modulePreview: {
+    alignItems: "center",
+    borderRadius: 28,
+    borderWidth: 1,
+    height: 72,
+    justifyContent: "center",
+    overflow: "hidden",
+    width: 72,
+  },
+  previewCount: {
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  quickGrid: {
+    gap: 10,
+  },
+  quickItem: {
+    width: "100%",
   },
   modalBackdrop: {
     flex: 1,

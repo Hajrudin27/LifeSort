@@ -46,5 +46,8 @@
   "quickGoalTitle": "New life goal",
   "quickGoalSubtitle": "Turn a big ambition into something concrete.",
   "quickHouseholdTitle": "New household task",
-  "quickHouseholdSubtitle": "Assign responsibility and keep home flowing."
+  "quickHouseholdSubtitle": "Assign responsibility and keep home flowing.",
+  "a11y": {
+    "openFocus": "Open {{title}}"
+  }
 }

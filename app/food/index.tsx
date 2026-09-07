@@ -185,6 +185,9 @@ export default function FoodScreen() {
           onChangeText={setPurchaseAmount}
         />
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("food.a11y.logPurchase")}
+          accessibilityState={{ disabled: !canLogPurchase }}
           style={[styles.smallButton, { backgroundColor: accentTints.accent }, !canLogPurchase && { opacity: 0.4 }]}
           disabled={!canLogPurchase}
           onPress={logPurchase}>

@@ -42,7 +42,13 @@ export default function HabitMonthCalendar({ habit }: Props) {
   return (
     <View>
       <View style={styles.header}>
-        <Pressable disabled={!canGoBack} onPress={() => setMonthDate((d) => addMonths(d, -1))}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('common.a11y.previousMonth')}
+          accessibilityState={{ disabled: !canGoBack }}
+          hitSlop={12}
+          disabled={!canGoBack}
+          onPress={() => setMonthDate((d) => addMonths(d, -1))}>
           <SymbolView
             name={{ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' }}
             size={20}
@@ -50,7 +56,13 @@ export default function HabitMonthCalendar({ habit }: Props) {
           />
         </Pressable>
         <Text style={styles.monthLabel}>{formatMonthLabel(monthDate, locale)}</Text>
-        <Pressable disabled={!canGoForward} onPress={() => setMonthDate((d) => addMonths(d, 1))}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('common.a11y.nextMonth')}
+          accessibilityState={{ disabled: !canGoForward }}
+          hitSlop={12}
+          disabled={!canGoForward}
+          onPress={() => setMonthDate((d) => addMonths(d, 1))}>
           <SymbolView
             name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
             size={20}

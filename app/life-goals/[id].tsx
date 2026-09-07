@@ -157,7 +157,11 @@ export default function LifeGoalDetailScreen() {
                   {sg.title}
                 </Text>
               </Pressable>
-              <Pressable onPress={() => removeSubGoal(goal.id, sg.id)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("lifeGoals.a11y.removeSubGoal", { title: sg.title })}
+                hitSlop={14}
+                onPress={() => removeSubGoal(goal.id, sg.id)}>
                 <SymbolView
                   name={{ ios: "xmark", android: "close", web: "close" }}
                   size={16}

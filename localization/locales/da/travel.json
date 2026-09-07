@@ -72,5 +72,9 @@
   "other": "Andet"
 },
 "allPackedLabel": "Alt er pakket!",
-"noPackingItems": "Ingen elementer på listen endnu."
+"noPackingItems": "Ingen elementer på listen endnu.",
+  "a11y": {
+    "addPackingItem": "Tilføj til pakkeliste",
+    "selectCategory": "Kategori: {{category}}"
+  }
 }

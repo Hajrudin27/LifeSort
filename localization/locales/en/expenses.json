@@ -91,5 +91,9 @@
   "restOfWeek": "Rest of the week",
   "allClearTitle": "All clear!",
   "leftSuffix": "left",
-  "next7Days": "Next 7 days"
+  "next7Days": "Next 7 days",
+  "a11y": {
+    "search": "Search expenses",
+    "addExpense": "Add expense"
+  }
 }

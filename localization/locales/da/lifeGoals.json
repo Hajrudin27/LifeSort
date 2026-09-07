@@ -17,5 +17,8 @@
     "progressLabel": "{{done}}/{{total}} delmål",
     "edit": "Rediger",
     "activeLabel": "Aktive",
-    "showCompleted": "Vis fuldførte"
-  }
+    "showCompleted": "Vis fuldførte",
+    "a11y": {
+        "removeSubGoal": "Fjern delmål {{title}}"
+    }
+}

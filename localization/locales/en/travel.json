@@ -72,5 +72,9 @@
   "other": "Other"
 },
 "allPackedLabel": "All packed!",
-"noPackingItems": "No items on the list yet."
-  }
+"noPackingItems": "No items on the list yet.",
+    "a11y": {
+        "addPackingItem": "Add to packing list",
+        "selectCategory": "Category: {{category}}"
+    }
+}

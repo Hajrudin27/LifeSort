@@ -1,3 +1,11 @@
 {
-    "saved": "Gemt"
-  }
+    "saved": "Gemt",
+    "a11y": {
+        "previousMonth": "Forrige måned",
+        "nextMonth": "Næste måned",
+        "delete": "Slet",
+        "openAttachment": "Åbn vedhæftning",
+        "search": "Søg",
+        "info": "Om appen"
+    }
+}

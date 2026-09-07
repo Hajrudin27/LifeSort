@@ -68,5 +68,9 @@
     "noWeekActivity": "Intet planlagt denne uge",
     "invitationsLabel": "Invitationer",
     "invitationSubtitle": "Du er inviteret til at dele denne rejse",
-    "invitationUnknownTrip": "En rejse"
-  }
+    "invitationUnknownTrip": "En rejse",
+    "a11y": {
+        "acceptInvitation": "Accepter invitation til {{trip}}",
+        "declineInvitation": "Afvis invitation til {{trip}}"
+    }
+}

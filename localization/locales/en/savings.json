@@ -71,5 +71,8 @@
   "archive": "Archive",
   "longPressToArchive": "Long-press to archive",
   "archiveConfirmTitle": "Archive goal?",
-  "archiveConfirmMessage": "The goal will be hidden from your active list, but its history is kept."
+  "archiveConfirmMessage": "The goal will be hidden from your active list, but its history is kept.",
+  "a11y": {
+    "addGoal": "Add savings goal"
+  }
 }

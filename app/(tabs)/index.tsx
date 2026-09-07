@@ -288,12 +288,18 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.invitationButtons}>
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('home.a11y.acceptInvitation', { trip: trip?.name ?? t('home.invitationUnknownTrip') })}
+                    hitSlop={5}
                     style={[styles.invitationButton, { backgroundColor: accentTints.accent }]}
                     onPress={() => respondToInvitation(inv.tripId, true)}
                   >
                     <SymbolView name={{ ios: 'checkmark', android: 'check', web: 'check' }} size={14} tintColor="#FFFFFF" />
                   </Pressable>
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('home.a11y.declineInvitation', { trip: trip?.name ?? t('home.invitationUnknownTrip') })}
+                    hitSlop={5}
                     style={[styles.invitationButton, { backgroundColor: textMuted }]}
                     onPress={() => respondToInvitation(inv.tripId, false)}
                   >

@@ -160,6 +160,7 @@ export default function FloatingTabBar({ descriptors, navigation, state }: Float
           return (
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={label}
               accessibilityState={isFocused ? { selected: true } : {}}
               key={route.key}
               onPress={onPress}

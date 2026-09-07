@@ -98,7 +98,12 @@ export default function CategoryExpensesScreen() {
                 <View style={styles.heroIcon}>
                   <SymbolView name={getCategoryIconName(categoryKey) as any} size={23} tintColor="#FFFFFF" />
                 </View>
-                <Pressable style={styles.heroAddButton} onPress={() => router.push("/expenses/new")}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t("expenses.a11y.addExpense")}
+                  hitSlop={3}
+                  style={styles.heroAddButton}
+                  onPress={() => router.push("/expenses/new")}>
                   <SymbolView name={{ ios: "plus", android: "add", web: "add" }} size={17} tintColor="#FFFFFF" />
                 </Pressable>
               </View>

@@ -17,5 +17,8 @@
     "progressLabel": "{{done}}/{{total}} sub-goals",
     "edit": "Edit",
     "activeLabel": "Active",
-    "showCompleted": "Show completed"
-  }
+    "showCompleted": "Show completed",
+    "a11y": {
+        "removeSubGoal": "Remove sub-goal {{title}}"
+    }
+}

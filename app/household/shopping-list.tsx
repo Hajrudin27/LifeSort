@@ -58,7 +58,11 @@ export default function HouseholdShoppingListScreen() {
                 {item.label}
               </Text>
             </Pressable>
-            <Pressable onPress={() => removeShoppingItem(item.id)}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('household.a11y.removeShoppingItem', { item: item.label })}
+              hitSlop={14}
+              onPress={() => removeShoppingItem(item.id)}>
               <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} size={16} tintColor={borderColor} />
             </Pressable>
           </Card>

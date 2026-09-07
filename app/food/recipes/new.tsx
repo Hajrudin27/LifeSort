@@ -107,7 +107,11 @@ export default function NewRecipeScreen() {
               onChangeText={(v) => updateIngredient(index, "amount", v)}
             />
             {ingredients.length > 1 && (
-              <Pressable onPress={() => removeIngredientRow(index)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("food.a11y.removeIngredient")}
+                hitSlop={14}
+                onPress={() => removeIngredientRow(index)}>
                 <SymbolView name={{ ios: "xmark", android: "close", web: "close" }} size={16} tintColor={borderColor} />
               </Pressable>
             )}

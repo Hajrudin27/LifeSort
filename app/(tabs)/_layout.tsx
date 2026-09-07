@@ -14,13 +14,14 @@ type IconName = { ios: string; android: string; web: string };
 type HeaderIconLinkProps = {
   href: Href;
   icon: IconName;
+  label: string;
   side: 'left' | 'right';
   tintColor: string;
   backgroundColor: string;
   borderColor: string;
 };
 
-function HeaderIconLink({ href, icon, side, tintColor, backgroundColor, borderColor }: HeaderIconLinkProps) {
+function HeaderIconLink({ href, icon, label, side, tintColor, backgroundColor, borderColor }: HeaderIconLinkProps) {
   const buttonStyle = StyleSheet.flatten([
     styles.headerIconButton,
     side === 'left' ? styles.headerIconLeft : styles.headerIconRight,
@@ -29,7 +30,7 @@ function HeaderIconLink({ href, icon, side, tintColor, backgroundColor, borderCo
 
   return (
     <Link href={href} asChild>
-      <Pressable style={buttonStyle}>
+      <Pressable accessibilityRole="button" accessibilityLabel={label} hitSlop={4} style={buttonStyle}>
         {({ pressed }) => (
           <SymbolView
             name={icon as any}
@@ -74,6 +75,7 @@ export default function TabLayout() {
             <HeaderIconLink
               href="/search"
               icon={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
+              label={t('common.a11y.search')}
               side="left"
               tintColor={theme.text}
               backgroundColor={headerButtonBackground}
@@ -84,6 +86,7 @@ export default function TabLayout() {
             <HeaderIconLink
               href="/modal"
               icon={{ ios: 'info.circle', android: 'info', web: 'info' }}
+              label={t('common.a11y.info')}
               side="right"
               tintColor={theme.text}
               backgroundColor={headerButtonBackground}
@@ -100,6 +103,7 @@ export default function TabLayout() {
             <HeaderIconLink
               href="/economy/insights"
               icon={{ ios: 'chart.line.uptrend.xyaxis', android: 'trending_up', web: 'trending_up' }}
+              label={t('economy.insightsTitle')}
               side="right"
               tintColor={theme.text}
               backgroundColor={headerButtonBackground}

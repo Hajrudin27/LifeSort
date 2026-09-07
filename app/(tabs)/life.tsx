@@ -220,7 +220,11 @@ export default function LifeScreen() {
           <Text style={styles.focusTitle}>{focusCard.title}</Text>
           <Text style={[styles.focusSubtitle, { color: textMuted }]}>{focusCard.subtitle}</Text>
         </View>
-        <Pressable style={[styles.focusButton, { backgroundColor: focusCard.tone }]} onPress={() => router.push(focusCard.route)}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('life.a11y.openFocus', { title: focusCard.title })}
+          style={[styles.focusButton, { backgroundColor: focusCard.tone }]}
+          onPress={() => router.push(focusCard.route)}>
           <SymbolView name={{ ios: 'arrow.right', android: 'arrow_forward', web: 'arrow_forward' }} size={17} tintColor="#FFFFFF" />
         </Pressable>
       </Card>

@@ -112,5 +112,10 @@
 "pantryCount": "{{count}} items",
 "shoppingCount": "{{count}} on the list",
 "setBudgetLink": "Set a food budget",
-"noStoresYet": "No stores available yet."
-  }
+"noStoresYet": "No stores available yet.",
+    "a11y": {
+        "logPurchase": "Log purchase",
+        "removeIngredient": "Remove ingredient",
+        "removeShoppingItem": "Remove {{item}} from the shopping list"
+    }
+}

@@ -58,7 +58,11 @@ export default function MovingChecklistScreen() {
                 {item.label}
               </Text>
             </Pressable>
-            <Pressable onPress={() => removeMovingItem(item.id)}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('household.a11y.removeMovingItem', { item: item.label })}
+              hitSlop={14}
+              onPress={() => removeMovingItem(item.id)}>
               <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' }} size={16} tintColor={borderColor} />
             </Pressable>
           </Card>

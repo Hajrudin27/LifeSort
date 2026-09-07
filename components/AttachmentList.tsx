@@ -26,10 +26,13 @@ type ThumbProps = {
  * må kaldes inde i en .map.
  */
 function AttachmentThumb({ attachment, borderColor, iconBackground, iconTint, onRemove }: ThumbProps) {
+  const { t } = useTranslation();
   const uri = useAttachmentUri(attachment);
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('common.a11y.openAttachment')}
       style={[styles.thumb, { borderColor }]}
       onPress={() => attachment.kind === 'image' && uri && router.push({ pathname: '/warranties/view-image', params: { uri } })}
       onLongPress={onRemove}>

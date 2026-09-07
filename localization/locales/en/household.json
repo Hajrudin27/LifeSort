@@ -42,5 +42,9 @@
       "electricity": "Set up electricity",
       "mailForwarding": "Mail forwarding",
       "insurance": "Update insurance"
+    },
+    "a11y": {
+        "removeMovingItem": "Remove {{item}} from the moving list",
+        "removeShoppingItem": "Remove {{item}} from the shopping list"
     }
-  }
+}

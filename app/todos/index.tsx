@@ -138,7 +138,13 @@ export default function TodosScreen() {
     return (
       <SwipeableRow onDelete={() => confirmDelete(item)}>
         <Card style={[styles.todoCard, { borderColor: isOverdue ? danger : borderColor, backgroundColor: surface }]}>
-          <Pressable style={styles.checkButton} onPress={() => toggleTodo(item.id)}>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityLabel={t('todos.a11y.toggleTodo', { title: item.title })}
+            accessibilityState={{ checked: item.completed }}
+            hitSlop={10}
+            style={styles.checkButton}
+            onPress={() => toggleTodo(item.id)}>
             <SymbolView
               name={{
                 ios: item.completed ? 'checkmark.circle.fill' : 'circle',
@@ -208,7 +214,12 @@ export default function TodosScreen() {
                 <View style={styles.heroIcon}>
                   <SymbolView name={{ ios: 'checklist', android: 'checklist', web: 'checklist' }} size={22} tintColor={brand.onBrand} />
                 </View>
-                <Pressable style={styles.heroAddButton} onPress={() => router.push('/todos/new')}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('todos.a11y.addTodo')}
+                  hitSlop={4}
+                  style={styles.heroAddButton}
+                  onPress={() => router.push('/todos/new')}>
                   <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={17} tintColor={brand.onBrand} />
                 </Pressable>
               </View>

@@ -141,6 +141,9 @@ export default function PackingListScreen() {
             return (
               <Pressable
                 key={cat}
+                accessibilityRole="button"
+                accessibilityLabel={t('travel.a11y.selectCategory', { category: t(`travel.packingCategories.${cat}`) })}
+                accessibilityState={{ selected: isActive }}
                 style={[
                   styles.categoryChip,
                   { borderColor: isActive ? accentTints.accent : borderColor, backgroundColor: isActive ? accentTints.accent : 'transparent' },
@@ -162,7 +165,11 @@ export default function PackingListScreen() {
             onChangeText={setNewLabel}
             onSubmitEditing={addItem}
           />
-          <Pressable style={[styles.addButton, { backgroundColor: accentTints.accent }]} onPress={addItem}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('travel.a11y.addPackingItem')}
+            style={[styles.addButton, { backgroundColor: accentTints.accent }]}
+            onPress={addItem}>
             <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={18} tintColor="#FFFFFF" />
           </Pressable>
         </View>

@@ -91,5 +91,9 @@
   "restOfWeek": "Resten af ugen",
   "allClearTitle": "Alt er klaret!",
   "leftSuffix": "tilbage",
-  "next7Days": "Næste 7 dage"
+  "next7Days": "Næste 7 dage",
+  "a11y": {
+    "search": "Søg i udgifter",
+    "addExpense": "Tilføj udgift"
+  }
 }

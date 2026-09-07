@@ -112,5 +112,10 @@
 "pantryCount": "{{count}} varer",
 "shoppingCount": "{{count}} på listen",
 "setBudgetLink": "Sæt et madbudget",
-"noStoresYet": "Ingen butikker tilgængelige endnu."
-  }
+"noStoresYet": "Ingen butikker tilgængelige endnu.",
+    "a11y": {
+        "logPurchase": "Registrer indkøb",
+        "removeIngredient": "Fjern ingrediens",
+        "removeShoppingItem": "Fjern {{item}} fra indkøbslisten"
+    }
+}

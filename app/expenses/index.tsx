@@ -86,6 +86,8 @@ export default function ExpensesScreen() {
     <View style={[styles.container, { backgroundColor: background }]}>
       <View style={styles.toolbar}>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("expenses.a11y.search")}
           style={[styles.roundButton, { backgroundColor: surface, borderColor: border }]}
           onPress={() => router.push("/expenses/search")}
         >
@@ -93,7 +95,12 @@ export default function ExpensesScreen() {
         </Pressable>
 
         <View style={[styles.monthPill, { backgroundColor: surface, borderColor: border }]}>
-          <Pressable style={styles.monthArrow} onPress={() => setSelectedMonth((d) => addMonths(d, -1))}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("common.a11y.previousMonth")}
+            hitSlop={4}
+            style={styles.monthArrow}
+            onPress={() => setSelectedMonth((d) => addMonths(d, -1))}>
             <SymbolView
               name={{ ios: "chevron.left", android: "chevron_left", web: "chevron_left" }}
               size={18}
@@ -103,12 +110,19 @@ export default function ExpensesScreen() {
           <Text style={styles.monthLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
             {formatMonthLabel(selectedMonth, locale)}
           </Text>
-          <Pressable style={styles.monthArrow} onPress={() => setSelectedMonth((d) => addMonths(d, 1))}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("common.a11y.nextMonth")}
+            hitSlop={4}
+            style={styles.monthArrow}
+            onPress={() => setSelectedMonth((d) => addMonths(d, 1))}>
             <SymbolView name={{ ios: "chevron.right", android: "chevron_right", web: "chevron_right" }} size={18} tintColor={textMuted} />
           </Pressable>
         </View>
 
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("expenses.a11y.addExpense")}
           style={[styles.roundButton, styles.primaryRoundButton, { backgroundColor: accentTints.accent }]}
           onPress={() => router.push("/expenses/new")}
         >

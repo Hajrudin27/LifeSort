@@ -1,3 +1,11 @@
 {
-    "saved": "Saved"
-  }
+    "saved": "Saved",
+    "a11y": {
+        "previousMonth": "Previous month",
+        "nextMonth": "Next month",
+        "delete": "Delete",
+        "openAttachment": "Open attachment",
+        "search": "Search",
+        "info": "About the app"
+    }
+}

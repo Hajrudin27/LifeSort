@@ -42,5 +42,9 @@
       "electricity": "Opret el-abonnement",
       "mailForwarding": "Eftersendelse af post",
       "insurance": "Opdater forsikring"
+    },
+    "a11y": {
+        "removeMovingItem": "Fjern {{item}} fra flyttelisten",
+        "removeShoppingItem": "Fjern {{item}} fra indkøbslisten"
     }
-  }
+}

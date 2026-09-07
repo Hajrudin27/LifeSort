@@ -94,6 +94,8 @@ export default function TripAttachmentGrid({
         {attachments.map((a) => (
           <Pressable
             key={a.id}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.a11y.openAttachment')}
             style={[styles.thumb, { borderColor }]}
             onPress={() => openAttachment(a)}
             onLongPress={() => confirmRemove(a.id)}

@@ -46,5 +46,8 @@
   "quickGoalTitle": "Nyt livsmål",
   "quickGoalSubtitle": "Gør en stor ambition konkret.",
   "quickHouseholdTitle": "Ny hjemmetask",
-  "quickHouseholdSubtitle": "Fordel ansvar og hold hjemmet i flow."
+  "quickHouseholdSubtitle": "Fordel ansvar og hold hjemmet i flow.",
+  "a11y": {
+    "openFocus": "Åbn {{title}}"
+  }
 }

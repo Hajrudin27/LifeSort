@@ -71,5 +71,8 @@
   "archive": "Arkivér",
   "longPressToArchive": "Langt tryk for at arkivere",
   "archiveConfirmTitle": "Arkivér mål?",
-  "archiveConfirmMessage": "Målet skjules fra din aktive liste, men historikken bevares."
+  "archiveConfirmMessage": "Målet skjules fra din aktive liste, men historikken bevares.",
+  "a11y": {
+    "addGoal": "Tilføj sparemål"
+  }
 }

@@ -68,5 +68,9 @@
     "noWeekActivity": "Nothing planned this week",
     "invitationsLabel": "Invitations",
     "invitationSubtitle": "You've been invited to share this trip",
-    "invitationUnknownTrip": "A trip"
-  }
+    "invitationUnknownTrip": "A trip",
+    "a11y": {
+        "acceptInvitation": "Accept invitation to {{trip}}",
+        "declineInvitation": "Decline invitation to {{trip}}"
+    }
+}

@@ -57,11 +57,21 @@ export default function CycleMonthCalendar({ cycles, fertileWindow, predictedNex
   return (
     <View>
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
-        <Pressable style={[styles.navButton, { backgroundColor: cycleTints.accentSoft }]} onPress={() => setMonthDate((d) => addMonths(d, -1))}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('common.a11y.previousMonth')}
+          hitSlop={8}
+          style={[styles.navButton, { backgroundColor: cycleTints.accentSoft }]}
+          onPress={() => setMonthDate((d) => addMonths(d, -1))}>
           <SymbolView name={{ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' }} size={16} tintColor={cycleTints.accent} />
         </Pressable>
         <Text style={styles.monthLabel}>{formatMonthLabel(monthDate, locale)}</Text>
-        <Pressable style={[styles.navButton, { backgroundColor: cycleTints.accentSoft }]} onPress={() => setMonthDate((d) => addMonths(d, 1))}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('common.a11y.nextMonth')}
+          hitSlop={8}
+          style={[styles.navButton, { backgroundColor: cycleTints.accentSoft }]}
+          onPress={() => setMonthDate((d) => addMonths(d, 1))}>
           <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} size={16} tintColor={cycleTints.accent} />
         </Pressable>
       </View>

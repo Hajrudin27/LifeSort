@@ -99,6 +99,9 @@ export default function SavingsGoalsScreen() {
             <Text style={styles.heroAmount}>{available.toFixed(0)} kr.</Text>
           </View>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("savings.a11y.addGoal")}
+            hitSlop={6}
             style={styles.addButton}
             onPress={() => setShowAddModal(true)}
           >

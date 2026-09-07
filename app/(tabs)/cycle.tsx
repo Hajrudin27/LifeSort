@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, TextInput } from "react-native";
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -10,7 +10,7 @@ import Chip from "@/components/Chip";
 import CycleInsightsCard from "@/components/CycleInsightsCard";
 import CycleMonthCalendar from "@/components/CycleMonthCalendar";
 import CycleWheel from "@/components/CycleWheel";
-import { Text, useThemeColor, View } from "@/components/Themed";
+import { Text, useThemeColor } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import { CycleTints } from "@/constants/Colors";
 import { sharedStyles } from "@/constants/sharedStyles";
@@ -61,6 +61,7 @@ export default function CycleScreen() {
   const warning = useThemeColor({}, "warning");
   const borderColor = useThemeColor({}, "border");
   const surface = useThemeColor({}, "surface");
+  const surfaceMuted = useThemeColor({}, "surfaceMuted");
   const backgroundColor = useThemeColor({}, "background");
   const locale = i18n.language === "da" ? "da-DK" : "en-US";
   const handleTabBarScroll = useTabBarScroll();
@@ -101,6 +102,9 @@ export default function CycleScreen() {
     lutealPhaseLength,
   );
   const predictedNext = getPredictedNextPeriod(cycles, avgCycleLength);
+  const predictedNextLabel = predictedNext
+    ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(predictedNext))
+    : t("cycle.noPredictionShort");
 
   useEffect(() => {
     if (reminderEnabled && predictedNext) {
@@ -211,6 +215,30 @@ export default function CycleScreen() {
     },
   ];
 
+  const statusItems = [
+    {
+      key: "next",
+      icon: { ios: "calendar.badge.clock", android: "event", web: "event" },
+      label: t("cycle.nextPeriodShort"),
+      value: predictedNextLabel,
+      tone: cycleTints.period,
+    },
+    {
+      key: "average",
+      icon: { ios: "clock.fill", android: "schedule", web: "schedule" },
+      label: t("cycle.averageShort"),
+      value: t("cycle.cycleLengthLabel", { days: avgCycleLength }),
+      tone: cycleTints.fertile,
+    },
+    {
+      key: "logs",
+      icon: { ios: "chart.bar.fill", android: "bar_chart", web: "bar_chart" },
+      label: t("cycle.recordsShort"),
+      value: String(symptomLogs.length),
+      tone: cycleTints.ovulation,
+    },
+  ];
+
   return (
     <ScrollView
       style={{ backgroundColor }}
@@ -218,78 +246,91 @@ export default function CycleScreen() {
       onScroll={handleTabBarScroll}
       scrollEventThrottle={16}
     >
-      <Card
-        style={[
-          styles.hero,
-          { backgroundColor: cycleTints.accent, overflow: "hidden" },
-        ]}
-      >
-        <View
-          style={[
-            styles.heroCircleLarge,
-            { backgroundColor: "#FFFFFF", opacity: 0.1 },
-          ]}
-        />
-        <View
-          style={[
-            styles.heroCircleSmall,
-            { backgroundColor: "#FFFFFF", opacity: 0.12 },
-          ]}
-        />
+      <Card style={styles.hero}>
+        <View style={[styles.heroGlow, styles.heroGlowRose]} />
+        <View style={[styles.heroGlow, styles.heroGlowAmber]} />
         <View style={styles.heroTopRow}>
-          <SymbolView
-            name={{
-              ios: "drop.fill",
-              android: "water_drop",
-              web: "water_drop",
-            }}
-            size={18}
-            tintColor="#FFFFFF"
-          />
-          <Text style={styles.heroKicker}>{t("cycle.title")}</Text>
+          <View style={styles.heroIcon}>
+            <SymbolView
+              name={{
+                ios: "drop.fill",
+                android: "water_drop",
+                web: "water_drop",
+              }}
+              size={18}
+              tintColor="#FFFFFF"
+            />
+          </View>
+          <Text style={styles.heroKicker}>{t("cycle.overviewKicker")}</Text>
         </View>
         {cycleDay !== null ? (
           <>
-            <Text style={styles.heroDay}>
-              {t("cycle.heroDayLabel", { day: cycleDay })}
-            </Text>
-            {phase && (
-              <Text style={styles.heroPhase}>{t(`cycle.phase.${phase}`)}</Text>
-            )}
-            {daysUntilNext !== null && daysUntilNext > 0 && (
-              <View style={styles.heroNextPill}>
-                <Text style={styles.heroNext}>
-                  {t("cycle.daysUntilNext", { days: daysUntilNext })}
-                </Text>
-              </View>
-            )}
+            <Text style={styles.heroDay}>{t("cycle.heroDayLabel", { day: cycleDay })}</Text>
+            <Text style={styles.heroPhase}>{phase ? t(`cycle.phase.${phase}`) : t("cycle.todayOverviewFallback")}</Text>
           </>
         ) : (
           <Text style={styles.heroDay}>{t("cycle.heroNoData")}</Text>
         )}
+        <View style={styles.heroStats}>
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatLabel}>{t("cycle.nextPeriodShort")}</Text>
+            <Text style={styles.heroStatValue}>{predictedNextLabel}</Text>
+          </View>
+          <View style={styles.heroDivider} />
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatLabel}>{t("cycle.statusShort")}</Text>
+            <Text style={styles.heroStatValue}>
+              {onPeriod ? t("cycle.onPeriodShort") : phase ? t(`cycle.phase.${phase}`) : t("cycle.noDataShort")}
+            </Text>
+          </View>
+        </View>
       </Card>
 
-      <Button
-        label={
-          onPeriod ? t("cycle.endPeriodButton") : t("cycle.startPeriodButton")
-        }
-        variant={onPeriod ? "secondary" : "primary"}
-        onPress={handlePeriodAction}
-      />
+      <View style={styles.statusGrid}>
+        {statusItems.map((item) => (
+          <View
+            key={item.key}
+            style={[styles.statusCard, { backgroundColor: surface, borderColor: `${item.tone}2E` }]}
+          >
+            <View style={[styles.statusIcon, { backgroundColor: `${item.tone}18` }]}>
+              <SymbolView name={item.icon as any} size={15} tintColor={item.tone} />
+            </View>
+            <Text style={[styles.statusLabel, { color: textMuted }]}>{item.label}</Text>
+            <Text style={styles.statusValue} numberOfLines={1}>{item.value}</Text>
+          </View>
+        ))}
+      </View>
 
-      <Text style={sharedStyles.sectionLabel}>
-        {t("cycle.symptomsTodayLabel")}
-      </Text>
+      <View style={[styles.actionPanel, { backgroundColor: surface, borderColor }]}>
+        <View style={styles.actionText}>
+          <Text style={[styles.actionEyebrow, { color: cycleTints.accent }]}>{t("cycle.todayActionEyebrow")}</Text>
+          <Text style={styles.actionTitle}>
+            {onPeriod ? t("cycle.endPeriodActionTitle") : t("cycle.startPeriodActionTitle")}
+          </Text>
+          <Text style={[styles.actionSubtitle, { color: textMuted }]}>
+            {onPeriod ? t("cycle.endPeriodActionSubtitle") : t("cycle.startPeriodActionSubtitle")}
+          </Text>
+        </View>
+        <Button
+          label={onPeriod ? t("cycle.endPeriodButton") : t("cycle.startPeriodButton")}
+          variant={onPeriod ? "secondary" : "primary"}
+          onPress={handlePeriodAction}
+        />
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionEyebrow, { color: cycleTints.accent }]}>{t("cycle.todayLogKicker")}</Text>
+        <Text style={styles.sectionTitle}>{t("cycle.journalTitle")}</Text>
+        <Text style={[styles.sectionSubtitle, { color: textMuted }]}>{t("cycle.journalSubtitle")}</Text>
+      </View>
       <Card style={styles.symptomsCard}>
-        <View style={styles.symptomsKickerRow}>
+        <View style={styles.symptomsHeader}>
           <SymbolView
             name={{ ios: "heart.text.square.fill", android: "assignment", web: "assignment" }}
-            size={14}
+            size={17}
             tintColor={cycleTints.accent}
           />
-          <Text style={[styles.symptomsKicker, { color: cycleTints.accent }]}>
-            {t("cycle.todayLogKicker")}
-          </Text>
+          <Text style={styles.symptomsTitle}>{t("cycle.symptomsTodayLabel")}</Text>
         </View>
 
         <Text style={[styles.subLabel, { color: textMuted }]}>
@@ -370,8 +411,11 @@ export default function CycleScreen() {
 
       <CycleInsightsCard />
 
-      <Text style={sharedStyles.sectionLabel}>{t("cycle.calendarLabel")}</Text>
-      <Card>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionEyebrow, { color: cycleTints.accent }]}>{t("cycle.timelineEyebrow")}</Text>
+        <Text style={styles.sectionTitle}>{t("cycle.calendarLabel")}</Text>
+      </View>
+      <Card style={styles.visualCard}>
         <CycleMonthCalendar
           cycles={cycles}
           fertileWindow={fertileWindow}
@@ -379,10 +423,12 @@ export default function CycleScreen() {
         />
       </Card>
 
-      <Text style={sharedStyles.sectionLabel}>
-        {t("cycle.cycleWheelLabel")}
-      </Text>
-      <Card style={{ alignItems: "center" }}>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionEyebrow, { color: cycleTints.accent }]}>{t("cycle.exploreEyebrow")}</Text>
+        <Text style={styles.sectionTitle}>{t("cycle.cycleWheelLabel")}</Text>
+        <Text style={[styles.sectionSubtitle, { color: textMuted }]}>{t("cycle.wheelHelper")}</Text>
+      </View>
+      <Card style={styles.wheelCard}>
         <CycleWheel
           cycleDay={cycleDay}
           avgCycleLength={avgCycleLength}
@@ -404,7 +450,10 @@ export default function CycleScreen() {
         />
       </Card>
 
-      <Text style={sharedStyles.sectionLabel}>{t("cycle.moreLabel")}</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionEyebrow, { color: cycleTints.accent }]}>{t("cycle.moreEyebrow")}</Text>
+        <Text style={styles.sectionTitle}>{t("cycle.moreLabel")}</Text>
+      </View>
       <View style={[styles.linkGroup, { borderColor: cycleTints.accentSoft }]}>
         {linkItems.map((item, index) => (
           <Pressable key={item.key} onPress={item.onPress}>
@@ -448,93 +497,222 @@ export default function CycleScreen() {
   );
 }
 
-const styles = {
-  container: { padding: 16, gap: 14, paddingBottom: 48 },
-  hero: { padding: 20, gap: 4, position: "relative" as const },
-  heroCircleLarge: {
-    position: "absolute" as const,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    top: -50,
-    right: -40,
+const styles = StyleSheet.create({
+  container: { padding: 16, gap: 16, paddingBottom: 116 },
+  hero: {
+    backgroundColor: "#16130F",
+    borderColor: "rgba(255,255,255,0.08)",
+    gap: 13,
+    overflow: "hidden",
+    padding: 20,
+    position: "relative",
   },
-  heroCircleSmall: {
-    position: "absolute" as const,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    bottom: -25,
-    left: -15,
+  heroGlow: {
+    position: "absolute",
+  },
+  heroGlowRose: {
+    backgroundColor: "#E11D48",
+    borderRadius: 112,
+    height: 224,
+    opacity: 0.34,
+    right: -72,
+    top: -88,
+    width: 224,
+  },
+  heroGlowAmber: {
+    backgroundColor: "#F59E0B",
+    borderRadius: 74,
+    bottom: -62,
+    height: 148,
+    left: -42,
+    opacity: 0.2,
+    width: 148,
   },
   heroTopRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
-    marginBottom: 6,
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  heroIcon: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderColor: "rgba(255,255,255,0.14)",
+    borderRadius: 17,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: "center",
+    width: 34,
   },
   heroKicker: {
-    color: "#FFFFFF",
+    color: "#FADBE3",
     fontSize: 12,
-    fontWeight: "700" as const,
-    opacity: 0.85,
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.6,
+    fontWeight: "900",
+    textTransform: "uppercase",
   },
-  heroDay: { fontSize: 24, fontWeight: "800" as const, color: "#FFFFFF" },
-  heroPhase: { fontSize: 15, color: "#FFFFFF", opacity: 0.92, marginTop: 2 },
-  heroNext: { fontSize: 12, color: "#FFFFFF", fontWeight: "700" as const },
-  heroNextPill: {
-    alignSelf: "flex-start" as const,
-    backgroundColor: "rgba(255,255,255,0.18)",
+  heroDay: { color: "#FFFFFF", fontSize: 42, fontWeight: "900" },
+  heroPhase: { color: "rgba(255,255,255,0.78)", fontSize: 16, fontWeight: "700", marginTop: -8 },
+  heroStats: {
+    backgroundColor: "rgba(255,255,255,0.11)",
+    borderColor: "rgba(255,255,255,0.12)",
+    borderRadius: 20,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginTop: 4,
+    padding: 14,
+  },
+  heroStat: {
+    flex: 1,
+    gap: 3,
+  },
+  heroStatLabel: {
+    color: "rgba(255,255,255,0.62)",
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  heroStatValue: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  heroDivider: {
+    backgroundColor: "rgba(255,255,255,0.14)",
+    marginHorizontal: 12,
+    width: 1,
+  },
+  statusGrid: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  statusCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 112,
+    padding: 12,
+  },
+  statusIcon: {
+    alignItems: "center",
     borderRadius: 14,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    marginTop: 8,
+    height: 32,
+    justifyContent: "center",
+    marginBottom: 12,
+    width: 32,
   },
-  symptomsCard: { gap: 10 },
-  symptomsKickerRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginBottom: -2 },
-  symptomsKicker: { fontSize: 11, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+  statusLabel: {
+    fontSize: 10,
+    fontWeight: "900",
+    minHeight: 24,
+    textTransform: "uppercase",
+  },
+  statusValue: {
+    fontSize: 15,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+  actionPanel: {
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 14,
+    padding: 16,
+  },
+  actionText: {
+    gap: 4,
+  },
+  actionEyebrow: {
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  actionTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  actionSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  sectionHeader: {
+    gap: 4,
+    marginTop: 4,
+  },
+  sectionEyebrow: {
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  symptomsCard: { gap: 13 },
+  symptomsHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 2,
+  },
+  symptomsTitle: {
+    fontSize: 17,
+    fontWeight: "900",
+  },
   subLabel: {
     fontSize: 12,
-    fontWeight: "700" as const,
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.4,
+    fontWeight: "900",
+    textTransform: "uppercase",
   },
-  notesInput: { minHeight: 60, textAlignVertical: "top" as const },
+  notesInput: { minHeight: 72, textAlignVertical: "top" },
   patternCard: { borderWidth: 1.5, gap: 6 },
   patternHeader: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
+    alignItems: "center",
+    flexDirection: "row",
     gap: 6,
   },
-  patternTitle: { fontWeight: "700" as const, fontSize: 13 },
+  patternTitle: { fontWeight: "800", fontSize: 13 },
   patternBody: { fontSize: 13, lineHeight: 18 },
-  patternDismiss: { fontSize: 12, fontWeight: "600" as const, marginTop: 2 },
+  patternDismiss: { fontSize: 12, fontWeight: "700", marginTop: 2 },
+  visualCard: {
+    padding: 14,
+  },
+  wheelCard: {
+    alignItems: "center",
+    paddingVertical: 18,
+  },
   linkGroup: {
     borderWidth: 1.5,
-    borderRadius: 18,
-    overflow: "hidden" as const,
+    borderRadius: 22,
+    overflow: "hidden",
   },
   linkRowItem: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
+    alignItems: "center",
+    flexDirection: "row",
     gap: 12,
-    paddingVertical: 13,
     paddingHorizontal: 14,
+    paddingVertical: 14,
   },
-  linkIconWrap: { width: 34, height: 34, alignItems: "center" as const, justifyContent: "center" as const },
-  linkIconGlow: { position: "absolute" as const, width: 34, height: 34, borderRadius: 17 },
+  linkIconWrap: { alignItems: "center", height: 36, justifyContent: "center", width: 36 },
+  linkIconGlow: { borderRadius: 18, height: 36, position: "absolute", width: 36 },
   linkIconCircle: {
-    width: 28,
-    height: 28,
+    alignItems: "center",
     borderRadius: 14,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
+    height: 28,
+    justifyContent: "center",
+    width: 28,
   },
-  linkText: { fontWeight: "700" as const, fontSize: 14, flex: 1 },
-  countBadge: { minWidth: 22, height: 22, borderRadius: 11, alignItems: "center" as const, justifyContent: "center" as const, paddingHorizontal: 6 },
-  countBadgeText: { fontSize: 12, fontWeight: "800" as const },
+  linkText: { flex: 1, fontWeight: "800", fontSize: 14 },
+  countBadge: {
+    alignItems: "center",
+    borderRadius: 11,
+    height: 22,
+    justifyContent: "center",
+    minWidth: 22,
+    paddingHorizontal: 6,
+  },
+  countBadgeText: { fontSize: 12, fontWeight: "900" },
   disclaimerBox: { borderRadius: 14, padding: 12, marginTop: 2 },
-  disclaimer: { fontSize: 11, textAlign: "center" as const, lineHeight: 15 },
-};
+  disclaimer: { fontSize: 11, textAlign: "center", lineHeight: 15 },
+});

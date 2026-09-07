@@ -62,7 +62,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "TZ=Europe/Copenhagen jest",
-    "test:watch": "TZ=Europe/Copenhagen jest --watch"
+    "test:watch": "TZ=Europe/Copenhagen jest --watch",
+    "check:adr": "node scripts/check-adr.js"
   },
   "private": true,
   "jest": {

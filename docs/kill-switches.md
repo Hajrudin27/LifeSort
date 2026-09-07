@@ -71,7 +71,9 @@ for everyone is still closed for the next person who signs in.
 ## What is enforced, and what is not
 
 `ModuleGate` sits in the root layout as an overlay, so it covers every way into a
-module: tab, hub link, notification tap and deep link alike. It resolves the
+module: tab, hub link, notification tap and deep link alike. Because it covers the whole
+screen, including the tab bar, it always renders a way out: back where there is
+history, otherwise Home, which belongs to the shell and can never be blocked. It resolves the
 module from the current path via `moduleForPath`, which is tested against every
 route in [`docs/app-inventory.md`](./app-inventory.md) §2.
 

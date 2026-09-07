@@ -48,6 +48,8 @@ export default function ModuleGate() {
 
   // 'active' kan i praksis ikke være spærret, men typen udelukker det ikke —
   // og en overlay uden tekst ville være værre end en generisk. Falder tilbage.
+  const canGoBack = router.canGoBack();
+
   const copy = access.status === 'active'
     ? { title: 'modules.unavailableTitle', body: 'modules.unavailableBody' }
     : COPY[access.status];
@@ -69,16 +71,21 @@ export default function ModuleGate() {
           brugeren møder den lukkede dør. */}
       <Text style={[styles.note, { color: textMuted }]}>{t('modules.dataSafeNote')}</Text>
 
-      {router.canGoBack() && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('modules.backButton')}
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, { borderColor, opacity: pressed ? 0.6 : 1 }]}
-        >
-          <Text style={{ color: text, fontWeight: '600' }}>{t('modules.backButton')}</Text>
-        </Pressable>
-      )}
+      {/* Overlayet dækker HELE skærmen, også tab-baren, så der skal altid være
+          en vej ud. Er der ingen historik at gå tilbage til — fx hvis brugeren
+          trykkede direkte på et spærret tab — sendes hun til forsiden, som
+          hører til skallen og aldrig kan spærres. Uden det her ville en kill
+          switch kunne låse brugeren fast på en skærm uden udgang. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={canGoBack ? t('modules.backButton') : t('modules.homeButton')}
+        onPress={() => (canGoBack ? router.back() : router.replace('/'))}
+        style={({ pressed }) => [styles.backButton, { borderColor, opacity: pressed ? 0.6 : 1 }]}
+      >
+        <Text style={{ color: text, fontWeight: '600' }}>
+          {canGoBack ? t('modules.backButton') : t('modules.homeButton')}
+        </Text>
+      </Pressable>
     </View>
   );
 }

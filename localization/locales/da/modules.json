@@ -12,5 +12,6 @@
   "betaOnlyTitle": "Kun for beta-testere",
   "betaOnlyBody": "Området er åbent for en mindre gruppe testere lige nu.",
   "dataSafeNote": "Du kan altid hente dine data ud eller slette dem under Indstillinger.",
-  "backButton": "Tilbage"
+  "backButton": "Tilbage",
+  "homeButton": "Gå til forsiden"
 }

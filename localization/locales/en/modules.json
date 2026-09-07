@@ -12,5 +12,6 @@
   "betaOnlyTitle": "Beta testers only",
   "betaOnlyBody": "This area is open to a small group of testers right now.",
   "dataSafeNote": "You can always export or delete your data under Settings.",
-  "backButton": "Back"
+  "backButton": "Back",
+  "homeButton": "Go to Home"
 }

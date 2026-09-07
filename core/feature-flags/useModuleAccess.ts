@@ -1,10 +1,10 @@
 import {
   evaluateModuleAccess,
   type ModuleAccess,
-  type ModuleId,
   type ModuleViewer,
   PUBLIC_VIEWER,
 } from '@/core/modules/moduleAvailability';
+import type { ModuleId } from '@/core/modules/moduleRegistry';
 import { useModuleFlagsStore } from '@/store/useModuleFlagsStore';
 
 import { resolveModuleAvailability } from './moduleFlags';

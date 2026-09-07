@@ -1,17 +1,7 @@
-/// <reference types="node" />
-
-import fs from 'fs';
-import path from 'path';
-
 import {
   evaluateModuleAccess,
-  MODULE_AVAILABILITY,
   MODULE_AVAILABILITY_STATES,
-  MODULE_IDS,
-  moduleAccess,
-  type ModuleAvailability,
   type ModuleViewer,
-  PLATFORM_MODULE_IDS,
   PUBLIC_VIEWER,
 } from '@/core/modules/moduleAvailability';
 
@@ -107,50 +97,5 @@ describe('evaluateModuleAccess — ikke-frigivne tilstande', () => {
     // Standardværdien må aldrig give mere adgang end den mindst privilegerede.
     expect(evaluateModuleAccess('beta')).toEqual(evaluateModuleAccess('beta', PUBLIC_VIEWER));
     expect(evaluateModuleAccess('internal')).toEqual(evaluateModuleAccess('internal', PUBLIC_VIEWER));
-  });
-});
-
-describe('MODULE_AVAILABILITY', () => {
-  it('erklærer en tilstand for hvert modul', () => {
-    for (const moduleId of MODULE_IDS) {
-      expect(MODULE_AVAILABILITY_STATES).toContain(MODULE_AVAILABILITY[moduleId]);
-    }
-    expect(Object.keys(MODULE_AVAILABILITY).sort()).toEqual([...MODULE_IDS].sort());
-  });
-
-  it('lader ikke selve appen blive slået fra', () => {
-    // core-shell og account ER appen; et flag på dem ville låse brugeren ude.
-    for (const moduleId of PLATFORM_MODULE_IDS) {
-      expect(MODULE_AVAILABILITY[moduleId]).toBe('available');
-    }
-  });
-
-  it('matcher modulerne i docs/app-inventory.md §1', () => {
-    const inventory = fs.readFileSync(path.resolve(__dirname, '..', 'docs', 'app-inventory.md'), 'utf8');
-    const start = inventory.indexOf('<!-- inventory:modules:start -->');
-    const end = inventory.indexOf('<!-- inventory:modules:end -->');
-    const rows = inventory
-      .slice(start, end)
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.startsWith('|'))
-      .map((line) => line.slice(1, line.lastIndexOf('|')).split('|').map((cell) => cell.replace(/`/g, '').trim()))
-      .filter((cells) => !/^-+$/.test(cells[0].replace(/\s/g, '')))
-      .slice(1);
-
-    expect(rows.map((cells) => cells[0]).sort()).toEqual([...MODULE_IDS].sort());
-
-    // Inventarets "observed availability" er prosa; første ord er tilstanden.
-    for (const cells of rows) {
-      const observed = cells[2].split('—')[0].trim() as ModuleAvailability;
-      expect(MODULE_AVAILABILITY[cells[0] as (typeof MODULE_IDS)[number]]).toBe(observed);
-    }
-  });
-});
-
-describe('moduleAccess', () => {
-  it('slår modulets egen tilstand op', () => {
-    expect(moduleAccess('economy')).toEqual(evaluateModuleAccess(MODULE_AVAILABILITY.economy));
-    expect(moduleAccess('cycle', INTERNAL)).toEqual(evaluateModuleAccess(MODULE_AVAILABILITY.cycle, INTERNAL));
   });
 });

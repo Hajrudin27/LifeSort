@@ -1,4 +1,5 @@
-import type { ModuleId } from './moduleAvailability';
+import type { ModuleId } from './moduleRegistry';
+import { listModules } from './moduleRegistry';
 
 /**
  * Hvilket modul en rute hører til (APP-006).
@@ -7,29 +8,14 @@ import type { ModuleId } from './moduleAvailability';
  * hub, fra en notifikation eller fra et deep link. Derfor slås modulet op ud fra
  * selve stien ét sted, frem for at hver skærm skal huske at spørge.
  *
- * Rækkefølgen betyder noget — første match vinder — så mere specifikke præfikser
- * står før de brede. Kortet holdes i sync med docs/app-inventory.md §2 af
- * __tests__/moduleRoutes.test.ts, som tjekker det mod alle ruter i repoet.
+ * Præfikserne kommer fra registret (APP-009), så en rute-rod kun står ét sted.
+ * De sorteres efter længde, så det mest specifikke match vinder uanset hvilken
+ * rækkefølge modulerne står i registret — rækkefølgen i en tabel er en dårlig
+ * ting at lade korrekthed afhænge af.
  */
-const ROUTE_PREFIXES: ReadonlyArray<readonly [string, ModuleId]> = [
-  ['/expenses', 'economy'],
-  ['/savings', 'economy'],
-  ['/economy', 'economy'],
-  ['/food', 'food'],
-  ['/household', 'home'],
-  ['/life-goals', 'goals'],
-  ['/habits', 'habits'],
-  ['/todos', 'tasks'],
-  ['/travel', 'travel'],
-  ['/warranties', 'warranties'],
-  ['/career', 'career'],
-  ['/cycle', 'cycle'],
-  ['/settings', 'account'],
-  ['/auth', 'account'],
-  ['/language', 'account'],
-  ['/onboarding-profile', 'account'],
-  ['/onboarding-pin', 'account'],
-];
+const ROUTE_PREFIXES: ReadonlyArray<readonly [string, ModuleId]> = listModules()
+  .flatMap((module) => module.routeRoots.map((root) => [root, module.id] as const))
+  .sort((a, b) => b[0].length - a[0].length);
 
 /**
  * Alt der ikke matcher, er skallen: Home, søgning, livs-hubben, modal og
@@ -54,8 +40,7 @@ export function moduleForPath(pathname: string): ModuleId {
  * Grænsen for hvad det fanger: en `[id]`-skærm der BÅDE viser og retter — fx
  * /habits/abc — bliver ikke fanget her, for den er også den eneste vej til at
  * læse posten. At spærre den ville tage læseadgangen med. Den slags skal hvert
- * modul selv skrue ned via canCreate/canEdit, når registry'et er på plads
- * (APP-009). Se docs/kill-switches.md.
+ * modul selv skrue ned via canCreate/canEdit. Se docs/kill-switches.md.
  */
 export function isWriteRoute(pathname: string): boolean {
   const segments = pathname.split('?')[0].split('/').filter(Boolean);

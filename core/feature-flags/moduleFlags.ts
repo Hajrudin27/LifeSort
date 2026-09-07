@@ -15,14 +15,13 @@
  *      APP-005, som er den eneste vej fra tilstand til rettigheder.
  */
 
+import { MODULE_AVAILABILITY_STATES, type ModuleAvailability } from '@/core/modules/moduleAvailability';
 import {
-  MODULE_AVAILABILITY,
-  MODULE_AVAILABILITY_STATES,
+  getModule,
   MODULE_IDS,
-  type ModuleAvailability,
   type ModuleId,
   PLATFORM_MODULE_IDS,
-} from '@/core/modules/moduleAvailability';
+} from '@/core/modules/moduleRegistry';
 
 /** Rækker fra serveren, oversat til de flag appen tør bruge. */
 export type ModuleFlagOverrides = Partial<Record<ModuleId, ModuleAvailability>>;
@@ -77,5 +76,5 @@ export function resolveModuleAvailability(
   moduleId: ModuleId,
   overrides: ModuleFlagOverrides,
 ): ModuleAvailability {
-  return overrides[moduleId] ?? MODULE_AVAILABILITY[moduleId];
+  return overrides[moduleId] ?? getModule(moduleId).availability;
 }

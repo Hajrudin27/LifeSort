@@ -1,6 +1,10 @@
 /**
  * Modulernes modenhedstilstand og den centrale evaluator (APP-005).
  *
+ * Filen kender ikke til hvilke moduler der findes — kun til tilstandene og hvad
+ * de betyder. Selve modul-listen og hvert moduls tilstand ligger i
+ * moduleRegistry.ts (APP-009), så metadata kun står ét sted.
+ *
  * Et halvfærdigt modul må ikke ligne et færdigt. Uden én fælles tilstand ender
  * hver skærm med sin egen halve variant — en `if` her, et skjult tab der — og
  * så er der ingen, der kan svare på, hvad brugeren egentlig kan lige nu.
@@ -13,29 +17,6 @@
  * Hvor tilstanden KOMMER fra (remote flags, kill switches) er APP-006. Her
  * erklæres den lokalt, så der er ét sted at rette, indtil den kommer udefra.
  */
-
-export const MODULE_IDS = [
-  'core-shell',
-  'account',
-  'economy',
-  'food',
-  'home',
-  'goals',
-  'habits',
-  'tasks',
-  'travel',
-  'warranties',
-  'career',
-  'cycle',
-] as const;
-
-export type ModuleId = (typeof MODULE_IDS)[number];
-
-/**
- * Moduler der udgør selve appen. De kan ikke slås fra — uden dem er der ingen
- * app tilbage at slå til. Se docs/app-inventory.md §1.
- */
-export const PLATFORM_MODULE_IDS = ['core-shell', 'account'] as const satisfies readonly ModuleId[];
 
 export const MODULE_AVAILABILITY_STATES = [
   'hidden', // findes i koden, men ikke for brugeren
@@ -88,28 +69,6 @@ export type ModuleAccess = {
   /** Datarettighed — altid true. */
   canDeleteData: boolean;
   status: ModuleAccessStatus;
-};
-
-/**
- * Modulernes tilstand lige nu. Alle domænemoduler er i produktion; ingen af dem
- * er halvfærdige. Tabellen findes for at det næste modul SKAL tage stilling —
- * og for at et modul kan sættes i maintenance uden at røre skærmene.
- *
- * Holdes i sync med docs/app-inventory.md §1 af __tests__/moduleAvailability.test.ts.
- */
-export const MODULE_AVAILABILITY: Record<ModuleId, ModuleAvailability> = {
-  'core-shell': 'available',
-  account: 'available',
-  economy: 'available',
-  food: 'available',
-  home: 'available',
-  goals: 'available',
-  habits: 'available',
-  tasks: 'available',
-  travel: 'available',
-  warranties: 'available',
-  career: 'available',
-  cycle: 'available',
 };
 
 /** Fuld adgang — det et modul i produktion giver. */
@@ -184,9 +143,4 @@ export function evaluateModuleAccess(
       // Modulets skærme er væk, men dataene er der stadig og kan hentes ud.
       return invisibleAccess('retired');
   }
-}
-
-/** Slår modulets erklærede tilstand op og evaluerer den. */
-export function moduleAccess(moduleId: ModuleId, viewer: ModuleViewer = PUBLIC_VIEWER): ModuleAccess {
-  return evaluateModuleAccess(MODULE_AVAILABILITY[moduleId], viewer);
 }

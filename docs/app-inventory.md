@@ -79,9 +79,9 @@ itself is APP-005 and is **not** implemented here.
 
 | Module | Spec `ModuleId` | Observed availability | Route root(s) | Primary stores | Sensitivity | Owner |
 | --- | --- | --- | --- | --- | --- | --- |
-| `core-shell` | – (core platform, not a module in the spec) | available | `/`, `/life`, `/search`, `/modal`, `_layout` | `useSettingsStore`, `useThemeStore`, `useSyncStatusStore`, `useTabBarStore`, `useToastStore` | personal, financial, health | Hajrudin Kardasevic |
+| `core-shell` | – (core platform, not a module in the spec) | available | `/`, `/life`, `/search`, `/modal`, `_layout` | `useSettingsStore`, `useThemeStore`, `useSyncStatusStore`, `useTabBarStore`, `useToastStore`, `useModuleFlagsStore` | ordinary | Hajrudin Kardasevic |
 | `account` | – (auth/profile shell) | available | `/auth`, `/language`, `/onboarding-*`, `/settings`, `/settings/*` | `useAuthStore`, `useProfileStore`, `useAppLockStore` | personal | Hajrudin Kardasevic |
-| `economy` | `economy` | available | `/economy`, `/economy/*`, `/expenses/*`, `/savings/*` | `useExpensesStore`, `useIncomeStore`, `useSavingsGoalsStore`, `useCategoriesStore` | financial | Hajrudin Kardasevic |
+| `economy` | `economy` | available | `/economy`, `/economy/*`, `/expenses/*`, `/savings/*` | `useExpensesStore`, `useIncomeStore`, `useSavingsGoalsStore`, `useCategoriesStore` | ordinary, financial, document | Hajrudin Kardasevic |
 | `food` | `food` | available | `/food/*` | `useFoodStore` | ordinary, financial | Hajrudin Kardasevic |
 | `home` | `home` | available | `/household/*` | `useHouseholdStore` | ordinary | Hajrudin Kardasevic |
 | `goals` | `goals` | available | `/life-goals/*` | `useLifeGoalsStore` | personal | Hajrudin Kardasevic |
@@ -89,10 +89,16 @@ itself is APP-005 and is **not** implemented here.
 | `tasks` | – (spec has no `tasks` id; see §8-F3) | available | `/todos/*` | `useTodoStore` | ordinary | Hajrudin Kardasevic |
 | `travel` | `travel` | available | `/travel/*` | `useTripsStore` | personal, financial, document | Hajrudin Kardasevic |
 | `warranties` | `warranties` | available | `/warranties/*` | `useWarrantiesStore` | document, financial | Hajrudin Kardasevic |
-| `career` | `career` | available | `/career/*` | `useCareerStore`, `useCVStore`, `useSkillCategoriesStore` | personal, document | Hajrudin Kardasevic |
+| `career` | `career` | available | `/career/*` | `useCareerStore`, `useCVStore`, `useSkillCategoriesStore` | ordinary, personal, document | Hajrudin Kardasevic |
 | `cycle` | `cycle` | available — but tab visibility is gated on `profile.gender === 'female'` (see §8-F2) | `/cycle`, `/cycle/*` | `useCycleStore` | health | Hajrudin Kardasevic |
 
 <!-- inventory:modules:end -->
+
+**On `core-shell`'s sensitivity.** It owns only ordinary data — settings, theme,
+sync status, module flags. Home *renders* financial and health values belonging
+to other modules, but rendering is not ownership; that is a display concern,
+handled by the privacy-safe Home in APP-013. `core/modules/moduleRegistry.ts`
+carries the same classification, and a test keeps the two in step.
 
 ### Spec modules with no implementation in this repo
 
@@ -240,7 +246,7 @@ All persisted stores currently use plain (unencrypted) AsyncStorage, including
 | `useLifeGoalsStore` | `store/useLifeGoalsStore.ts` | `goals` | `lifesort-life-goals` | AsyncStorage (plain) | `life_goals` | personal | Hajrudin Kardasevic |
 | `useHabitsStore` | `store/useHabitsStore.ts` | `habits` | `lifesort-habits` | AsyncStorage (plain) | `habits` | ordinary | Hajrudin Kardasevic |
 | `useTodoStore` | `store/useTodoStore.ts` | `tasks` | `lifesort-todos` | AsyncStorage (plain) | `todos` | ordinary | Hajrudin Kardasevic |
-| `useTripsStore` | `store/useTripsStore.ts` | `travel` | `lifesort-trips` | AsyncStorage (plain) | `trips`, `trip_expenses`, `trip_packing_items`, `trip_participants` | personal, financial | Hajrudin Kardasevic |
+| `useTripsStore` | `store/useTripsStore.ts` | `travel` | `lifesort-trips` | AsyncStorage (plain) | `trips`, `trip_expenses`, `trip_packing_items`, `trip_participants` | personal, financial, document | Hajrudin Kardasevic |
 | `useWarrantiesStore` | `store/useWarrantiesStore.ts` | `warranties` | `lifesort-warranties` | AsyncStorage (plain) | `warranties` | document, financial | Hajrudin Kardasevic |
 | `useCareerStore` | `store/useCareerStore.ts` | `career` | `lifesort-career` | AsyncStorage (plain) | `job_applications`, `skills` | personal | Hajrudin Kardasevic |
 | `useCVStore` | `store/useCVStore.ts` | `career` | `lifesort-cv` | AsyncStorage (plain) | `cv_personal_info`, `cv_education`, `cv_experience`, `cv_languages`, `cv_versions` | personal, document | Hajrudin Kardasevic |

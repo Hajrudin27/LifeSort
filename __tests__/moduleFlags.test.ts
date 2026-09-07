@@ -4,13 +4,8 @@ import {
   parseModuleFlags,
   resolveModuleAvailability,
 } from '@/core/feature-flags/moduleFlags';
-import {
-  evaluateModuleAccess,
-  MODULE_AVAILABILITY,
-  MODULE_AVAILABILITY_STATES,
-  MODULE_IDS,
-  PLATFORM_MODULE_IDS,
-} from '@/core/modules/moduleAvailability';
+import { evaluateModuleAccess, MODULE_AVAILABILITY_STATES } from '@/core/modules/moduleAvailability';
+import { getModule, MODULE_IDS, PLATFORM_MODULE_IDS } from '@/core/modules/moduleRegistry';
 
 const row = (module_id: string, availability: string) => ({ module_id, availability });
 
@@ -67,7 +62,7 @@ describe('parseModuleFlags — serverens svar er input udefra', () => {
 describe('resolveModuleAvailability — sikker fallback', () => {
   it('bruger den kompilerede tilstand, når serveren intet siger', () => {
     for (const moduleId of MODULE_IDS) {
-      expect(resolveModuleAvailability(moduleId, {})).toBe(MODULE_AVAILABILITY[moduleId]);
+      expect(resolveModuleAvailability(moduleId, {})).toBe(getModule(moduleId).availability);
     }
   });
 

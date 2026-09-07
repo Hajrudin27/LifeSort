@@ -79,7 +79,7 @@ itself is APP-005 and is **not** implemented here.
 
 | Module | Spec `ModuleId` | Observed availability | Route root(s) | Primary stores | Sensitivity | Owner |
 | --- | --- | --- | --- | --- | --- | --- |
-| `core-shell` | – (core platform, not a module in the spec) | available | `/`, `/life`, `/search`, `/modal`, `_layout` | `useSettingsStore`, `useThemeStore`, `useSyncStatusStore`, `useTabBarStore`, `useToastStore`, `useModuleFlagsStore` | ordinary | Hajrudin Kardasevic |
+| `core-shell` | – (core platform, not a module in the spec) | available | `/`, `/life`, `/search`, `/modal`, `_layout` | `useSettingsStore`, `useThemeStore`, `useSyncStatusStore`, `useTabBarStore`, `useToastStore`, `useModuleFlagsStore`, `useEnabledModulesStore` | ordinary | Hajrudin Kardasevic |
 | `account` | – (auth/profile shell) | available | `/auth`, `/language`, `/onboarding-*`, `/settings`, `/settings/*` | `useAuthStore`, `useProfileStore`, `useAppLockStore` | personal | Hajrudin Kardasevic |
 | `economy` | `economy` | available | `/economy`, `/economy/*`, `/expenses/*`, `/savings/*` | `useExpensesStore`, `useIncomeStore`, `useSavingsGoalsStore`, `useCategoriesStore` | ordinary, financial, document | Hajrudin Kardasevic |
 | `food` | `food` | available | `/food/*` | `useFoodStore` | ordinary, financial | Hajrudin Kardasevic |
@@ -199,6 +199,7 @@ to Supabase tables in §3.
 | `/settings/delete-account` | `app/settings/delete-account.tsx` | `account` | `useToastStore` | personal | Hajrudin Kardasevic |
 | `/settings/pin` | `app/settings/pin.tsx` | `account` | `useProfileStore`<br>`useToastStore` | personal | Hajrudin Kardasevic |
 | `/settings/profile` | `app/settings/profile.tsx` | `account` | `useProfileStore`<br>`useToastStore` | personal | Hajrudin Kardasevic |
+| `/settings/modules` | `app/settings/modules.tsx` | `account` | `useEnabledModulesStore` | ordinary | Hajrudin Kardasevic |
 | `/todos/[id]` | `app/todos/[id].tsx` | `tasks` | `useTodoStore` | ordinary | Hajrudin Kardasevic |
 | `/todos` | `app/todos/index.tsx` | `tasks` | `useToastStore`<br>`useTodoStore` | ordinary | Hajrudin Kardasevic |
 | `/todos/new` | `app/todos/new.tsx` | `tasks` | `useCycleStore`<br>`useProfileStore`<br>`useToastStore`<br>`useTodoStore` | ordinary, health | Hajrudin Kardasevic |
@@ -236,6 +237,7 @@ All persisted stores currently use plain (unencrypted) AsyncStorage, including
 | `useSyncStatusStore` | `store/useSyncStatusStore.ts` | `core-shell` | `sync-status` | AsyncStorage (plain) | – | ordinary | Hajrudin Kardasevic |
 | `useTabBarStore` | `store/useTabBarStore.ts` | `core-shell` | – | memory only | – | ordinary | Hajrudin Kardasevic |
 | `useModuleFlagsStore` | `store/useModuleFlagsStore.ts` | `core-shell` | `lifesort-module-flags` | AsyncStorage (plain) | `module_flags` | ordinary | Hajrudin Kardasevic |
+| `useEnabledModulesStore` | `store/useEnabledModulesStore.ts` | `core-shell` | `lifesort-enabled-modules` | AsyncStorage (plain) | `user_modules` | ordinary | Hajrudin Kardasevic |
 | `useToastStore` | `store/useToastStore.ts` | `core-shell` | – | memory only | – | ordinary | Hajrudin Kardasevic |
 | `useExpensesStore` | `store/useExpensesStore.ts` | `economy` | `lifesort-expenses` | AsyncStorage (plain) | `expenses`, `expense_category_budgets` | financial, document | Hajrudin Kardasevic |
 | `useIncomeStore` | `store/useIncomeStore.ts` | `economy` | `lifesort-income-v2` | AsyncStorage (plain) | `income` | financial | Hajrudin Kardasevic |
@@ -271,6 +273,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `profiles` | `account` | `store/useProfileStore.ts` | personal | Hajrudin Kardasevic |
 | `settings` | `core-shell` | `store/useSettingsStore.ts`, `store/useThemeStore.ts` | ordinary | Hajrudin Kardasevic |
 | `module_flags` | `core-shell` (shared read-only; operator kill switches) | `store/useModuleFlagsStore.ts` | ordinary | Hajrudin Kardasevic |
+| `user_modules` | `core-shell` (per-user module choice) | `store/useEnabledModulesStore.ts` | ordinary | Hajrudin Kardasevic |
 | `expenses` | `economy` | `store/useExpensesStore.ts` | financial | Hajrudin Kardasevic |
 | `expense_category_budgets` | `economy` | `store/useExpensesStore.ts` | financial | Hajrudin Kardasevic |
 | `income` | `economy` | `store/useIncomeStore.ts` | financial | Hajrudin Kardasevic |

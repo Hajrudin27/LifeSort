@@ -9,6 +9,8 @@ import QuickActionCard from '@/components/QuickActionCard';
 import Screen from '@/components/Screen';
 import SectionHeader from '@/components/SectionHeader';
 import { Text, useThemeColor, View } from '@/components/Themed';
+import type { ModuleId } from '@/core/modules/moduleRegistry';
+import { useEnabledModuleIds } from '@/core/modules/useModuleEnabled';
 import { useBrandTints } from '@/hooks/useBrandTints';
 import { useLifeModuleTints } from '@/hooks/useLifeModuleTints';
 import { useCareerStore } from '@/store/useCareerStore';
@@ -119,7 +121,7 @@ export default function LifeScreen() {
                   tone: '#16A34A',
                 };
 
-  const modules: Array<{
+  const allModules: Array<{
     key: LifeModuleKey;
     icon: IconName;
     title: string;
@@ -180,6 +182,18 @@ export default function LifeScreen() {
       tone: '#7C3AED',
     },
   ];
+
+  // Hub'en viser kun de moduler brugeren har valgt til (APP-010). Fravalg
+  // skjuler — det sletter ikke, og modulet kan slås til igen i Indstillinger.
+  const enabled = useEnabledModuleIds();
+  const moduleIdByKey: Record<LifeModuleKey, ModuleId> = {
+    todos: 'tasks',
+    lifeGoals: 'goals',
+    habits: 'habits',
+    household: 'home',
+    career: 'career',
+  };
+  const modules = allModules.filter((module) => enabled.includes(moduleIdByKey[module.key]));
 
   return (
     <Screen contentContainerStyle={styles.content}>

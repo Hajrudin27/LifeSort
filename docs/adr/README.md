@@ -28,6 +28,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0007](./0007-app-lock-pin-is-defence-in-depth.md) | The app-lock PIN is defence in depth, not an authorisation boundary | Accepted | 2026-09-07 | Pre-existing |
 | [0008](./0008-primitives-are-frozen-then-migrated.md) | Duplicated primitives are frozen now and migrated by the story that owns the semantics | Accepted | 2026-09-07 | APP-008 |
 | [0009](./0009-registry-is-the-single-source-of-module-metadata.md) | The module registry is the single source of module metadata | Accepted | 2026-09-07 | APP-009 |
+| [0010](./0010-module-choice-is-a-filter-not-a-deletion.md) | A user's module choice is a filter, never a deletion | Accepted | 2026-09-07 | APP-010 |
 
 ## When an ADR is required
 

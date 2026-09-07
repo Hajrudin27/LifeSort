@@ -13,5 +13,40 @@
   "betaOnlyBody": "Området er åbent for en mindre gruppe testere lige nu.",
   "dataSafeNote": "Du kan altid hente dine data ud eller slette dem under Indstillinger.",
   "backButton": "Tilbage",
-  "homeButton": "Gå til forsiden"
+  "homeButton": "Gå til forsiden",
+  "settingsTitle": "Mine moduler",
+  "settingsDescription": "Vælg hvad LifeSort skal hjælpe dig med",
+  "chooseTitle": "Hvad skal LifeSort hjælpe dig med?",
+  "chooseSubtitle": "Slå de områder til, du har brug for. Du kan altid ændre det senere.",
+  "dataKeptNote": "Slår du et område fra, bliver det skjult — dine data bliver liggende, og du kan slå det til igen når som helst.",
+  "enabledLabel": "Slået til",
+  "disabledLabel": "Slået fra",
+  "names": {
+    "core-shell": "LifeSort",
+    "account": "Konto",
+    "economy": "Økonomi",
+    "food": "Mad",
+    "home": "Hjemmet",
+    "goals": "Livsmål",
+    "habits": "Vaner",
+    "tasks": "To-do",
+    "travel": "Rejser",
+    "warranties": "Garantier",
+    "career": "Karriere",
+    "cycle": "Cyklus"
+  },
+  "descriptions": {
+    "core-shell": "Appens grundlæggende skærme",
+    "account": "Din konto og dine indstillinger",
+    "economy": "Udgifter, indtægter og sparemål",
+    "food": "Madbudget, opskrifter og indkøb",
+    "home": "Opgaver og vedligehold i hjemmet",
+    "goals": "Langsigtede mål og delmål",
+    "habits": "Daglige vaner og streaks",
+    "tasks": "Din to-do-liste",
+    "travel": "Rejser, budget og pakkeliste",
+    "warranties": "Garantier, kvitteringer og forsikringer",
+    "career": "Jobansøgninger og CV",
+    "cycle": "Cyklus og symptomer"
+  }
 }

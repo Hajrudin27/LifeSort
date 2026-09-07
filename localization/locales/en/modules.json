@@ -13,5 +13,40 @@
   "betaOnlyBody": "This area is open to a small group of testers right now.",
   "dataSafeNote": "You can always export or delete your data under Settings.",
   "backButton": "Back",
-  "homeButton": "Go to Home"
+  "homeButton": "Go to Home",
+  "settingsTitle": "My modules",
+  "settingsDescription": "Choose what LifeSort helps you with",
+  "chooseTitle": "What should LifeSort help you with?",
+  "chooseSubtitle": "Turn on the areas you need. You can always change this later.",
+  "dataKeptNote": "Turning an area off hides it — your data stays, and you can turn it back on whenever you like.",
+  "enabledLabel": "On",
+  "disabledLabel": "Off",
+  "names": {
+    "core-shell": "LifeSort",
+    "account": "Account",
+    "economy": "Economy",
+    "food": "Food",
+    "home": "Household",
+    "goals": "Life goals",
+    "habits": "Habits",
+    "tasks": "To-do",
+    "travel": "Travel",
+    "warranties": "Warranties",
+    "career": "Career",
+    "cycle": "Cycle"
+  },
+  "descriptions": {
+    "core-shell": "The app's core screens",
+    "account": "Your account and settings",
+    "economy": "Expenses, income and savings goals",
+    "food": "Food budget, recipes and shopping",
+    "home": "Household chores and maintenance",
+    "goals": "Long-term goals and milestones",
+    "habits": "Daily habits and streaks",
+    "tasks": "Your to-do list",
+    "travel": "Trips, budget and packing",
+    "warranties": "Warranties, receipts and insurance",
+    "career": "Job applications and CV",
+    "cycle": "Cycle and symptoms"
+  }
 }

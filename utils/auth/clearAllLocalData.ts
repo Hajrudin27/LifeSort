@@ -3,6 +3,7 @@ import { useCareerStore } from '@/store/useCareerStore';
 import { useCategoriesStore } from '@/store/useCategoriesStore';
 import { useCVStore } from '@/store/useCVStore';
 import { useCycleStore } from '@/store/useCycleStore';
+import { useEnabledModulesStore } from '@/store/useEnabledModulesStore';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useFoodStore } from '@/store/useFoodStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
@@ -63,6 +64,12 @@ export async function clearAllLocalData() {
     reminderEnabled: false,
     reminderDaysBefore: 1,
   });
+
+  // Modulvalget hører til brugeren, ikke til enheden — modsat kill switches,
+  // der gælder alle og bliver liggende. Nulstilles til standarden (alt slået
+  // til), så den næste bruger ikke arver et fravalg. Det sletter ingen data;
+  // det rydder kun et valg.
+  useEnabledModulesStore.getState().clearLocal();
 
   useThemeStore.setState({ mode: 'system' });
   useAppLockStore.setState({ lockEnabled: false, isLocked: false });

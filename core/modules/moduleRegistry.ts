@@ -75,6 +75,9 @@ export type DeleteHandler = () => Promise<void>;
 export interface ModuleDefinition {
   id: ModuleId;
   availability: ModuleAvailability;
+  /** i18n-nøgler. Modulets navn skal kunne vises uden at skærmen kender modulet. */
+  titleKey: string;
+  descriptionKey: string;
   /** Alle klasser af data modulet selv ejer — ikke dem det viser for andre. */
   sensitivity: DataSensitivity[];
   /**
@@ -103,12 +106,16 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
   'core-shell': {
     id: 'core-shell',
     availability: 'available',
+    titleKey: 'modules.names.core-shell',
+    descriptionKey: 'modules.descriptions.core-shell',
     sensitivity: ['ordinary'],
     routeRoots: [],
   },
   account: {
     id: 'account',
     availability: 'available',
+    titleKey: 'modules.names.account',
+    descriptionKey: 'modules.descriptions.account',
     sensitivity: ['personal'],
     routeRoots: ['/settings', '/auth', '/language', '/onboarding-profile', '/onboarding-pin'],
     notificationCategory: 'security',
@@ -116,6 +123,8 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
   economy: {
     id: 'economy',
     availability: 'available',
+    titleKey: 'modules.names.economy',
+    descriptionKey: 'modules.descriptions.economy',
     sensitivity: ['ordinary', 'financial', 'document'],
     routeRoots: ['/economy', '/expenses', '/savings'],
     notificationCategory: 'financial',
@@ -123,36 +132,48 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
   food: {
     id: 'food',
     availability: 'available',
+    titleKey: 'modules.names.food',
+    descriptionKey: 'modules.descriptions.food',
     sensitivity: ['ordinary', 'financial'],
     routeRoots: ['/food'],
   },
   home: {
     id: 'home',
     availability: 'available',
+    titleKey: 'modules.names.home',
+    descriptionKey: 'modules.descriptions.home',
     sensitivity: ['ordinary'],
     routeRoots: ['/household'],
   },
   goals: {
     id: 'goals',
     availability: 'available',
+    titleKey: 'modules.names.goals',
+    descriptionKey: 'modules.descriptions.goals',
     sensitivity: ['personal'],
     routeRoots: ['/life-goals'],
   },
   habits: {
     id: 'habits',
     availability: 'available',
+    titleKey: 'modules.names.habits',
+    descriptionKey: 'modules.descriptions.habits',
     sensitivity: ['ordinary'],
     routeRoots: ['/habits'],
   },
   tasks: {
     id: 'tasks',
     availability: 'available',
+    titleKey: 'modules.names.tasks',
+    descriptionKey: 'modules.descriptions.tasks',
     sensitivity: ['ordinary'],
     routeRoots: ['/todos'],
   },
   travel: {
     id: 'travel',
     availability: 'available',
+    titleKey: 'modules.names.travel',
+    descriptionKey: 'modules.descriptions.travel',
     sensitivity: ['personal', 'financial', 'document'],
     routeRoots: ['/travel'],
     notificationCategory: 'personal',
@@ -160,6 +181,8 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
   warranties: {
     id: 'warranties',
     availability: 'available',
+    titleKey: 'modules.names.warranties',
+    descriptionKey: 'modules.descriptions.warranties',
     sensitivity: ['document', 'financial'],
     routeRoots: ['/warranties'],
     notificationCategory: 'personal',
@@ -167,12 +190,16 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
   career: {
     id: 'career',
     availability: 'available',
+    titleKey: 'modules.names.career',
+    descriptionKey: 'modules.descriptions.career',
     sensitivity: ['ordinary', 'personal', 'document'],
     routeRoots: ['/career'],
   },
   cycle: {
     id: 'cycle',
     availability: 'available',
+    titleKey: 'modules.names.cycle',
+    descriptionKey: 'modules.descriptions.cycle',
     sensitivity: ['health'],
     routeRoots: ['/cycle'],
     // Generisk som standard — en påmindelse må ikke afsløre en cyklus på

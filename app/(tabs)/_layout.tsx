@@ -7,6 +7,7 @@ import FloatingTabBar from '@/components/FloatingTabBar';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { useModuleEnabled } from '@/core/modules/useModuleEnabled';
 import { useProfileStore } from '@/store/useProfileStore';
 
 type IconName = { ios: string; android: string; web: string };
@@ -49,7 +50,15 @@ export default function TabLayout() {
   const { t } = useTranslation();
   const theme = Colors[colorScheme];
   const gender = useProfileStore((s) => s.profile.gender);
-  const showCycleTab = gender === 'female';
+
+  // Brugerens eget valg af moduler (APP-010). Et fravalgt modul forsvinder fra
+  // navigationen — men ruten virker stadig, og dataene bliver liggende. Det er
+  // forskellen på et fravalg og en kill switch.
+  const economyEnabled = useModuleEnabled('economy');
+  const cycleEnabled = useModuleEnabled('cycle');
+
+  // Køns-gaten er stadig APP-071's at fjerne; her lægges brugerens valg oveni.
+  const showCycleTab = gender === 'female' && cycleEnabled;
   const navBorder = 'rgba(253,246,237,0.1)';
   const headerButtonBackground = colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(22,19,15,0.05)';
 
@@ -99,6 +108,7 @@ export default function TabLayout() {
         name="economy"
         options={{
           title: t('economy.title'),
+          href: economyEnabled ? undefined : null,
           headerRight: () => (
             <HeaderIconLink
               href="/economy/insights"

@@ -225,6 +225,12 @@ export default function SettingsScreen() {
             description: t("settings.profileDescription"),
             onPress: () => router.push("/settings/profile"),
           })}
+          {renderRow({
+            icon: { ios: "square.grid.2x2", android: "grid_view", web: "grid_view" },
+            title: t("modules.settingsTitle"),
+            description: t("modules.settingsDescription"),
+            onPress: () => router.push("/settings/modules"),
+          })}
         </View>
       </View>
 

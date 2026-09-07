@@ -78,6 +78,20 @@ reconciled, and a test keeps registry and inventory in step.
 - **Kill switches** — `resolveModuleAvailability` reads `availability` here.
 - **Route resolution** — `moduleForPath` derives its prefixes from `routeRoots`,
   sorted longest-first so correctness does not depend on the order of a table.
+- **The user's module choice** (APP-010) — "My modules" in Settings lists
+  `TOGGLEABLE_MODULE_IDS` and renders each module's `titleKey` and
+  `descriptionKey`, so a new module appears there without touching the screen.
+- **Navigation** — the tab bar and the Life hub filter on the user's choice.
+
+## Two axes, deliberately separate
+
+| Question | Owner | Where |
+| --- | --- | --- |
+| Is this module released? | The operator | `availability` + kill switches |
+| Has the user chosen it? | The user | `user_modules` + `moduleEnablement` |
+
+A kill switch blocks a module's routes. A user's choice only removes it from
+navigation — following an old link still reaches their data. See ADR-0010.
 
 ## Adding a module
 

@@ -162,3 +162,23 @@ describe('valgfrie handlers', () => {
     }
   });
 });
+
+describe('visningsnøgler', () => {
+  it('kan slås op på både dansk og engelsk', () => {
+    // Et modul uden navn kan ikke vises i "Mine moduler" eller i en launcher.
+    // Manglende nøgler viser sig ellers først som rå nøgletekst på skærmen.
+    for (const locale of ['da', 'en']) {
+      const copy = JSON.parse(
+        fs.readFileSync(path.join(REPO_ROOT, 'localization', 'locales', locale, 'modules.json'), 'utf8'),
+      );
+      for (const module of listModules()) {
+        for (const key of [module.titleKey, module.descriptionKey]) {
+          const value = key.replace(/^modules\./, '').split('.').reduce<any>((node, part) => node?.[part], copy);
+          if (typeof value !== 'string' || value.trim() === '') {
+            throw new Error(`${locale}: mangler oversættelse for "${key}"`);
+          }
+        }
+      }
+    }
+  });
+});

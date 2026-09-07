@@ -29,6 +29,7 @@ import { useCareerStore } from "@/store/useCareerStore";
 import { useCategoriesStore } from "@/store/useCategoriesStore";
 import { useCVStore } from "@/store/useCVStore";
 import { useCycleStore } from "@/store/useCycleStore";
+import { useEnabledModulesStore } from "@/store/useEnabledModulesStore";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { useFoodStore } from "@/store/useFoodStore";
 import { useHabitsStore } from "@/store/useHabitsStore";
@@ -107,6 +108,7 @@ export default function RootLayout() {
   const fetchFood = useFoodStore((s) => s.fetchFromSupabase);
   const fetchCycle = useCycleStore((s) => s.fetchFromSupabase);
   const fetchModuleFlags = useModuleFlagsStore((s) => s.fetchFromSupabase);
+  const fetchEnabledModules = useEnabledModulesStore((s) => s.fetchFromSupabase);
 
   const appLockHasHydrated = useAppLockStore((s) => s.hasHydrated);
   const lockEnabled = useAppLockStore((s) => s.lockEnabled);
@@ -144,6 +146,7 @@ export default function RootLayout() {
       fetchCV();
       fetchFood();
       fetchCycle();
+      fetchEnabledModules();
     }
   }, [session?.user.id]);
 
@@ -592,6 +595,10 @@ function RootLayoutNav({ language }: { language: string | null }) {
               title: t("appLock.pinSettingsTitle"),
               headerBackTitle: t("settings.title"),
             }}
+          />
+          <Stack.Screen
+            name="settings/modules"
+            options={{ title: t("modules.settingsTitle"), headerBackTitle: t("settings.title") }}
           />
           <Stack.Screen
             name="cycle/history"

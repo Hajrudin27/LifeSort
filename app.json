@@ -42,7 +42,14 @@
       "expo-secure-store",
       "expo-image",
       "expo-font",
-      "expo-widgets"
+      "expo-widgets",
+      [
+        "expo-calendar",
+        {
+          "writeOnlyAccess": true,
+          "writeOnlyCalendarPermission": "LifeSort skal have lov til at tilføje opgaver til din kalender."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

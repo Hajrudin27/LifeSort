@@ -1,5 +1,4 @@
 import { router, Stack } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, TextInput } from 'react-native';
@@ -8,6 +7,7 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
 import DatePickerField from '@/components/DatePickerField';
+import Kicker from '@/components/Kicker';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import { CycleTints } from '@/constants/Colors';
@@ -59,10 +59,13 @@ export default function LogAnotherDayScreen() {
     <ScrollView style={{ backgroundColor }} contentContainerStyle={sharedStyles.formContainerScroll} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: t('cycle.logAnotherDayLabel') }} />
 
-      <View style={[styles.kicker, { backgroundColor: cycleTints.accentSoft }]}>
-        <SymbolView name={{ ios: 'calendar.badge.plus', android: 'event_note', web: 'event_note' }} size={12} tintColor={cycleTints.accent} />
-        <Text style={[styles.kickerText, { color: cycleTints.accent }]}>{t('cycle.selectDateLabel')}</Text>
-      </View>
+      <Kicker
+        label={t('cycle.selectDateLabel')}
+        color={cycleTints.accent}
+        backgroundColor={cycleTints.accentSoft}
+        icon={{ ios: 'calendar.badge.plus', android: 'event_note', web: 'event_note' }}
+        style={styles.kickerSpacing}
+      />
       <DatePickerField value={date} onChange={onDateChange} />
 
       <Card style={[sharedStyles.card, styles.section, { borderColor: cycleTints.accentSoft }]}>
@@ -97,8 +100,7 @@ export default function LogAnotherDayScreen() {
 }
 
 const styles = {
-  kicker: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5, alignSelf: 'flex-start' as const, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 10, marginBottom: 6 },
-  kickerText: { fontSize: 11, fontWeight: '800' as const, textTransform: 'uppercase' as const, letterSpacing: 0.4 },
+  kickerSpacing: { marginBottom: 6 },
   section: { borderWidth: 1.5, marginTop: 4 },
   notesInput: { minHeight: 60, textAlignVertical: 'top' as const },
 };

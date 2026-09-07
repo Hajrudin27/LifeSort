@@ -12,6 +12,7 @@ import Screen from '@/components/Screen';
 import SectionHeader from '@/components/SectionHeader';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
+import Kicker from '@/components/Kicker';
 import { useAccentTints } from '@/hooks/useAccentTints';
 import { useBrandTints } from '@/hooks/useBrandTints';
 import { useCycleStore } from '@/store/useCycleStore';
@@ -274,10 +275,12 @@ export default function HomeScreen() {
       {/* Invitationer til delte rejser */}
       {pendingInvitations.length > 0 && (
         <View style={styles.invitationsSection}>
-          <View style={[styles.invitationsKicker, { backgroundColor: accentTints.accentSoft }]}>
-            <SymbolView name={{ ios: 'envelope.fill', android: 'mail', web: 'mail' }} size={12} tintColor={accentTints.accent} />
-            <Text style={[styles.invitationsKickerText, { color: accentTints.accent }]}>{t('home.invitationsLabel')}</Text>
-          </View>
+          <Kicker
+            label={t('home.invitationsLabel')}
+            color={accentTints.accent}
+            backgroundColor={accentTints.accentSoft}
+            icon={{ ios: 'envelope.fill', android: 'mail', web: 'mail' }}
+          />
           {pendingInvitations.map((inv) => {
             const trip = trips.find((tr) => tr.id === inv.tripId);
             return (
@@ -540,8 +543,6 @@ const styles = {
   heroSubtitle: { fontSize: 13, opacity: 0.85, marginTop: 10, backgroundColor: 'transparent' },
   heroStreak: { fontSize: 13, fontWeight: '700' as const, marginTop: 8, backgroundColor: 'transparent' },
   invitationsSection: { gap: 8 },
-  invitationsKicker: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5, alignSelf: 'flex-start' as const, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 10 },
-  invitationsKickerText: { fontSize: 11, fontWeight: '800' as const, textTransform: 'uppercase' as const, letterSpacing: 0.4 },
   invitationCard: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10, borderWidth: 1.5 },
   invitationTextGroup: { flex: 1, gap: 1 },
   invitationTripName: { fontWeight: '800' as const, fontSize: 15 },

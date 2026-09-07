@@ -5,6 +5,7 @@ import { ScrollView } from 'react-native';
 
 import Card from '@/components/Card';
 import HealthDisclaimer from '@/components/HealthDisclaimer';
+import Kicker from '@/components/Kicker';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import { CycleTints } from '@/constants/Colors';
@@ -50,18 +51,24 @@ export default function HealthConditionDetailScreen() {
         <Text style={styles.conditionName}>{isDa ? condition.nameDa : condition.nameEn}</Text>
       </View>
 
-      <View style={[styles.sectionKicker, { backgroundColor: cycleTints.accentSoft }]}>
-        <Text style={[styles.sectionKickerText, { color: cycleTints.accent }]}>{t('healthInfo.whatItIsLabel')}</Text>
-      </View>
+      <Kicker
+        label={t('healthInfo.whatItIsLabel')}
+        color={cycleTints.accent}
+        backgroundColor={cycleTints.accentSoft}
+        style={styles.sectionKickerSpacing}
+      />
       <Card style={[styles.sectionCard, { borderColor: cycleTints.accentSoft }]}>
         <Text style={styles.body}>{isDa ? condition.whatItIsDa : condition.whatItIsEn}</Text>
       </Card>
 
       {commonSymptomNames.length > 0 && (
         <>
-          <View style={[styles.sectionKicker, { backgroundColor: cycleTints.accentSoft }]}>
-            <Text style={[styles.sectionKickerText, { color: cycleTints.accent }]}>{t('healthInfo.commonSymptomsLabel')}</Text>
-          </View>
+          <Kicker
+            label={t('healthInfo.commonSymptomsLabel')}
+            color={cycleTints.accent}
+            backgroundColor={cycleTints.accentSoft}
+            style={styles.sectionKickerSpacing}
+          />
           <View style={sharedStyles.chipRow}>
             {commonSymptomNames.map((s) => (
               <View key={s.id} style={[styles.symptomChip, { borderColor: cycleTints.accent, backgroundColor: cycleTints.accentSoft }]}>
@@ -72,16 +79,22 @@ export default function HealthConditionDetailScreen() {
         </>
       )}
 
-      <View style={[styles.sectionKicker, { backgroundColor: cycleTints.accentSoft }]}>
-        <Text style={[styles.sectionKickerText, { color: cycleTints.accent }]}>{t('healthInfo.whatHelpsLabel')}</Text>
-      </View>
+      <Kicker
+        label={t('healthInfo.whatHelpsLabel')}
+        color={cycleTints.accent}
+        backgroundColor={cycleTints.accentSoft}
+        style={styles.sectionKickerSpacing}
+      />
       <Card style={[styles.sectionCard, { borderColor: cycleTints.accentSoft }]}>
         <Text style={styles.body}>{isDa ? condition.whatHelpsDa : condition.whatHelpsEn}</Text>
       </Card>
 
-      <View style={[styles.sectionKicker, { backgroundColor: cycleTints.accentSoft }]}>
-        <Text style={[styles.sectionKickerText, { color: cycleTints.accent }]}>{t('healthInfo.whenToSeeDoctorLabel')}</Text>
-      </View>
+      <Kicker
+        label={t('healthInfo.whenToSeeDoctorLabel')}
+        color={cycleTints.accent}
+        backgroundColor={cycleTints.accentSoft}
+        style={styles.sectionKickerSpacing}
+      />
       <Card style={[styles.sectionCard, { borderColor: cycleTints.accentSoft }]}>
         <Text style={styles.body}>{isDa ? condition.whenToSeeDoctorDa : condition.whenToSeeDoctorEn}</Text>
       </Card>
@@ -90,12 +103,11 @@ export default function HealthConditionDetailScreen() {
 }
 
 const styles = {
+  sectionKickerSpacing: { marginBottom: 4 },
   iconHeader: { alignItems: 'center' as const, marginVertical: 8, position: 'relative' as const },
   bigIconGlow: { position: 'absolute' as const, width: 96, height: 96, borderRadius: 48, top: -8 },
   bigIconCircle: { width: 72, height: 72, borderRadius: 36, alignItems: 'center' as const, justifyContent: 'center' as const },
   conditionName: { fontSize: 18, fontWeight: '800' as const, marginTop: 10, textAlign: 'center' as const },
-  sectionKicker: { alignSelf: 'flex-start' as const, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 12, marginBottom: 4 },
-  sectionKickerText: { fontSize: 11, fontWeight: '800' as const, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
   sectionCard: { borderWidth: 1.5 },
   body: { lineHeight: 20 },
   symptomChip: { borderWidth: 1.5, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12 },

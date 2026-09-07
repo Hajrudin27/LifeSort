@@ -1,20 +1,4 @@
-export interface HealthCondition {
-    id: string;
-    nameKey: string; // oversættelsesnøgle
-    summaryKey: string;
-    whatItIsKey: string;
-    commonSymptomsKeys: string[];
-    whatHelpsKey: string;
-    whenToSeeDoctorKey: string;
-  }
-  
-  export interface SymptomInfo {
-    id: string; // matcher Symptom-typen fra types/cycle.ts, hvor muligt
-    nameKey: string;
-    descriptionKey: string;
-  }
-
-  // Admin-styret indhold hentet fra Supabase (health_conditions / symptom_glossary) —
+// Admin-styret indhold hentet fra Supabase (health_conditions / symptom_glossary) —
 // tosprogede felter direkte i databasen i stedet for oversættelsesnøgler, så indholdet
 // kan redigeres fra admin-panelet uden en app-udgivelse.
 export interface HealthConditionRecord {

@@ -7,6 +7,7 @@ import { Alert, Modal, Pressable, ScrollView, TextInput } from "react-native";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import DatePickerField from "@/components/DatePickerField";
+import Kicker from "@/components/Kicker";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
 import { useAccentTints } from "@/hooks/useAccentTints";
@@ -167,10 +168,13 @@ export default function TripDetailScreen() {
         onPress={() => router.push(`/travel/${trip.id}/packing`)}
       />
 
-      <View style={[styles.kicker, { backgroundColor: accentTints.accentSoft }]}>
-        <SymbolView name={{ ios: 'person.2.fill', android: 'group', web: 'group' }} size={12} tintColor={accentTints.accent} />
-        <Text style={[styles.kickerText, { color: accentTints.accent }]}>{t('travel.participantsLabel')}</Text>
-      </View>
+      <Kicker
+        label={t('travel.participantsLabel')}
+        color={accentTints.accent}
+        backgroundColor={accentTints.accentSoft}
+        icon={{ ios: 'person.2.fill', android: 'group', web: 'group' }}
+        style={styles.kickerSpacing}
+      />
 
       {participants.length === 0 ? (
         <Text style={{ color: textMuted, fontSize: 13 }}>{t('travel.noParticipantsYet')}</Text>
@@ -242,9 +246,12 @@ export default function TripDetailScreen() {
       <Modal visible={showInvite} animationType="slide" transparent onRequestClose={() => setShowInvite(false)}>
         <Pressable accessible={false} style={styles.modalBackdrop} onPress={() => setShowInvite(false)}>
           <Pressable accessible={false} style={[styles.modalCard, { backgroundColor, borderColor }]} onPress={(e) => e.stopPropagation()}>
-            <View style={[styles.kicker, { backgroundColor: accentTints.accentSoft }]}>
-              <Text style={[styles.kickerText, { color: accentTints.accent }]}>{t('travel.inviteButton')}</Text>
-            </View>
+            <Kicker
+              label={t('travel.inviteButton')}
+              color={accentTints.accent}
+              backgroundColor={accentTints.accentSoft}
+              style={styles.kickerSpacing}
+            />
             <Text style={{ color: textMuted, fontSize: 13, marginBottom: 4 }}>{t('travel.inviteHint')}</Text>
             <TextInput
               style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
@@ -269,6 +276,7 @@ export default function TripDetailScreen() {
 }
 
 const styles = {
+  kickerSpacing: { marginTop: 8 },
   summaryCard: { alignItems: "center" as const, gap: 4 },
   dates: { fontWeight: "700" as const },
   editButton: {
@@ -277,8 +285,6 @@ const styles = {
     gap: 4,
     marginRight: 8,
   },
-  kicker: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5, alignSelf: 'flex-start' as const, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 10, marginTop: 8 },
-  kickerText: { fontSize: 11, fontWeight: '800' as const, textTransform: 'uppercase' as const, letterSpacing: 0.4 },
   participantRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
   participantIconCircle: { width: 30, height: 30, borderRadius: 15, alignItems: 'center' as const, justifyContent: 'center' as const },
   participantEmail: { fontWeight: '700' as const, fontSize: 14 },

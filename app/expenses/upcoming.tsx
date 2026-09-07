@@ -5,6 +5,7 @@ import { Pressable, SectionList, StyleSheet } from 'react-native';
 
 import { Text, useThemeColor, View } from '@/components/Themed';
 import Hero, { HeroPill, HeroPillText } from '@/components/Hero';
+import Kicker from '@/components/Kicker';
 import { useAccentTints } from '@/hooks/useAccentTints';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { getCategoryIconName } from '@/utils/expense/expenseCategoryIcon';
@@ -73,9 +74,12 @@ export default function UpcomingExpensesScreen() {
           </View>
         }
         renderSectionHeader={({ section }) => (
-          <View style={[styles.sectionKicker, { backgroundColor: accentTints.accentSoft }]}>
-            <Text style={[styles.sectionKickerText, { color: accentTints.accent }]}>{section.title}</Text>
-          </View>
+          <Kicker
+            label={section.title}
+            color={accentTints.accent}
+            backgroundColor={accentTints.accentSoft}
+            style={styles.sectionKickerSpacing}
+          />
         )}
         renderItem={({ item }) => {
           const color = urgencyColor(item.days);
@@ -112,12 +116,11 @@ export default function UpcomingExpensesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 12 },
   heroPillSpacing: { marginTop: 14 },
+  sectionKickerSpacing: { marginTop: 10, marginBottom: 6 },
   list: { gap: 8, paddingBottom: 32 },
   emptyCard: { alignItems: 'center', borderRadius: 20, padding: 32, marginTop: 8 },
   emptyIconCircle: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   emptyTitle: { fontWeight: '800', fontSize: 16 },
-  sectionKicker: { alignSelf: 'flex-start', borderRadius: 20, paddingVertical: 5, paddingHorizontal: 12, marginTop: 10, marginBottom: 6 },
-  sectionKickerText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderRadius: 16, padding: 12, marginBottom: 4 },
   iconWrap: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   iconGlow: { position: 'absolute', width: 36, height: 36, borderRadius: 18 },

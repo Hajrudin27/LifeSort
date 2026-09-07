@@ -14,6 +14,7 @@ import Button from "@/components/Button";
 import ProgressBar from "@/components/ProgressBar";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import Kicker from "@/components/Kicker";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useHomeBackTitle } from "@/hooks/useHomeBackTitle";
 import { useExpensesStore } from "@/store/useExpensesStore";
@@ -284,18 +285,11 @@ export default function SavingsGoalsScreen() {
             style={[styles.modalCard, { backgroundColor, borderColor }]}
             onPress={(e) => e.stopPropagation()}
           >
-            <View
-              style={[
-                styles.modalKicker,
-                { backgroundColor: accentTints.accentSoft },
-              ]}
-            >
-              <Text
-                style={[styles.modalKickerText, { color: accentTints.accent }]}
-              >
-                {t("savings.addExtraTitle")}
-              </Text>
-            </View>
+            <Kicker
+              label={t("savings.addExtraTitle")}
+              color={accentTints.accent}
+              backgroundColor={accentTints.accentSoft}
+            />
             <Text style={{ color: textMuted, fontSize: 13, marginBottom: 4 }}>
               {t("savings.addExtraHint")}
             </Text>
@@ -463,17 +457,5 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
     gap: 10,
-  },
-  modalKicker: {
-    alignSelf: "flex-start",
-    borderRadius: 20,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-  },
-  modalKickerText: {
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
 });

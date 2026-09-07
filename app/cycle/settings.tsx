@@ -5,6 +5,7 @@ import { ScrollView, TextInput } from 'react-native';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
+import Kicker from '@/components/Kicker';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import { CycleTints } from '@/constants/Colors';
@@ -41,9 +42,12 @@ export default function CycleSettingsScreen() {
   return (
     <ScrollView style={{ backgroundColor }} contentContainerStyle={sharedStyles.formContainerScroll} keyboardShouldPersistTaps="handled">
       <Card style={[sharedStyles.card, styles.section, { borderColor: cycleTints.accentSoft }]}>
-        <View style={[styles.kicker, { backgroundColor: cycleTints.accentSoft }]}>
-          <Text style={[styles.kickerText, { color: cycleTints.accent }]}>{t('cycle.reminderToggleLabel')}</Text>
-        </View>
+        <Kicker
+          label={t('cycle.reminderToggleLabel')}
+          color={cycleTints.accent}
+          backgroundColor={cycleTints.accentSoft}
+          style={styles.kickerSpacing}
+        />
         <Text style={{ color: textMuted, fontSize: 12 }}>{t('cycle.reminderToggleHint')}</Text>
         <Chip
           label={t('cycle.reminderToggleLabel')}
@@ -69,9 +73,12 @@ export default function CycleSettingsScreen() {
       </Card>
 
       <Card style={[sharedStyles.card, styles.section, { borderColor: cycleTints.accentSoft }]}>
-        <View style={[styles.kicker, { backgroundColor: cycleTints.accentSoft }]}>
-          <Text style={[styles.kickerText, { color: cycleTints.accent }]}>{t('cycle.avgCycleLengthLabel')}</Text>
-        </View>
+        <Kicker
+          label={t('cycle.avgCycleLengthLabel')}
+          color={cycleTints.accent}
+          backgroundColor={cycleTints.accentSoft}
+          style={styles.kickerSpacing}
+        />
         <View style={[styles.autoValueBox, { backgroundColor: cycleTints.accentSoft }]}>
           <Text style={[styles.autoValue, { color: cycleTints.accent }]}>{avgCycleLength} {t('cycle.daysUnit')}</Text>
         </View>
@@ -92,9 +99,8 @@ export default function CycleSettingsScreen() {
 }
 
 const styles = {
+  kickerSpacing: { marginBottom: 2 },
   section: { borderWidth: 1.5 },
-  kicker: { alignSelf: 'flex-start' as const, borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10, marginBottom: 2 },
-  kickerText: { fontSize: 10, fontWeight: '800' as const, textTransform: 'uppercase' as const, letterSpacing: 0.4 },
   autoValueBox: { alignSelf: 'flex-start' as const, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 14 },
   autoValue: { fontSize: 20, fontWeight: '800' as const },
   autoHint: { fontSize: 12, marginTop: -2 },

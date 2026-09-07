@@ -11,6 +11,7 @@ import { getCycleDayType } from '@/utils/cycle/cycleCalendar';
 import { FertileWindow } from '@/utils/cycle/cyclePredictions';
 import { getMonthCalendarWeeks, getWeekdayNarrowLabels } from '@/utils/habit/habitMonth';
 import { addMonths, formatMonthLabel, getMonthKey } from '@/utils/shared/monthKey';
+import { todayIso } from '@/utils/shared/localDate';
 
 type Props = {
   cycles: CycleEntry[];
@@ -31,7 +32,7 @@ export default function CycleMonthCalendar({ cycles, fertileWindow, predictedNex
   const warning = cycleTints.ovulation;
 
   const locale = i18n.language === 'da' ? 'da-DK' : 'en-US';
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = todayIso();
 
   const [monthDate, setMonthDate] = useState(() => new Date());
   const monthKey = getMonthKey(monthDate);

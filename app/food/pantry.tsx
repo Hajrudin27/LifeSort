@@ -10,6 +10,7 @@ import { sharedStyles } from "@/constants/sharedStyles";
 import { useFoodStore } from "@/store/useFoodStore";
 import { useToastStore } from "@/store/useToastStore";
 import { daysUntil } from "@/utils/shared/dateDays";
+import { todayIso } from "@/utils/shared/localDate";
 
 export default function PantryScreen() {
   const { t } = useTranslation();
@@ -101,7 +102,7 @@ export default function PantryScreen() {
         {showExpiryPicker ? (
           <>
             <Text style={sharedStyles.fieldLabel}>{t("food.pantryExpiryLabel")}</Text>
-            <DatePickerField value={expiryDate || new Date().toISOString().split("T")[0]} onChange={setExpiryDate} />
+            <DatePickerField value={expiryDate || todayIso()} onChange={setExpiryDate} />
           </>
         ) : (
           <Pressable accessibilityRole="button" onPress={() => setShowExpiryPicker(true)}>

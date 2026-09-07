@@ -13,6 +13,7 @@ import {
   TaskKind,
 } from '@/types/household';
 import { createSyncQueue } from '@/utils/shared/syncQueue';
+import { todayIso } from '@/utils/shared/localDate';
 
 function newId() {
   return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
@@ -147,7 +148,7 @@ export const useHouseholdStore = create<HouseholdState>()(
             t.id === id
               ? {
                   ...t,
-                  lastDone: new Date().toISOString().slice(0, 10),
+                  lastDone: todayIso(),
                   assignedTo: t.rotates ? otherAssignee(t.assignedTo) : t.assignedTo,
                 }
               : t,

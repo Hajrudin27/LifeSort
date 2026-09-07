@@ -6,9 +6,10 @@ import Card from "@/components/Card";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
 import { useFoodStore } from "@/store/useFoodStore";
+import { todayIso } from "@/utils/shared/localDate";
 
 function todayStr() {
-  return new Date().toISOString().split("T")[0];
+  return todayIso();
 }
 
 export default function OffersScreen() {

@@ -9,6 +9,7 @@ import DatePickerField from '@/components/DatePickerField';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useLifeGoalsStore } from '@/store/useLifeGoalsStore';
+import { todayIso } from '@/utils/shared/localDate';
 
 export default function NewLifeGoalScreen() {
   const { t } = useTranslation();
@@ -54,7 +55,7 @@ export default function NewLifeGoalScreen() {
         {showDeadlinePicker ? (
           <>
             <Text style={sharedStyles.fieldLabel}>{t('lifeGoals.deadlineLabel')}</Text>
-            <DatePickerField value={deadline || new Date().toISOString().split('T')[0]} onChange={setDeadline} />
+            <DatePickerField value={deadline || todayIso()} onChange={setDeadline} />
           </>
         ) : (
           <Pressable accessibilityRole="button" onPress={() => setShowDeadlinePicker(true)}>

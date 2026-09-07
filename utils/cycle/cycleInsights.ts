@@ -1,11 +1,6 @@
 import { CycleEntry } from "@/types/cycle";
 import { CyclePhase, getPhaseForCycleDay } from "@/utils/cycle/cyclePredictions";
-
-function daysBetween(a: string, b: string): number {
-  const diffMs =
-    new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime();
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-}
+import { addDaysIso, daysBetweenIso, toLocalIsoDate } from "@/utils/shared/localDate";
 
 // Finder hvilken cyklusfase en given dato faldt i, baseret på den nærmeste
 // forudgående registrerede cyklusstart — virker for enhver historisk dato,
@@ -23,7 +18,7 @@ export function getPhaseForDate(
   const latest = priorCycles[0];
   if (!latest) return null;
 
-  const dayNumber = daysBetween(latest.startDate, dateKey) + 1;
+  const dayNumber = daysBetweenIso(latest.startDate, dateKey) + 1;
   return getPhaseForCycleDay(
     dayNumber,
     avgCycleLength,
@@ -100,14 +95,13 @@ export function computeHabitRateByPhase(
     luteal: { logged: 0, possible: 0, rate: 0 },
   };
 
-  const todayKey = today.toISOString().slice(0, 10);
+  const todayKey = toLocalIsoDate(today);
 
   for (const habit of habits) {
     const loggedDates = new Set(habit.logs.map((l) => l.date.slice(0, 10)));
-    const cursor = new Date(habit.createdAt);
+    let dateKey = toLocalIsoDate(new Date(habit.createdAt));
 
-    while (cursor.toISOString().slice(0, 10) <= todayKey) {
-      const dateKey = cursor.toISOString().slice(0, 10);
+    while (dateKey <= todayKey) {
       const phase = getPhaseForDate(
         dateKey,
         cycles,
@@ -119,7 +113,7 @@ export function computeHabitRateByPhase(
         result[phase].possible += 1;
         if (loggedDates.has(dateKey)) result[phase].logged += 1;
       }
-      cursor.setDate(cursor.getDate() + 1);
+      dateKey = addDaysIso(dateKey, 1);
     }
   }
 
@@ -246,7 +240,7 @@ export function computeTodoOverdueRateByPhase(
     fertile: { overdue: 0, total: 0, rate: 0 },
     luteal: { overdue: 0, total: 0, rate: 0 },
   };
-  const todayKey = today.toISOString().slice(0, 10);
+  const todayKey = toLocalIsoDate(today);
 
   for (const todo of todos) {
     if (!todo.dueDate) continue;

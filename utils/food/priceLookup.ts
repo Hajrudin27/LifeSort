@@ -1,4 +1,5 @@
 import { GlobalOffer, GlobalStandardPrice } from '@/types/food';
+import { todayIso } from '@/utils/shared/localDate';
 
 function normalize(text: string): string {
   return text.trim().toLowerCase();
@@ -39,7 +40,7 @@ export function findBestGlobalPrice(
 ): PriceMatch | null {
   if (selectedStores.length === 0) return null;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayIso();
   const activeOffers = globalOffers.filter((o) => isOfferActive(o, today));
 
   const offerMatches = matchByName(ingredientName, activeOffers, selectedStores).map((o) => ({

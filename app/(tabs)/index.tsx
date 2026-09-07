@@ -34,6 +34,7 @@ import { daysUntilDue } from '@/utils/household/householdTaskSchedule';
 import { daysUntil } from '@/utils/shared/dateDays';
 import { getGreetingPeriod } from '@/utils/shared/greeting';
 import { getMonthKey } from '@/utils/shared/monthKey';
+import { toLocalIsoDate } from '@/utils/shared/localDate';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PAGE_WIDTH = SCREEN_WIDTH - 32;
@@ -51,7 +52,7 @@ export default function HomeScreen() {
   const now = new Date();
   const monthKey = getMonthKey(now);
   const weekKey = getISOWeekKey(now);
-  const todayKey = now.toISOString().slice(0, 10);
+  const todayKey = toLocalIsoDate(now);
   const greetingPeriod = getGreetingPeriod(now);
   const dateLabel = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
 

@@ -20,6 +20,7 @@ import {
   estimateMonthsToGoal,
   requiredMonthlyAmount,
 } from "@/utils/savings/savingsPace";
+import { todayIso } from "@/utils/shared/localDate";
 
 export default function SavingsGoalDetailScreen() {
   const { t } = useTranslation();
@@ -52,7 +53,7 @@ export default function SavingsGoalDetailScreen() {
   const [icon, setIcon] = useState<SavingsGoalIcon>(goal?.icon ?? "other");
   const [hasDeadline, setHasDeadline] = useState(!!goal?.deadline);
   const [deadline, setDeadline] = useState(
-    goal?.deadline ?? new Date().toISOString().split("T")[0],
+    goal?.deadline ?? todayIso(),
   );
   const [contribution, setContribution] = useState("");
   const [transferTarget, setTransferTarget] = useState<string | null>(null);

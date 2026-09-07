@@ -9,6 +9,7 @@ import { useHabitsStore } from '@/store/useHabitsStore';
 import { Habit } from '@/types/life';
 import { getMonthCalendarWeeks, getWeekdayNarrowLabels } from '@/utils/habit/habitMonth';
 import { addMonths, formatMonthLabel, getMonthKey } from '@/utils/shared/monthKey';
+import { todayIso } from '@/utils/shared/localDate';
 
 type Props = {
   habit: Habit;
@@ -24,7 +25,7 @@ export default function HabitMonthCalendar({ habit }: Props) {
   const toggleLogForDate = useHabitsStore((s) => s.toggleLogForDate);
 
   const locale = i18n.language === 'da' ? 'da-DK' : 'en-US';
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = todayIso();
   const creationKey = habit.createdAt.slice(0, 10);
   const minMonthKey = getMonthKey(new Date(habit.createdAt));
   const maxMonthKey = getMonthKey(new Date());

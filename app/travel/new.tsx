@@ -11,6 +11,7 @@ import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useTripsStore } from '@/store/useTripsStore';
 import { PackingCategory } from '@/types/trip';
+import { todayIso } from '@/utils/shared/localDate';
 
 const DEFAULT_PACKING_ITEMS: { key: string; category: PackingCategory }[] = [
   { key: 'passport', category: 'essentials' },
@@ -28,11 +29,11 @@ export default function NewTripScreen() {
   const surface = useThemeColor({}, 'surface');
   const backgroundColor = useThemeColor({}, 'background');
 
-  const todayIso = new Date().toISOString().split('T')[0];
+  const today = todayIso();
 
   const [name, setName] = useState('');
-  const [startDate, setStartDate] = useState(todayIso);
-  const [endDate, setEndDate] = useState(todayIso);
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
   const [budget, setBudget] = useState('');
   const [copyFromTripId, setCopyFromTripId] = useState<string | null>(null);
 

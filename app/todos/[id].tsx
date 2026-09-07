@@ -11,6 +11,7 @@ import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useTodoStore } from '@/store/useTodoStore';
 import { TodoImportance } from '@/types/life';
+import { todayIso } from '@/utils/shared/localDate';
 
 const IMPORTANCE_LEVELS: TodoImportance[] = ['low', 'medium', 'high'];
 
@@ -96,7 +97,7 @@ export default function TodoDetailScreen() {
         {showDuePicker ? (
           <>
             <Text style={sharedStyles.fieldLabel}>{t('todos.dueDateLabel')}</Text>
-            <DatePickerField value={dueDate || new Date().toISOString().split('T')[0]} onChange={setDueDate} />
+            <DatePickerField value={dueDate || todayIso()} onChange={setDueDate} />
           </>
         ) : (
           <Pressable accessibilityRole="button" onPress={() => setShowDuePicker(true)}>

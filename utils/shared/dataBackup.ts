@@ -18,6 +18,7 @@ import { useTodoStore } from '@/store/useTodoStore';
 import { useTripsStore } from '@/store/useTripsStore';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
 import { BACKUP_VERSION, type BackupParseError, parseBackupFile } from '@/utils/shared/backupValidation';
+import { todayIso } from '@/utils/shared/localDate';
 
 // Rækkefølgen her definerer, hvad der eksporteres/importeres — tilføj en ny linje,
 // når I bygger et nyt modul med sin egen store.
@@ -55,7 +56,7 @@ function buildBackupObject() {
 
 export async function exportBackup(): Promise<{ fileName: string }> {
   const backup = buildBackupObject();
-  const fileName = `lifesort-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  const fileName = `lifesort-backup-${todayIso()}.json`;
   const fileUri = `${FileSystem.documentDirectory}${fileName}`;
 
   await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backup, null, 2));

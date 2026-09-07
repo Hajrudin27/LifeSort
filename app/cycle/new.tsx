@@ -10,6 +10,7 @@ import DatePickerField from '@/components/DatePickerField';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useCycleStore } from '@/store/useCycleStore';
+import { todayIso } from '@/utils/shared/localDate';
 
 function rangesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
   return startA <= endB && startB <= endA;
@@ -23,9 +24,9 @@ export default function NewPastCycleScreen() {
   const endPeriod = useCycleStore((s) => s.endPeriod);
   const cycles = useCycleStore((s) => s.cycles);
 
-  const todayIso = new Date().toISOString().split('T')[0];
-  const [startDate, setStartDate] = useState(todayIso);
-  const [endDate, setEndDate] = useState(todayIso);
+  const today = todayIso();
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
   const [hasEndDate, setHasEndDate] = useState(true);
 
   const createCycle = () => {

@@ -12,10 +12,12 @@ import {
   scheduleWarrantyReminder,
 } from "@/utils/warranty/warrantyReminder";
 
+// Regner i UTC, så resultatet ikke afhænger af enhedens tidszone.
+// Bemærk: 29. februar + 1 år lander på 1. marts, som i JavaScript i øvrigt.
 function addOneYear(dateStr: string): string {
-  const d = new Date(dateStr);
-  d.setFullYear(d.getFullYear() + 1);
-  return d.toISOString().split("T")[0];
+  const [year, month, day] = dateStr.slice(0, 10).split("-").map(Number);
+  const d = new Date(Date.UTC(year + 1, month - 1, day));
+  return d.toISOString().slice(0, 10);
 }
 
 interface WarrantiesState {

@@ -1,4 +1,5 @@
 import { HabitLog } from '@/types/life';
+import { addDaysIso, parseIsoDate, todayIso } from '@/utils/shared/localDate';
 
 function toDateOnly(iso: string): string {
   return iso.slice(0, 10);
@@ -7,29 +8,25 @@ function toDateOnly(iso: string): string {
 export function getCurrentStreak(logs: HabitLog[]): number {
   const loggedDates = new Set(logs.map((l) => toDateOnly(l.date)));
   let streak = 0;
-  const cursor = new Date();
+  let cursor = todayIso();
 
-  while (true) {
-    const key = cursor.toISOString().slice(0, 10);
-    if (!loggedDates.has(key)) break;
+  while (loggedDates.has(cursor)) {
     streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor = addDaysIso(cursor, -1);
   }
 
   return streak;
 }
 
 export function getLoggedThisWeek(logs: HabitLog[]): number {
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  const dayNum = startOfWeek.getDay() || 7; // søndag = 7, ikke 0
-  startOfWeek.setDate(startOfWeek.getDate() - dayNum + 1); // mandag
-  startOfWeek.setHours(0, 0, 0, 0);
+  const today = todayIso();
+  const dayNum = parseIsoDate(today).getDay() || 7; // søndag = 7, ikke 0
+  const monday = addDaysIso(today, -(dayNum - 1));
 
-  return logs.filter((l) => new Date(l.date) >= startOfWeek).length;
+  return logs.filter((l) => toDateOnly(l.date) >= monday).length;
 }
 
 export function hasLoggedToday(logs: HabitLog[]): boolean {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   return logs.some((l) => toDateOnly(l.date) === today);
 }

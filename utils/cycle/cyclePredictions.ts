@@ -1,18 +1,9 @@
 import { CycleEntry } from "@/types/cycle";
-
-function toDate(iso: string): Date {
-  return new Date(`${iso}T00:00:00`);
-}
-
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function toIso(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
+import {
+  addDaysIso,
+  daysBetweenIso,
+  toLocalIsoDate,
+} from "@/utils/shared/localDate";
 
 export function getLatestCycle(cycles: CycleEntry[]): CycleEntry | null {
   if (cycles.length === 0) return null;
@@ -30,8 +21,7 @@ export function getCurrentCycleDay(
 ): number | null {
   const latest = getLatestCycle(cycles);
   if (!latest) return null;
-  const diffMs = today.getTime() - toDate(latest.startDate).getTime();
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const days = daysBetweenIso(latest.startDate, toLocalIsoDate(today));
   return days >= 0 ? days + 1 : null;
 }
 
@@ -41,7 +31,7 @@ export function getPredictedNextPeriod(
 ): string | null {
   const latest = getLatestCycle(cycles);
   if (!latest) return null;
-  return toIso(addDays(toDate(latest.startDate), avgCycleLength));
+  return addDaysIso(latest.startDate, avgCycleLength);
 }
 
 export function getDaysUntilNextPeriod(
@@ -51,8 +41,7 @@ export function getDaysUntilNextPeriod(
 ): number | null {
   const predicted = getPredictedNextPeriod(cycles, avgCycleLength);
   if (!predicted) return null;
-  const diffMs = toDate(predicted).getTime() - today.getTime();
-  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+  return daysBetweenIso(toLocalIsoDate(today), predicted);
 }
 
 export interface FertileWindow {
@@ -68,11 +57,11 @@ export function getFertileWindow(
 ): FertileWindow | null {
   const predicted = getPredictedNextPeriod(cycles, avgCycleLength);
   if (!predicted) return null;
-  const ovulation = addDays(toDate(predicted), -lutealPhaseLength);
+  const ovulation = addDaysIso(predicted, -lutealPhaseLength);
   return {
-    start: toIso(addDays(ovulation, -5)),
-    end: toIso(addDays(ovulation, 1)),
-    ovulation: toIso(ovulation),
+    start: addDaysIso(ovulation, -5),
+    end: addDaysIso(ovulation, 1),
+    ovulation,
   };
 }
 
@@ -86,7 +75,7 @@ export function getCurrentPhase(
 ): CyclePhase | null {
   if (isCurrentlyOnPeriod(cycles)) return "menstrual";
   const fertile = getFertileWindow(cycles, avgCycleLength, lutealPhaseLength);
-  const todayIso = toIso(today);
+  const todayIso = toLocalIsoDate(today);
   if (fertile && todayIso >= fertile.start && todayIso <= fertile.end)
     return "fertile";
   if (fertile && todayIso > fertile.end) return "luteal";
@@ -100,10 +89,7 @@ export function getAverageCycleLength(cycles: CycleEntry[]): number | null {
   if (sorted.length < 2) return null;
   const diffs: number[] = [];
   for (let i = 1; i < sorted.length; i++) {
-    const diffMs =
-      toDate(sorted[i].startDate).getTime() -
-      toDate(sorted[i - 1].startDate).getTime();
-    diffs.push(Math.round(diffMs / (1000 * 60 * 60 * 24)));
+    diffs.push(daysBetweenIso(sorted[i - 1].startDate, sorted[i].startDate));
   }
   return Math.round(diffs.reduce((sum, d) => sum + d, 0) / diffs.length);
 }
@@ -136,13 +122,9 @@ export function getAveragePeriodLength(
   if (completed.length === 0) return fallback;
 
   const total = completed.reduce((sum, c) => {
-    const days = daysBetween(c.startDate, c.endDate!) + 1;
+    const days = daysBetweenIso(c.startDate, c.endDate!) + 1;
     return sum + days;
   }, 0);
 
   return Math.round(total / completed.length);
-}
-function daysBetween(a: string, b: string): number {
-  const diffMs = toDate(b).getTime() - toDate(a).getTime();
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }

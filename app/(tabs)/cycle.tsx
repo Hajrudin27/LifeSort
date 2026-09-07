@@ -31,6 +31,7 @@ import {
 } from "@/utils/cycle/cyclePredictions";
 import { cancelCycleReminder, scheduleCycleReminder } from "@/utils/cycle/cycleReminder";
 import { detectRecurringSymptoms } from "@/utils/cycle/symptomPatterns";
+import { toLocalIsoDate } from "@/utils/shared/localDate";
 
 const SYMPTOMS: Symptom[] = [
   "cramps",
@@ -87,7 +88,7 @@ export default function CycleScreen() {
   }, [cycles]);
 
   const today = new Date();
-  const todayKey = today.toISOString().slice(0, 10);
+  const todayKey = toLocalIsoDate(today);
 
   const cycleDay = getCurrentCycleDay(cycles, today);
   const onPeriod = isCurrentlyOnPeriod(cycles);

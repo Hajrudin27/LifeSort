@@ -1,4 +1,11 @@
+import { daysUntilIso } from '@/utils/shared/localDate';
+
+/**
+ * Hele kalenderdage fra i dag til den givne dato. 0 = i dag, negativ = passeret.
+ *
+ * Regner i kalenderdage frem for millisekunder, så hverken tidszone,
+ * klokkeslæt eller sommertid forskyder svaret — se utils/shared/localDate.ts.
+ */
 export function daysUntil(dateStr: string): number {
-  const diffMs = new Date(dateStr).getTime() - new Date().setHours(0, 0, 0, 0);
-  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+  return daysUntilIso(dateStr.slice(0, 10));
 }

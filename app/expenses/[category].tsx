@@ -12,6 +12,7 @@ import { useExpensesStore } from "@/store/useExpensesStore";
 import { Expense, ExpenseCategory } from "@/types/expense";
 import { getCategoryIconName } from "@/utils/expense/expenseCategoryIcon";
 import { getCategoryLabel } from "@/utils/expense/expenseCategoryLabel";
+import { parseIsoDate } from "@/utils/shared/localDate";
 
 export default function CategoryExpensesScreen() {
   const { t, i18n } = useTranslation();
@@ -45,7 +46,7 @@ export default function CategoryExpensesScreen() {
 
   const formatDate = (date: string) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(
-      new Date(`${date}T00:00:00`),
+      parseIsoDate(date),
     );
 
   const showActions = (expense: Expense) => {

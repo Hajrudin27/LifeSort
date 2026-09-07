@@ -11,6 +11,7 @@ import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
 import { useCareerStore } from "@/store/useCareerStore";
 import { ApplicationStatus } from "@/types/career";
+import { todayIso } from "@/utils/shared/localDate";
 
 const STATUSES: ApplicationStatus[] = [
   "applied",
@@ -28,8 +29,8 @@ export default function NewApplicationScreen() {
   const [company, setCompany] = useState("");
   const [position, setPosition] = useState("");
   const [status, setStatus] = useState<ApplicationStatus>("applied");
-  const todayIso = new Date().toISOString().split("T")[0];
-  const [appliedDate, setAppliedDate] = useState(todayIso);
+  const today = todayIso();
+  const [appliedDate, setAppliedDate] = useState(today);
   const [link, setLink] = useState("");
   const [notes, setNotes] = useState("");
 

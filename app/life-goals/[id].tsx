@@ -12,6 +12,7 @@ import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useLifeGoalsStore } from "@/store/useLifeGoalsStore";
+import { todayIso } from "@/utils/shared/localDate";
 
 export default function LifeGoalDetailScreen() {
   const { t } = useTranslation();
@@ -232,7 +233,7 @@ export default function LifeGoalDetailScreen() {
                 {t("lifeGoals.deadlineLabel")}
               </Text>
               <DatePickerField
-                value={deadline || new Date().toISOString().split("T")[0]}
+                value={deadline || todayIso()}
                 onChange={setDeadline}
               />
             </Card>

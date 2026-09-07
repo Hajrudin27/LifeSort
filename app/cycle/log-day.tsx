@@ -14,6 +14,7 @@ import { CycleTints } from '@/constants/Colors';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useCycleStore } from '@/store/useCycleStore';
 import { FlowIntensity, Symptom } from '@/types/cycle';
+import { todayIso } from '@/utils/shared/localDate';
 
 const SYMPTOMS: Symptom[] = [
   'cramps', 'headache', 'bloating', 'fatigue', 'moodSwings', 'acne', 'backache', 'nausea', 'tenderBreasts', 'other',
@@ -32,8 +33,8 @@ export default function LogAnotherDayScreen() {
   const symptomLogs = useCycleStore((s) => s.symptomLogs);
   const logSymptoms = useCycleStore((s) => s.logSymptoms);
 
-  const todayIso = new Date().toISOString().split('T')[0];
-  const [date, setDate] = useState(todayIso);
+  const today = todayIso();
+  const [date, setDate] = useState(today);
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [flow, setFlow] = useState<FlowIntensity | undefined>(undefined);
   const [notes, setNotes] = useState('');

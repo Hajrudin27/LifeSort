@@ -10,6 +10,7 @@ import DatePickerField from '@/components/DatePickerField';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useCVStore } from '@/store/useCVStore';
+import { todayIso } from '@/utils/shared/localDate';
 
 export default function NewExperienceScreen() {
   const { t } = useTranslation();
@@ -20,9 +21,9 @@ export default function NewExperienceScreen() {
 
   const [company, setCompany] = useState('');
   const [position, setPosition] = useState('');
-  const todayIso = new Date().toISOString().split('T')[0];
-  const [startDate, setStartDate] = useState(todayIso);
-  const [endDate, setEndDate] = useState(todayIso);
+  const today = todayIso();
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
   const [isCurrent, setIsCurrent] = useState(false);
   const [description, setDescription] = useState('');
 

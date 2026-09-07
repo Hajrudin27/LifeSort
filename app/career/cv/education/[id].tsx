@@ -10,6 +10,7 @@ import DatePickerField from '@/components/DatePickerField';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useCVStore } from '@/store/useCVStore';
+import { todayIso } from '@/utils/shared/localDate';
 
 export default function EditEducationScreen() {
   const { t } = useTranslation();
@@ -26,7 +27,7 @@ export default function EditEducationScreen() {
   const [degree, setDegree] = useState(entry?.degree ?? '');
   const [fieldOfStudy, setFieldOfStudy] = useState(entry?.fieldOfStudy ?? '');
   const [startDate, setStartDate] = useState(entry ? `${entry.startDate}-01` : '');
-  const [endDate, setEndDate] = useState(entry?.endDate ? `${entry.endDate}-01` : new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(entry?.endDate ? `${entry.endDate}-01` : todayIso());
   const [isCurrent, setIsCurrent] = useState(!entry?.endDate);
   const [description, setDescription] = useState(entry?.description ?? '');
 

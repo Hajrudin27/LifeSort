@@ -77,5 +77,14 @@
   "tripSnapshotHelperNamed": "{{name}}",
   "cycleSnapshotLabel": "Cyklusdag",
   "cycleSnapshotHelper": "Om {{days}} dage til næste",
-  "tripSnapshotValueDays": "Om {{days}} dage"
+  "tripSnapshotValueDays": "Om {{days}} dage",
+  "cardActionsTitle": "Tilpas kortet",
+  "cardActionPin": "Fastgør øverst",
+  "cardActionUnpin": "Fjern fastgørelse",
+  "cardActionHide": "Skjul fra forsiden",
+  "cardActionsHint": "Hold nede for at fastgøre eller skjule",
+  "hiddenSectionTitle": "Skjulte kort",
+  "hiddenSectionSubtitle": "Kortet er væk fra forsiden. Modulet og dine data er der stadig.",
+  "restoreCard": "Vis igen",
+  "pinnedBadge": "Fastgjort"
 }

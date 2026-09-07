@@ -20,6 +20,7 @@ import ModuleGate from "@/components/ModuleGate";
 import PrivacyOverlay from "@/components/PrivacyOverlay";
 import Toast from "@/components/Toast";
 import { useColorScheme } from "@/components/useColorScheme";
+import { useRecordModuleVisit } from "@/core/modules/useModuleVisit";
 import Colors from "@/constants/Colors";
 import "@/localization/i18n";
 import i18n from "@/localization/i18n";
@@ -221,6 +222,11 @@ export default function RootLayout() {
 
 function RootLayoutNav({ language }: { language: string | null }) {
   const colorScheme = useColorScheme();
+
+  // "Senest brugt" til rækkefølgen på Home (APP-012). Registreres her, hvor alle
+  // ruter kommer forbi, uanset hvordan brugeren nåede frem.
+  useRecordModuleVisit();
+
   const { t } = useTranslation();
   const hasOnboarded = useProfileStore((s) => s.hasOnboarded);
   const session = useAuthStore((s) => s.session);

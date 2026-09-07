@@ -2,11 +2,13 @@ import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, NativeScrollEvent, NativeSyntheticEvent, Pressable, RefreshControl, ScrollView } from 'react-native';
+import { Alert, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Pressable, RefreshControl, ScrollView } from 'react-native';
 
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
+import { hiddenModuleIds, rankHomeSnapshots } from '@/core/modules/homeRanking';
 import { useHomeSnapshots } from '@/core/modules/homeSnapshots';
+import { getModule } from '@/core/modules/moduleRegistry';
 import { HOME_SNAPSHOT_PROVIDERS } from '@/features/homeSnapshots';
 import MetricCard from '@/components/MetricCard';
 import QuickActionCard from '@/components/QuickActionCard';
@@ -20,6 +22,7 @@ import { useBrandTints } from '@/hooks/useBrandTints';
 import { useFoodStore } from '@/store/useFoodStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
+import { useHomeLayoutStore } from '@/store/useHomeLayoutStore';
 import { useProfileStore } from '@/store/useProfileStore';
 import { useTodoStore } from '@/store/useTodoStore';
 import { useTripsStore } from '@/store/useTripsStore';
@@ -80,6 +83,29 @@ export default function HomeScreen() {
   // Home beder modulerne om små, typede kort. Den kender ikke længere en
   // eneste domæne-store til det — se docs/home-snapshots.md.
   const { snapshots, reload: reloadSnapshots } = useHomeSnapshots(HOME_SNAPSHOT_PROVIDERS);
+
+  // Rækkefølgen er brugerens, ikke appens: fastgjort > presserende > senest
+  // brugt, og intet andet. Se ADR-0011.
+  const pinned = useHomeLayoutStore((s) => s.pinned);
+  const hidden = useHomeLayoutStore((s) => s.hidden);
+  const lastOpenedAt = useHomeLayoutStore((s) => s.lastOpenedAt);
+  const togglePinned = useHomeLayoutStore((s) => s.togglePinned);
+  const toggleHidden = useHomeLayoutStore((s) => s.toggleHidden);
+
+  const rankedSnapshots = rankHomeSnapshots(snapshots, { pinned, hidden, lastOpenedAt });
+  const hiddenCards = hiddenModuleIds({ pinned, hidden, lastOpenedAt });
+
+  const openCardActions = (moduleId: (typeof rankedSnapshots)[number]['moduleId'], label: string) => {
+    const isPinned = pinned.includes(moduleId);
+    Alert.alert(t('home.cardActionsTitle'), label, [
+      {
+        text: isPinned ? t('home.cardActionUnpin') : t('home.cardActionPin'),
+        onPress: () => togglePinned(moduleId),
+      },
+      { text: t('home.cardActionHide'), onPress: () => toggleHidden(moduleId) },
+      { text: t('warranties.cancel'), style: 'cancel' },
+    ]);
+  };
 
   const profileName = useProfileStore((s) => s.profile.name);
   const gender = useProfileStore((s) => s.profile.gender);
@@ -460,7 +486,7 @@ export default function HomeScreen() {
       {/* Overview snapshot grid */}
       <SectionHeader title={t('home.overviewTitle')} subtitle={t('home.overviewSubtitle')} />
       <View style={styles.grid}>
-        {snapshots.map((snapshot) => (
+        {rankedSnapshots.map((snapshot) => (
           <MetricCard
             key={snapshot.moduleId}
             style={styles.gridCell}
@@ -473,14 +499,54 @@ export default function HomeScreen() {
             helper={snapshot.helperKey ? t(snapshot.helperKey, snapshot.helperParams) : undefined}
             tone={snapshot.priority === 'urgent' ? danger : snapshot.priority === 'important' ? warning : accentTints.accent}
             onPress={() => router.push(snapshot.route as any)}
+            onLongPress={() => openCardActions(snapshot.moduleId, t(snapshot.titleKey))}
+            accessibilityHint={t('home.cardActionsHint')}
+            accessibilityActions={[
+              { name: 'pin', label: pinned.includes(snapshot.moduleId) ? t('home.cardActionUnpin') : t('home.cardActionPin') },
+              { name: 'hide', label: t('home.cardActionHide') },
+            ]}
+            onAccessibilityAction={(event) => {
+              if (event.nativeEvent.actionName === 'pin') togglePinned(snapshot.moduleId);
+              if (event.nativeEvent.actionName === 'hide') toggleHidden(snapshot.moduleId);
+            }}
           />
         ))}
       </View>
+
+      {/* Uden en vej tilbage ville "skjul" i praksis være "slet kortet". */}
+      {hiddenCards.length > 0 && (
+        <>
+          <SectionHeader title={t('home.hiddenSectionTitle')} subtitle={t('home.hiddenSectionSubtitle')} />
+          <View style={styles.hiddenRow}>
+            {hiddenCards.map((moduleId) => (
+              <Pressable
+                key={moduleId}
+                accessibilityRole="button"
+                accessibilityLabel={`${t(getModule(moduleId).titleKey)} — ${t('home.restoreCard')}`}
+                onPress={() => toggleHidden(moduleId)}
+                style={styles.hiddenChip}
+              >
+                <Text style={styles.hiddenChipText}>{t(getModule(moduleId).titleKey)}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
     </Screen>
   );
 }
 
 const styles = {
+  hiddenRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 8, backgroundColor: 'transparent' },
+  hiddenChip: {
+    minHeight: 44,
+    justifyContent: 'center' as const,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(128,128,128,0.35)',
+  },
+  hiddenChipText: { fontSize: 13, fontWeight: '600' as const },
   container: { padding: 16, gap: 16, paddingBottom: 48 },
   hero: { padding: 20, gap: 4, position: 'relative' as const, borderRadius: 24 },
   heroRoseGlow: { position: 'absolute' as const, width: 220, height: 220, borderRadius: 110, top: -92, right: -62, opacity: 0.24 },

@@ -77,5 +77,14 @@
   "tripSnapshotHelperNamed": "{{name}}",
   "cycleSnapshotLabel": "Cycle day",
   "cycleSnapshotHelper": "{{days}} days until next",
-  "tripSnapshotValueDays": "In {{days}} days"
+  "tripSnapshotValueDays": "In {{days}} days",
+  "cardActionsTitle": "Customise card",
+  "cardActionPin": "Pin to top",
+  "cardActionUnpin": "Unpin",
+  "cardActionHide": "Hide from Home",
+  "cardActionsHint": "Press and hold to pin or hide",
+  "hiddenSectionTitle": "Hidden cards",
+  "hiddenSectionSubtitle": "The card is off Home. The module and your data are still there.",
+  "restoreCard": "Show again",
+  "pinnedBadge": "Pinned"
 }

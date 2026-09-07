@@ -80,7 +80,7 @@ itself is APP-005 and is **not** implemented here.
 
 | Module | Spec `ModuleId` | Observed availability | Route root(s) | Primary stores | Sensitivity | Owner |
 | --- | --- | --- | --- | --- | --- | --- |
-| `core-shell` | – (core platform, not a module in the spec) | available | `/`, `/life`, `/search`, `/modal`, `_layout` | `useSettingsStore`, `useThemeStore`, `useSyncStatusStore`, `useTabBarStore`, `useToastStore`, `useModuleFlagsStore`, `useEnabledModulesStore` | ordinary | Hajrudin Kardasevic |
+| `core-shell` | – (core platform, not a module in the spec) | available | `/`, `/life`, `/search`, `/modal`, `_layout` | `useSettingsStore`, `useThemeStore`, `useSyncStatusStore`, `useTabBarStore`, `useToastStore`, `useModuleFlagsStore`, `useEnabledModulesStore`, `useHomeLayoutStore` | ordinary | Hajrudin Kardasevic |
 | `account` | – (auth/profile shell) | available | `/auth`, `/language`, `/onboarding-*`, `/settings`, `/settings/*` | `useAuthStore`, `useProfileStore`, `useAppLockStore` | personal | Hajrudin Kardasevic |
 | `economy` | `economy` | available | `/economy`, `/economy/*`, `/expenses/*`, `/savings/*` | `useExpensesStore`, `useIncomeStore`, `useSavingsGoalsStore`, `useCategoriesStore` | ordinary, financial, document | Hajrudin Kardasevic |
 | `food` | `food` | available | `/food/*` | `useFoodStore` | ordinary, financial | Hajrudin Kardasevic |
@@ -239,6 +239,7 @@ All persisted stores currently use plain (unencrypted) AsyncStorage, including
 | `useTabBarStore` | `store/useTabBarStore.ts` | `core-shell` | – | memory only | – | ordinary | Hajrudin Kardasevic |
 | `useModuleFlagsStore` | `store/useModuleFlagsStore.ts` | `core-shell` | `lifesort-module-flags` | AsyncStorage (plain) | `module_flags` | ordinary | Hajrudin Kardasevic |
 | `useEnabledModulesStore` | `store/useEnabledModulesStore.ts` | `core-shell` | `lifesort-enabled-modules` | AsyncStorage (plain) | `user_modules` | ordinary | Hajrudin Kardasevic |
+| `useHomeLayoutStore` | `store/useHomeLayoutStore.ts` | `core-shell` | `lifesort-home-layout` | AsyncStorage (plain) | – (kun lokalt) | ordinary | Hajrudin Kardasevic |
 | `useToastStore` | `store/useToastStore.ts` | `core-shell` | – | memory only | – | ordinary | Hajrudin Kardasevic |
 | `useExpensesStore` | `store/useExpensesStore.ts` | `economy` | `lifesort-expenses` | AsyncStorage (plain) | `expenses`, `expense_category_budgets` | financial, document | Hajrudin Kardasevic |
 | `useIncomeStore` | `store/useIncomeStore.ts` | `economy` | `lifesort-income-v2` | AsyncStorage (plain) | `income` | financial | Hajrudin Kardasevic |

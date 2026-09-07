@@ -92,6 +92,27 @@ introducing a contract: ranking is APP-012, hiding and masking is APP-013, and
 the module launcher is APP-015. Ten cards with no ranking would be worse than
 four.
 
+## §4 Order (APP-012)
+
+`rankHomeSnapshots` decides where each card sits. Three signals, in order:
+
+1. **Pinned**, in the user's own order — their choice outranks urgency.
+2. **Urgent**, then important, then normal — taken from the snapshot's
+   `priority`, which comes from data.
+3. **Recently used**, recorded from the routes the user visits rather than from
+   card taps, so the order does not reinforce itself.
+
+Registry order breaks any remaining tie, so the sort is a **total order**: the
+same input always gives the same output. There is no engagement score, no
+randomisation and no decay curve — see [ADR-0011](./adr/0011-home-ranking-is-deterministic.md).
+
+**Hide and restore.** Long-press a card to pin or hide it; screen-reader users
+get the same two options as accessibility actions, since a long press is not
+discoverable. Hidden cards are listed at the bottom of Home and come back with
+one tap — without a way back, "hide" reads as "delete".
+
+Pinning and hiding are device-local and are not synced.
+
 ## What Home still reads directly
 
 Four of the ten baselined couplings are gone. Six remain, and they are not

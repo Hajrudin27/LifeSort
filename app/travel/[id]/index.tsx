@@ -11,6 +11,7 @@ import Kicker from "@/components/Kicker";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
 import { useAccentTints } from "@/hooks/useAccentTints";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useTripsStore } from "@/store/useTripsStore";
 
 export default function TripDetailScreen() {
@@ -34,6 +35,7 @@ export default function TripDetailScreen() {
   );
   const myUserId = useTripsStore((s) => s.myUserId);
   const inviteParticipant = useTripsStore((s) => s.inviteParticipant);
+  const isEmailVerified = useAuthStore((s) => s.isEmailVerified);
   const removeParticipant = useTripsStore((s) => s.removeParticipant);
   const fetchParticipants = useTripsStore((s) => s.fetchParticipants);
 
@@ -94,6 +96,14 @@ export default function TripDetailScreen() {
 
   const sendInvite = async () => {
     setInviteError(null);
+
+    // En invitation forlader appen og lander i en fremmed indbakke, afsendt fra
+    // en adresse afsenderen ikke har bevist at eje. Bekræftelsen først (APP-018).
+    if (!isEmailVerified) {
+      setInviteError(t('auth.verifyRequiredBody'));
+      return;
+    }
+
     setIsInviting(true);
     const { error } = await inviteParticipant(trip.id, inviteEmail);
     setIsInviting(false);
@@ -105,7 +115,7 @@ export default function TripDetailScreen() {
     } else if (error === 'trip_not_found') {
       setInviteError(t('travel.inviteTripNotFoundError'));
     } else if (error) {
-      setInviteError(error);
+      setInviteError(t('auth.errorGeneric'));
     } else {
       setInviteEmail("");
       setShowInvite(false);

@@ -32,6 +32,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0011](./0011-home-ranking-is-deterministic.md) | Home's order is deterministic, and the user outranks the app | Accepted | 2026-09-07 | APP-012 |
 | [0012](./0012-monthly-review-reports-facts-not-judgement.md) | The monthly review reports facts, never judgement | Accepted | 2026-09-07 | APP-016 |
 | [0013](./0013-sign-up-asks-only-for-credentials.md) | Sign-up asks only for credentials | Accepted | 2026-09-07 | APP-017 |
+| [0014](./0014-auth-errors-never-reveal-whether-an-account-exists.md) | Auth errors never reveal whether an account exists | Accepted | 2026-09-07 | APP-018 |
 
 ## When an ADR is required
 

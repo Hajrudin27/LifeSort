@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
 
 import Button from '@/components/Button';
+import { signInErrorKey, signUpOutcome } from '@/core/auth/authErrors';
 import Card from '@/components/Card';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
@@ -45,17 +46,23 @@ export default function AuthScreen() {
     try {
       if (mode === 'signIn') {
         const { error: signInError } = await signIn(email.trim(), password);
-        if (signInError) setError(signInError);
+        // Providerens tekst når aldrig skærmen — den ville røbe, hvilke
+        // adresser der findes. Se core/auth/authErrors.ts.
+        const key = signInErrorKey(signInError);
+        if (key) setError(t(key));
       } else {
         const { error: signUpError, session: signUpSession } = await signUp(email.trim(), password);
-        if (signUpError) {
-          setError(signUpError);
-        } else if (!signUpSession) {
+        const outcome = signUpOutcome(signUpError, !!signUpSession);
+
+        if (outcome.kind === 'error') {
+          setError(t(outcome.key));
+        } else if (outcome.kind === 'check-inbox') {
+          // Samme svar, uanset om adressen var kendt i forvejen. Ejeren får en
+          // mail og kan komme videre; alle andre får intet at vide.
           Alert.alert(t('auth.signUpSuccessTitle'), t('auth.signUpSuccessBody'));
           setMode('signIn');
         } else {
-          // Session findes med det samme (email-bekræftelse er slået fra) —
-          // brugeren er allerede logget ind, send dem til PIN-oprettelse.
+          // Session med det samme: bekræftelse er slået fra i projektet.
           router.push('/onboarding-pin');
         }
       }

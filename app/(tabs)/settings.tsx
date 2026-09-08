@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 
 import { Text, useThemeColor } from "@/components/Themed";
+import VerifyEmailBanner from "@/components/VerifyEmailBanner";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useBrandTints } from "@/hooks/useBrandTints";
@@ -212,6 +213,9 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Pressable>
+
+      {/* Vises kun, hvis adressen mangler at blive bekræftet (APP-018). */}
+      <VerifyEmailBanner />
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>

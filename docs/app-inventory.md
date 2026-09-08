@@ -368,6 +368,7 @@ module that owns it.
 | `useColorScheme` (web) | `components/useColorScheme.web.ts` | `core-shell` | Hajrudin Kardasevic |
 | `LockScreen` | `components/LockScreen.tsx` | `account` | Hajrudin Kardasevic |
 | `PrivacyOverlay` | `components/PrivacyOverlay.tsx` | `account` | Hajrudin Kardasevic |
+| `VerifyEmailBanner` | `components/VerifyEmailBanner.tsx` | `account` | Hajrudin Kardasevic |
 | `AttachmentList` | `components/AttachmentList.tsx` | shared (attachments: `economy`, `warranties`) | Hajrudin Kardasevic |
 | `CategoryPicker` | `components/CategoryPicker.tsx` | `economy` | Hajrudin Kardasevic |
 | `ExpensePieChart` | `components/ExpensePieChart.tsx` | `economy` | Hajrudin Kardasevic |

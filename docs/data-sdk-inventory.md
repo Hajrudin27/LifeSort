@@ -81,7 +81,8 @@ One row per data type the app holds.
 
 | Data type | Module | Purpose | Location | Vendor | Retention | Sensitivity | Apple App Privacy | Google Data Safety |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Email address | `account` | Account identity and sign-in | cloud | Supabase | Held in `auth.users` until account deletion; removed by `delete_my_account` | personal | Contact Info › Email Address | Personal info › Email address |
+| Email address | `account` | Account identity and sign-in; confirmed before the account can invite anyone (APP-018) | cloud | Supabase | Held in `auth.users` until account deletion; removed by `delete_my_account` | personal | Contact Info › Email Address | Personal info › Email address |
+| Verification resend timestamp | `account` | Throttles how often the confirmation email can be re-sent | local | – | `lifesort-verification-last-sent` in AsyncStorage; cleared on sign-out | ordinary | Not collected (device-local) | Not collected (device-local) |
 | Password | `account` | Authentication | cloud | Supabase | Stored only as a hash by Supabase Auth; never held by the app | personal | Identifiers (credential) — not stored by app | Personal info › Other info (credentials) |
 | Auth session / refresh token | `account` | Keep the user signed in between launches | local | Supabase | Device keychain/keystore via `utils/auth/secureSessionStorage.ts`; cleared on sign-out | personal | Not collected (device-local credential) | Not collected (device-local credential) |
 | App-lock PIN | `account` | Optional local app lock | local | – | PBKDF2-SHA256 hash in SecureStore (`utils/auth/pinAuth.ts`); cleared by `clearLocalPin()` on logout and deletion | personal | Not collected (device-local) | Not collected (device-local) |

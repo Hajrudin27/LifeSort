@@ -47,6 +47,12 @@ used for anyway.
   device still in hand, and it keeps the current session alive.
 - What the app *can* show is the current session's sign-in time, so the screen
   is not empty.
+- Account deletion signs out with an explicit `global` scope. It is the one
+  place where closing every session is unambiguously right — the account no
+  longer exists, so every session anywhere is already invalid — but it is
+  written out rather than left to the library's default, so no reader has to
+  know what that default is. A test asserts no `signOut()` in the codebase
+  omits its scope.
 - A real device list needs an Edge Function calling the admin API on the user's
   behalf — a separate piece of work with its own authorisation surface, not
   something to fake in the client.

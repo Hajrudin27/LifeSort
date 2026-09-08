@@ -62,6 +62,15 @@ describe('almindeligt log ud rammer kun denne enhed', () => {
   it('lukker alt, inklusive denne enhed, når man beder om det', () => {
     expect(store).toContain("signOutWithScope('global')");
   });
+
+  it('ingen afmelding i kodebasen udelader sit scope', () => {
+    // Supabase' standard er `global`. Et scope-løst kald er derfor aldrig
+    // "bare et log ud" — det lukker alle brugerens enheder.
+    const files = ['store/useAuthStore.ts', 'core/auth/deleteAccount.ts', 'core/auth/clearLocalUserData.ts'];
+    for (const file of files) {
+      expect(read(file)).not.toMatch(/auth\.signOut\(\s*\)/);
+    }
+  });
 });
 
 describe('ærlighed om det, appen ikke kan', () => {

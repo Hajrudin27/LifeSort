@@ -82,7 +82,10 @@ export async function deleteAccount(
   // telefonen. Derfor ingen tidlig retur her.
   onStage?.('local');
   try {
-    await supabase.auth.signOut();
+    // Udtrykkeligt scope, som alle andre steder (ADR-0019). Her er `global`
+    // det rigtige: kontoen findes ikke længere, så enhver session på enhver
+    // enhed er alligevel ugyldig — og ingen af dem skal ligge og vente.
+    await supabase.auth.signOut({ scope: 'global' });
   } catch {
     // Sessionen er alligevel ugyldig nu.
   }

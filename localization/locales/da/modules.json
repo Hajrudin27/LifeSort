@@ -14,8 +14,8 @@
   "dataSafeNote": "Du kan altid hente dine data ud eller slette dem under Indstillinger.",
   "backButton": "Tilbage",
   "homeButton": "Gå til forsiden",
-  "settingsTitle": "Mine moduler",
-  "settingsDescription": "Vælg hvad LifeSort skal hjælpe dig med",
+  "settingsTitle": "Vælg moduler",
+  "settingsDescription": "Bestem hvad LifeSort hjælper dig med",
   "chooseTitle": "Hvad skal LifeSort hjælpe dig med?",
   "chooseSubtitle": "Slå de områder til, du har brug for. Du kan altid ændre det senere.",
   "dataKeptNote": "Slår du et område fra, bliver det skjult — dine data bliver liggende, og du kan slå det til igen når som helst.",
@@ -48,5 +48,14 @@
     "warranties": "Garantier, kvitteringer og forsikringer",
     "career": "Jobansøgninger og CV",
     "cycle": "Cyklus og symptomer"
-  }
+  },
+  "launcherTitle": "Mine moduler",
+  "launcherSubtitle": "Alt det, LifeSort hjælper dig med",
+  "launcherSearchPlaceholder": "Søg i dine moduler",
+  "launcherNoMatches": "Ingen moduler matcher “{{query}}”",
+  "launcherManage": "Vælg hvilke moduler du bruger",
+  "launcherEmpty": "Du har ikke valgt nogen moduler til endnu.",
+  "launcherPinAction": "Fastgør øverst",
+  "launcherUnpinAction": "Fjern fastgørelse",
+  "launcherPinnedBadge": "Fastgjort"
 }

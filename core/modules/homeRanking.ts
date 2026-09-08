@@ -77,3 +77,37 @@ export function rankHomeSnapshots(
 export function hiddenModuleIds(preferences: HomeLayoutPreferences): ModuleId[] {
   return MODULE_IDS.filter((moduleId) => preferences.hidden.includes(moduleId));
 }
+
+/**
+ * Rækkefølgen i modul-launcheren (APP-015).
+ *
+ * Samme regel som Home, minus det der ikke findes uden et kort: fastgjort først
+ * i brugerens rækkefølge, så senest brugt, så registret. Ét begreb om
+ * "fastgjort" på tværs af Home og launcher — fastgør man et modul ét sted,
+ * flytter det sig begge steder, hvilket er det, folk forventer.
+ *
+ * Skjulte kort er IKKE skjulte moduler: at tage et kort af Home er ikke det
+ * samme som ikke at ville bruge modulet, så launcheren viser dem alle.
+ */
+export function rankModuleIds(
+  moduleIds: ModuleId[],
+  preferences: HomeLayoutPreferences = EMPTY_HOME_LAYOUT,
+): ModuleId[] {
+  const pinnedRank = new Map(preferences.pinned.map((moduleId, index) => [moduleId, index]));
+
+  return [...moduleIds].sort((a, b) => {
+    const pinnedA = pinnedRank.get(a);
+    const pinnedB = pinnedRank.get(b);
+    if (pinnedA !== undefined || pinnedB !== undefined) {
+      if (pinnedA === undefined) return 1;
+      if (pinnedB === undefined) return -1;
+      if (pinnedA !== pinnedB) return pinnedA - pinnedB;
+    }
+
+    const openedA = preferences.lastOpenedAt[a] ?? '';
+    const openedB = preferences.lastOpenedAt[b] ?? '';
+    if (openedA !== openedB) return openedA < openedB ? 1 : -1;
+
+    return registryIndex(a) - registryIndex(b);
+  });
+}

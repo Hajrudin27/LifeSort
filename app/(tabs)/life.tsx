@@ -320,11 +320,38 @@ export default function LifeScreen() {
           onPress={() => router.push('/household/tasks/new')}
         />
       </View>
+      {/* Livs-fanen viser fem moduler med tal på. Launcheren viser dem alle —
+          alternativet til at gøre hvert modul til et tab. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('modules.launcherTitle')}
+        onPress={() => router.push('/modules')}
+        style={styles.launcherRow}
+      >
+        <Text style={styles.launcherText}>{t('modules.launcherTitle')}</Text>
+        <SymbolView
+          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+          size={16}
+          tintColor={textMuted}
+        />
+      </Pressable>
+
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  launcherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(128,128,128,0.3)',
+  },
+  launcherText: { fontSize: 15, fontWeight: '600' },
   content: {
     paddingBottom: 72,
   },

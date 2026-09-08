@@ -47,6 +47,7 @@ the rest of a module's metadata rather than in a second table.
 | --- | --- |
 | `id`, `availability`, `sensitivity`, `routeRoots` | Populated for all twelve modules |
 | `notificationCategory` | Set for the four modules that schedule reminders today |
+| `titleKey`, `descriptionKey` | Populated for all twelve; the launcher and the settings chooser render from them, so a new module needs no screen edits |
 | `requiredEntitlements` | Typed, unused — there is no entitlement model yet (APP-131) |
 | `homeSnapshot` | Implemented for four modules by APP-011, supplied by the shell rather than stored on the definition — see [`docs/home-snapshots.md`](./home-snapshots.md) |
 | `searchEntries` | **Undefined.** APP-077 |
@@ -82,6 +83,11 @@ reconciled, and a test keeps registry and inventory in step.
   `TOGGLEABLE_MODULE_IDS` and renders each module's `titleKey` and
   `descriptionKey`, so a new module appears there without touching the screen.
 - **Navigation** — the tab bar and the Life hub filter on the user's choice.
+- **The module launcher** (APP-015) at `/modules` — the alternative to turning
+  every module into a tab. It lists every module the user has enabled *and* that
+  is released, ordered by the same pin the Home cards use, with a search over
+  names and descriptions only. Reached from the Life hub; a module with neither
+  a tab nor a Home card is still findable there.
 
 ## Two axes, deliberately separate
 

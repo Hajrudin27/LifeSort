@@ -14,8 +14,8 @@
   "dataSafeNote": "You can always export or delete your data under Settings.",
   "backButton": "Back",
   "homeButton": "Go to Home",
-  "settingsTitle": "My modules",
-  "settingsDescription": "Choose what LifeSort helps you with",
+  "settingsTitle": "Choose modules",
+  "settingsDescription": "Decide what LifeSort helps you with",
   "chooseTitle": "What should LifeSort help you with?",
   "chooseSubtitle": "Turn on the areas you need. You can always change this later.",
   "dataKeptNote": "Turning an area off hides it — your data stays, and you can turn it back on whenever you like.",
@@ -48,5 +48,14 @@
     "warranties": "Warranties, receipts and insurance",
     "career": "Job applications and CV",
     "cycle": "Cycle and symptoms"
-  }
+  },
+  "launcherTitle": "My modules",
+  "launcherSubtitle": "Everything LifeSort helps you with",
+  "launcherSearchPlaceholder": "Search your modules",
+  "launcherNoMatches": "No modules match “{{query}}”",
+  "launcherManage": "Choose which modules you use",
+  "launcherEmpty": "You have not turned on any modules yet.",
+  "launcherPinAction": "Pin to top",
+  "launcherUnpinAction": "Unpin",
+  "launcherPinnedBadge": "Pinned"
 }

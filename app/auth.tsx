@@ -5,6 +5,7 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 're
 
 import Button from '@/components/Button';
 import { signInErrorKey, signUpOutcome } from '@/core/auth/authErrors';
+import { MIN_PASSWORD_LENGTH, newPasswordProblem } from '@/core/auth/passwordPolicy';
 import Card from '@/components/Card';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
@@ -21,6 +22,7 @@ export default function AuthScreen() {
   const danger = useThemeColor({}, 'danger');
 
   const signUp = useAuthStore((s) => s.signUp);
+  const sendPasswordReset = useAuthStore((s) => s.sendPasswordReset);
   const signIn = useAuthStore((s) => s.signIn);
 
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
@@ -31,6 +33,18 @@ export default function AuthScreen() {
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
+  const requestPasswordReset = async () => {
+    setError(null);
+    if (!isValidEmail) {
+      setError(t('auth.invalidEmailError'));
+      return;
+    }
+    await sendPasswordReset(email.trim());
+    // Samme kvittering, uanset om adressen findes. Ejeren får en mail; alle
+    // andre får intet at vide (ADR-0014).
+    Alert.alert(t('auth.resetSentTitle'), t('auth.resetSentBody'));
+  };
+
   const submit = async () => {
     setError(null);
 
@@ -38,9 +52,14 @@ export default function AuthScreen() {
       setError(t('auth.invalidEmailError'));
       return;
     }
-    if (password.length < 6) {
-      setError(t('auth.shortPasswordError'));
-      return;
+    // Kun ved oprettelse. Et eksisterende kodeord er allerede accepteret, og at
+    // måle det mod dagens regel ville låse brugeren ude af sin egen konto.
+    if (mode === 'signUp') {
+      const problem = newPasswordProblem(password);
+      if (problem) {
+        setError(t(problem, { min: MIN_PASSWORD_LENGTH }));
+        return;
+      }
     }
     setIsSubmitting(true);
     try {
@@ -85,8 +104,11 @@ export default function AuthScreen() {
             placeholder={t('auth.emailPlaceholder')}
             placeholderTextColor={borderColor}
             autoCapitalize="none"
+            autoCorrect={false}
             autoComplete="email"
+            textContentType="username"
             keyboardType="email-address"
+            inputMode="email"
             value={email}
             onChangeText={setEmail}
           />
@@ -96,7 +118,14 @@ export default function AuthScreen() {
             placeholderTextColor={borderColor}
             secureTextEntry
             autoCapitalize="none"
-            autoComplete="password"
+            autoCorrect={false}
+            // Ved oprettelse skal manageren tilbyde at GENERERE en kode, ikke
+            // udfylde den gamle. Det er forskellen på de to værdier her.
+            autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
+            textContentType={mode === 'signUp' ? 'newPassword' : 'password'}
+            // Uden en regel antager iOS sine egne krav og laver en kode, appen
+            // så afviser. Her står præcis dét, vi faktisk kræver.
+            passwordRules={`minlength: ${MIN_PASSWORD_LENGTH};`}
             value={password}
             onChangeText={setPassword}
           />
@@ -106,6 +135,16 @@ export default function AuthScreen() {
               køn er valgfrie og hører til bagefter — se APP-017. */}
           {mode === 'signUp' && (
             <Text style={{ color: textMuted, fontSize: 12, lineHeight: 17 }}>{t('auth.minimalFieldsNote')}</Text>
+          )}
+
+          {mode === 'signIn' && (
+            <Text
+              accessibilityRole="button"
+              style={[styles.switchLink, { color: tint, marginTop: 0 }]}
+              onPress={requestPasswordReset}
+            >
+              {t('auth.forgotPassword')}
+            </Text>
           )}
 
           {error && <Text style={{ color: danger, fontSize: 13 }}>{error}</Text>}

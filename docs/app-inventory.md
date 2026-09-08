@@ -81,7 +81,7 @@ itself is APP-005 and is **not** implemented here.
 | Module | Spec `ModuleId` | Observed availability | Route root(s) | Primary stores | Sensitivity | Owner |
 | --- | --- | --- | --- | --- | --- | --- |
 | `core-shell` | – (core platform, not a module in the spec) | available | `/`, `/life`, `/search`, `/modal`, `/modules`, `/review`, `_layout` | `useSettingsStore`, `useThemeStore`, `useSyncStatusStore`, `useTabBarStore`, `useToastStore`, `useModuleFlagsStore`, `useEnabledModulesStore`, `useHomeLayoutStore`, `useReviewStore` | ordinary | Hajrudin Kardasevic |
-| `account` | – (auth/profile shell) | available | `/auth`, `/language`, `/onboarding-*`, `/settings`, `/settings/*` | `useAuthStore`, `useProfileStore`, `useAppLockStore` | personal | Hajrudin Kardasevic |
+| `account` | – (auth/profile shell) | available | `/auth`, `/language`, `/onboarding-*`, `/new-password`, `/settings`, `/settings/*` | `useAuthStore`, `useProfileStore`, `useAppLockStore` | personal | Hajrudin Kardasevic |
 | `economy` | `economy` | available | `/economy`, `/economy/*`, `/expenses/*`, `/savings/*` | `useExpensesStore`, `useIncomeStore`, `useSavingsGoalsStore`, `useCategoriesStore` | ordinary, financial, document | Hajrudin Kardasevic |
 | `food` | `food` | available | `/food/*` | `useFoodStore` | ordinary, financial | Hajrudin Kardasevic |
 | `home` | `home` | available | `/household/*` | `useHouseholdStore` | ordinary | Hajrudin Kardasevic |
@@ -191,6 +191,7 @@ to Supabase tables in §3.
 | `/modules` | `app/modules.tsx` | `core-shell` | `useEnabledModulesStore`<br>`useHomeLayoutStore`<br>`useModuleFlagsStore` | ordinary | Hajrudin Kardasevic |
 | `/review` | `app/review.tsx` | `core-shell` | `useEnabledModulesStore`<br>`useReviewStore` | financial | Hajrudin Kardasevic |
 | `/onboarding-pin` | `app/onboarding-pin.tsx` | `account` | `useProfileStore` | personal | Hajrudin Kardasevic |
+| `/new-password` | `app/new-password.tsx` | `account` | `useAuthStore`<br>`useToastStore` | personal | Hajrudin Kardasevic |
 | `/onboarding-profile` | `app/onboarding-profile.tsx` | `account` | `useProfileStore` | personal | Hajrudin Kardasevic |
 | `/savings/[id]` | `app/savings/[id].tsx` | `economy` | `useSavingsGoalsStore` | financial | Hajrudin Kardasevic |
 | `/savings/allocate` | `app/savings/allocate.tsx` | `economy` | `useExpensesStore`<br>`useIncomeStore`<br>`useSavingsGoalsStore` | financial | Hajrudin Kardasevic |

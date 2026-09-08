@@ -1,4 +1,5 @@
 import { useFonts } from "expo-font";
+import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import {
   DarkTheme,
@@ -19,6 +20,7 @@ import LockScreen from "@/components/LockScreen";
 import ModuleGate from "@/components/ModuleGate";
 import PrivacyOverlay from "@/components/PrivacyOverlay";
 import Toast from "@/components/Toast";
+import { parseRecoveryLink } from "@/core/auth/recoveryLink";
 import { useColorScheme } from "@/components/useColorScheme";
 import { useRecordModuleVisit } from "@/core/modules/useModuleVisit";
 import Colors from "@/constants/Colors";
@@ -109,6 +111,7 @@ export default function RootLayout() {
   const fetchFood = useFoodStore((s) => s.fetchFromSupabase);
   const fetchCycle = useCycleStore((s) => s.fetchFromSupabase);
   const fetchModuleFlags = useModuleFlagsStore((s) => s.fetchFromSupabase);
+  const beginPasswordRecovery = useAuthStore((s) => s.beginPasswordRecovery);
   const fetchEnabledModules = useEnabledModulesStore((s) => s.fetchFromSupabase);
 
   const appLockHasHydrated = useAppLockStore((s) => s.hasHydrated);
@@ -126,6 +129,25 @@ export default function RootLayout() {
   // beholder store'en det sidst kendte svar fra disk.
   useEffect(() => {
     fetchModuleFlags();
+  }, []);
+
+  // Nulstillingslinket fra mailen. Klienten er sat op uden automatisk
+  // URL-håndtering (den hører til på web), så appen bytter selv linkets tokens
+  // til en session og sender brugeren videre til at vælge et nyt kodeord.
+  useEffect(() => {
+    const handleUrl = async (url: string | null) => {
+      if (!url) return;
+      const tokens = parseRecoveryLink(url);
+      if (!tokens) return;
+
+      const { error: recoveryError } = await beginPasswordRecovery(tokens);
+      if (!recoveryError) router.push("/new-password");
+    };
+
+    // Appen kan være startet AF linket, eller allerede have kørt.
+    Linking.getInitialURL().then(handleUrl);
+    const subscription = Linking.addEventListener("url", (event) => handleUrl(event.url));
+    return () => subscription.remove();
   }, []);
 
   useEffect(() => {
@@ -613,6 +635,10 @@ function RootLayoutNav({ language }: { language: string | null }) {
           <Stack.Screen
             name="review"
             options={{ title: t("review.title"), headerBackTitle: t("settings.title") }}
+          />
+          <Stack.Screen
+            name="new-password"
+            options={{ title: t("auth.newPasswordTitle"), presentation: "fullScreenModal" }}
           />
           <Stack.Screen
             name="cycle/history"

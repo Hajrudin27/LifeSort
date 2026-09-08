@@ -1,0 +1,22 @@
+-- Revisionssporet skal ikke kunne skrives af den det handler om.
+--
+-- Indsæt-policyen spurgte kun "er du admin?" — ikke om actor_id og actor_name svarede til
+-- den der skrev. Målt lokalt kunne en 'editor' indsætte denne linje gennem anon-klienten:
+--
+--   actor_name = 'Alice Ejer', action = 'deleted', entity_label = 'Alle opskrifter'
+--
+-- altså tilskrive sin egen handling en kollega. Loggen er det eneste sted rolleændringer,
+-- sletninger og svar på supportsager registreres, så en post der kan forfalskes er værre
+-- end ingen post: den ser troværdig ud.
+--
+-- Det er ikke nok at kræve actor_id = auth.uid(), for actor_name er et frit tekstfelt, og
+-- det er navnet der vises i panelet. Ingen klientkode skriver i tabellen — alle linjer
+-- oprettes af serverruter med service role-nøglen, som udleder aktøren fra den
+-- verificerede session. Policyen fjernes derfor helt.
+--
+-- service_role går uden om RLS, så ruterne er upåvirkede. Skulle nogen senere forsøge at
+-- logge direkte fra browseren, fejler det synligt frem for at snige sig igennem.
+drop policy if exists "Admins can insert activity log" on public.activity_log;
+-- Læseadgangen bevares: alle admins skal kunne se sporet.
+-- Der er stadig ingen UPDATE- eller DELETE-policy, så linjer kan hverken ændres eller
+-- slettes af nogen der ikke har service role-nøglen.;

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import { clearAllLocalData } from '@/utils/auth/clearAllLocalData';
+import { clearLocalUserData } from '@/core/auth/clearLocalUserData';
+import { LOCAL_STORE_RESETS } from '@/features/localStores';
 
 const BUCKET = 'attachments';
 
@@ -50,7 +51,7 @@ export async function deleteAccount(): Promise<DeleteAccountResult> {
   }
 
   await supabase.auth.signOut();
-  await clearAllLocalData();
+  await clearLocalUserData(LOCAL_STORE_RESETS);
 
   return { error: null };
 }

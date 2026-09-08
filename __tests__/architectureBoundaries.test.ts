@@ -26,9 +26,10 @@ const INVENTORY = fs.readFileSync(path.join(REPO_ROOT, 'docs', 'app-inventory.md
 const PLATFORM_MODULES = ['core-shell', 'account'];
 
 /**
- * utils-mapper der er platformservices frem for domænelogik. clearAllLocalData
- * (logout) og dataBackup (eksport) rører nødvendigvis alle domæner i dag; de
- * bliver til registry-opslag i APP-009/APP-021.
+ * utils-mapper der er platformservices frem for domænelogik. dataBackup
+ * (eksport) rører nødvendigvis alle domæner i dag; den bliver til et
+ * registry-opslag i APP-097. Logout gjorde det samme indtil APP-021, hvor
+ * nulstillingerne flyttede ud i features/localStores.ts.
  */
 const PLATFORM_UTILS_DIRS = ['shared', 'auth'];
 
@@ -54,22 +55,6 @@ const CORE_TRACK_FILES = [
  * bliver til opslag i module registry'et, og så forsvinder listen.
  */
 const CORE_BASELINE = [
-  // Logout rydder hver store manuelt. Erstattes af registry-clear i APP-021.
-  'utils/auth/clearAllLocalData.ts -> useCVStore',
-  'utils/auth/clearAllLocalData.ts -> useCareerStore',
-  'utils/auth/clearAllLocalData.ts -> useCategoriesStore',
-  'utils/auth/clearAllLocalData.ts -> useCycleStore',
-  'utils/auth/clearAllLocalData.ts -> useExpensesStore',
-  'utils/auth/clearAllLocalData.ts -> useFoodStore',
-  'utils/auth/clearAllLocalData.ts -> useHabitsStore',
-  'utils/auth/clearAllLocalData.ts -> useHouseholdStore',
-  'utils/auth/clearAllLocalData.ts -> useIncomeStore',
-  'utils/auth/clearAllLocalData.ts -> useLifeGoalsStore',
-  'utils/auth/clearAllLocalData.ts -> useSavingsGoalsStore',
-  'utils/auth/clearAllLocalData.ts -> useTodoStore',
-  'utils/auth/clearAllLocalData.ts -> useTripsStore',
-  'utils/auth/clearAllLocalData.ts -> useWarrantiesStore',
-
   // Backup-eksport læser hver store manuelt. Erstattes af exportHandler i APP-097.
   'utils/shared/dataBackup.ts -> useCVStore',
   'utils/shared/dataBackup.ts -> useCareerStore',

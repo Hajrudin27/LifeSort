@@ -2,10 +2,11 @@ import { Session } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import { create } from "zustand";
 
-import { clearResendThrottle, isEmailVerified, recordSentNow } from "@/core/auth/emailVerification";
+import { clearLocalUserData } from "@/core/auth/clearLocalUserData";
+import { isEmailVerified, recordSentNow } from "@/core/auth/emailVerification";
 import type { RecoveryTokens } from "@/core/auth/recoveryLink";
 import { supabase } from "@/lib/supabase";
-import { clearAllLocalData } from "@/utils/auth/clearAllLocalData";
+import { LOCAL_STORE_RESETS } from "@/features/localStores";
 
 interface AuthState {
   session: Session | null;
@@ -90,7 +91,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Ryd al lokal data FØR selve login-kaldet, så den nye brugers
     // data aldrig kan blandes med en tidligere, allerede-logget-ud
     // brugers lokale rester.
-    await clearAllLocalData();
+    await clearLocalUserData(LOCAL_STORE_RESETS);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -100,8 +101,6 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signOut: async () => {
     await supabase.auth.signOut();
-    await clearAllLocalData();
-    // Spærretiden hører til den konto, der lige er logget ud af.
-    await clearResendThrottle();
+    await clearLocalUserData(LOCAL_STORE_RESETS);
   },
 }));

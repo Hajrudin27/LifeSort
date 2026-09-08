@@ -20,3 +20,20 @@ jest.mock('@/lib/supabase', () => ({
     auth: { getUser: () => Promise.resolve({ data: { user: null } }) },
   },
 }));
+
+/**
+ * expo-notifications er et native-modul. Flere stores trækker en påmindelses-
+ * util ind ved import, og den kalder setNotificationHandler med det samme — så
+ * mocken skal have hele fladen, ikke bare det den enkelte test bruger.
+ */
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  scheduleNotificationAsync: jest.fn(() => Promise.resolve('id')),
+  cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+  cancelAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve()),
+  getAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve([])),
+  requestPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
+  getPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  SchedulableTriggerInputTypes: { DATE: 'date' },
+}));

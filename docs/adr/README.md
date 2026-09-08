@@ -30,6 +30,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0009](./0009-registry-is-the-single-source-of-module-metadata.md) | The module registry is the single source of module metadata | Accepted | 2026-09-07 | APP-009 |
 | [0010](./0010-module-choice-is-a-filter-not-a-deletion.md) | A user's module choice is a filter, never a deletion | Accepted | 2026-09-07 | APP-010 |
 | [0011](./0011-home-ranking-is-deterministic.md) | Home's order is deterministic, and the user outranks the app | Accepted | 2026-09-07 | APP-012 |
+| [0012](./0012-monthly-review-reports-facts-not-judgement.md) | The monthly review reports facts, never judgement | Accepted | 2026-09-07 | APP-016 |
 
 ## When an ADR is required
 

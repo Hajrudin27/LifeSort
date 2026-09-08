@@ -7,6 +7,7 @@ import { Alert, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Pressable, 
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
 import { resolveHomeGridState, skeletonCardCount } from '@/core/modules/homeGridState';
+import { previousMonthKey } from '@/core/modules/monthlyReview';
 import { isMaskable, MASKED_VALUE, resolveCardDetail } from '@/core/modules/homePrivacy';
 import { hiddenModuleIds, rankHomeSnapshots } from '@/core/modules/homeRanking';
 import { useHomeSnapshots } from '@/core/modules/homeSnapshots';
@@ -26,6 +27,7 @@ import { useFoodStore } from '@/store/useFoodStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
 import { useHomeLayoutStore } from '@/store/useHomeLayoutStore';
+import { useReviewStore } from '@/store/useReviewStore';
 import { useProfileStore } from '@/store/useProfileStore';
 import { useTodoStore } from '@/store/useTodoStore';
 import { useTripsStore } from '@/store/useTripsStore';
@@ -97,6 +99,14 @@ export default function HomeScreen() {
   const detail = useHomeLayoutStore((s) => s.detail);
   const setCardDetail = useHomeLayoutStore((s) => s.setCardDetail);
   const layoutHasHydrated = useHomeLayoutStore((s) => s.hasHydrated);
+  // Invitationen til det månedlige tilbageblik. Vises kun hvis brugeren ikke
+  // har fravalgt den — og først når indstillingen er læst, så den ikke blinker
+  // frem hos en, der har slået den fra.
+  const showReviewOnHome = useReviewStore((s) => s.showOnHome);
+  const reviewHasHydrated = useReviewStore((s) => s.hasHydrated);
+  const reviewMonthLabel = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(
+    new Date(`${previousMonthKey(now)}-01T12:00:00`),
+  );
 
   const rankedSnapshots = rankHomeSnapshots(snapshots, { pinned, hidden, lastOpenedAt });
   const hiddenCards = hiddenModuleIds({ pinned, hidden, lastOpenedAt });
@@ -595,6 +605,17 @@ export default function HomeScreen() {
         })}
       </View>
 
+      {reviewHasHydrated && showReviewOnHome && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('review.homeInvitation', { month: reviewMonthLabel })}
+          onPress={() => router.push('/review')}
+          style={styles.reviewRow}
+        >
+          <Text style={styles.reviewText}>{t('review.homeInvitation', { month: reviewMonthLabel })}</Text>
+        </Pressable>
+      )}
+
       {/* Uden en vej tilbage ville "skjul" i praksis være "slet kortet". */}
       {hiddenCards.length > 0 && (
         <>
@@ -619,6 +640,15 @@ export default function HomeScreen() {
 }
 
 const styles = {
+  reviewRow: {
+    minHeight: 44,
+    justifyContent: 'center' as const,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(128,128,128,0.3)',
+  },
+  reviewText: { fontSize: 15, fontWeight: '600' as const },
   emptyTitle: { fontSize: 15, fontWeight: '700' as const },
   emptyBody: { fontSize: 13, lineHeight: 19, marginTop: 4 },
   hiddenRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 8, backgroundColor: 'transparent' },

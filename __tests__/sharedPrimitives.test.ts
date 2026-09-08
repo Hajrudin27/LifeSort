@@ -73,7 +73,9 @@ const MONEY_FORMATTING_FILES = [
   // APP-011 flyttede Homes beløbsformatering herind. Den forsvandt ikke —
   // den flyttede, og skal med i frysningen, hvor den nu står.
   'features/economy/homeSnapshot.ts',
+  'features/economy/monthlyReview.ts',
   'features/food/homeSnapshot.ts',
+  'features/food/monthlyReview.ts',
 ];
 
 function sourceFiles(dirs: string[]): string[] {

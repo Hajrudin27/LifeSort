@@ -611,6 +611,10 @@ function RootLayoutNav({ language }: { language: string | null }) {
             options={{ title: t("modules.launcherTitle"), headerBackTitle: t("life.title") }}
           />
           <Stack.Screen
+            name="review"
+            options={{ title: t("review.title"), headerBackTitle: t("settings.title") }}
+          />
+          <Stack.Screen
             name="cycle/history"
             options={{
               title: t("cycle.historyLabel"),

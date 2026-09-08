@@ -1,0 +1,20 @@
+{
+  "title": "Monthly review",
+  "subtitle": "Numbers from your own records — nothing more, nothing less",
+  "homeInvitation": "See your review for {{month}}",
+  "emptyTitle": "Nothing recorded in {{month}}",
+  "emptyBody": "The review only shows what you entered yourself. There is nothing to summarise for that month.",
+  "showOnHomeLabel": "Show the review on Home",
+  "showOnHomeHint": "This page stays either way.",
+  "factsNote": "Every number comes from your own records in the selected month.",
+  "economySpent": "{{amount}} kr. in expenses across {{count}} entries",
+  "economyIncome": "{{amount}} kr. recorded as income",
+  "economySaved": "{{amount}} kr. set aside",
+  "economyWithdrawn": "{{amount}} kr. taken out of savings",
+  "foodSpent": "{{amount}} kr. spent on food across {{count}} purchases",
+  "foodBudget": "The month's food budget was {{budget}} kr.",
+  "tasksCreated": "{{count}} to-dos created",
+  "tasksCompleted": "{{count}} to-dos completed",
+  "habitsLogged": "{{count}} entries across {{habits}} habits",
+  "homeTasksDone": "{{count}} household tasks done"
+}

@@ -1,0 +1,20 @@
+{
+  "title": "Månedligt tilbageblik",
+  "subtitle": "Tal fra dine egne poster — hverken mere eller mindre",
+  "homeInvitation": "Se dit tilbageblik for {{month}}",
+  "emptyTitle": "Ingenting registreret i {{month}}",
+  "emptyBody": "Tilbageblikket viser kun det, du selv har skrevet ind. Der er intet at samle op på for den måned.",
+  "showOnHomeLabel": "Vis tilbageblik på forsiden",
+  "showOnHomeHint": "Siden her bliver, uanset hvad du vælger.",
+  "factsNote": "Alle tal kommer fra dine egne poster i den valgte måned.",
+  "economySpent": "{{amount}} kr. i udgifter fordelt på {{count}} poster",
+  "economyIncome": "{{amount}} kr. registreret som indtægt",
+  "economySaved": "{{amount}} kr. lagt til side",
+  "economyWithdrawn": "{{amount}} kr. taget ud af opsparingen",
+  "foodSpent": "{{amount}} kr. brugt på mad fordelt på {{count}} indkøb",
+  "foodBudget": "Månedens madbudget var {{budget}} kr.",
+  "tasksCreated": "{{count}} gøremål oprettet",
+  "tasksCompleted": "{{count}} gøremål klaret",
+  "habitsLogged": "{{count}} registreringer på {{habits}} vaner",
+  "homeTasksDone": "{{count}} opgaver i hjemmet klaret"
+}

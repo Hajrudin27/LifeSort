@@ -231,6 +231,14 @@ export default function SettingsScreen() {
             description: t("modules.settingsDescription"),
             onPress: () => router.push("/settings/modules"),
           })}
+          {/* Bliver her, også hvis brugeren har fravalgt invitationen på
+              forsiden — et fravalg må ikke også være en aflåsning. */}
+          {renderRow({
+            icon: { ios: "calendar", android: "event", web: "event" },
+            title: t("review.title"),
+            description: t("review.subtitle"),
+            onPress: () => router.push("/review"),
+          })}
         </View>
       </View>
 

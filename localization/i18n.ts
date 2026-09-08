@@ -23,6 +23,7 @@ import da_life from './locales/da/life.json';
 import da_lifeGoals from './locales/da/lifeGoals.json';
 import da_modules from './locales/da/modules.json';
 import da_profile from './locales/da/profile.json';
+import da_review from './locales/da/review.json';
 import da_savings from './locales/da/savings.json';
 import da_search from "./locales/da/search.json";
 import da_deleteAccount from './locales/da/deleteAccount.json';
@@ -53,6 +54,7 @@ import en_life from './locales/en/life.json';
 import en_lifeGoals from './locales/en/lifeGoals.json';
 import en_modules from './locales/en/modules.json';
 import en_profile from './locales/en/profile.json';
+import en_review from './locales/en/review.json';
 import en_savings from './locales/en/savings.json';
 import en_search from "./locales/en/search.json";
 import en_deleteAccount from './locales/en/deleteAccount.json';
@@ -68,6 +70,7 @@ const resources = {
       home: da_home,
       economy: da_economy,
       expenses: da_expenses,
+      review: da_review,
       savings: da_savings,
       warranties: da_warranties,
       travel: da_travel,
@@ -100,6 +103,7 @@ const resources = {
       home: en_home,
       economy: en_economy,
       expenses: en_expenses,
+      review: en_review,
       savings: en_savings,
       warranties: en_warranties,
       travel: en_travel,

@@ -243,6 +243,7 @@ Recorded as facts. **None are fixed by APP-002**; each belongs to a later story.
 | D13 | Bundle identifier is still the scaffold default. | `app.json` sets `com.anonymous.LifeSort`. It must be production-final before the first submission, and before any verified deep link. | APP-158 |
 | D14 | Attachment filenames use `Date.now()` plus `Math.random()`. | `utils/shared/attachmentStorage.ts` builds local filenames this way. The specification requires CSPRNG identifiers for new platform code. | APP-030 |
 | D15 | Trip attachments are local-only, unlike every other attachment. | `AttachmentOwnerType` in `utils/shared/attachmentSync.ts` is `'warranty' \| 'expense'`; `TripAttachmentGrid` calls `persistFile` and stops. A boarding pass attached to a trip does not survive a reinstall or a new device, and never appears in the `attachments` table. Found while writing `docs/shared-primitives.md`; the earlier version of this row wrongly implied trip files were uploaded. | APP-058 |
+| D16 | The public deletion page is written but not deployed. | Google Play requires a web deletion route; `web/account-deletion/index.html` implements it and `core/config/publicUrls.ts` holds the URL, but the page must be published at that address and the domain confirmed before submission. Until then the Play Console field cannot be filled truthfully. | APP-023 (deploy), APP-163 |
 
 ## §7 What this inventory does not answer
 

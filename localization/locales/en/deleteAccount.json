@@ -20,5 +20,8 @@
   "whatIsDeletedTitle": "This gets deleted",
   "whatIsDeletedBody": "Your account and everything in it: expenses, savings, trips, warranties, tasks, habits, goals, career and cycle — and every file you uploaded.",
   "whatIsKeptTitle": "This takes a little longer",
-  "whatIsKeptBody": "Backups held by our database provider roll over on their normal schedule. We do not use them for anything, and they expire on their own."
+  "whatIsKeptBody": "Backups held by our database provider roll over on their normal schedule. We do not use them for anything, and they expire on their own.",
+  "webAlternativeTitle": "Without the app",
+  "webAlternativeBody": "You can also delete your account from {{url}} — including after uninstalling LifeSort.",
+  "openWebDeletion": "Open deletion in the browser"
 }

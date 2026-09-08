@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Slet din LifeSort-konto</title>
+
+  <!--
+    Sletning af konto uden appen (APP-023).
+
+    Google Play kræver, at en bruger kan bede om sletning fra en webadresse,
+    også efter at have afinstalleret appen. Siden her er den adresse.
+
+    Tre ting er bevidste:
+
+    1. Identiteten bevises med adgangskoden, ikke med en e-mailadresse. Kunne
+       man slette en konto ved at skrive en fremmed adresse, ville siden være
+       et våben frem for en rettighed.
+    2. Siden bruger den samme delete_my_account som appen. Ét sted at rette,
+       og ingen risiko for at web og app sletter forskellige ting.
+    3. Ingen analytics, ingen skrifttyper udefra, ingen sporing. Den, der
+       lander her, er ved at forlade os; at måle på det ville være upassende.
+
+    Udgivelse: erstat de to pladsholdere nedenfor med projektets URL og
+    publishable key. Begge er offentlige værdier — de ligger allerede i
+    app-bundtet. Servicenøglen må ALDRIG stå her.
+  -->
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #fdf6ed;
+      --surface: #fffdfa;
+      --text: #16130f;
+      --muted: #6b625a;
+      --border: #e4d9cc;
+      --danger: #b3261e;
+      --accent: #9c2b52;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16130f;
+        --surface: #211d18;
+        --text: #fdf6ed;
+        --muted: #a89c90;
+        --border: #3a332c;
+        --danger: #f2b8b5;
+        --accent: #e8a0bf;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 16px 64px;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 34rem; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+    h2 { font-size: 1.05rem; margin: 1.75rem 0 .5rem; }
+    p { margin: .5rem 0; }
+    .muted { color: var(--muted); font-size: .93rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    label { display: block; font-weight: 600; font-size: .9rem; margin: .75rem 0 .25rem; }
+    input {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    button {
+      width: 100%;
+      min-height: 48px;
+      margin-top: 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      background: var(--danger);
+      border: 0;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    button[disabled] { opacity: .5; cursor: not-allowed; }
+    .status { margin-top: 12px; font-size: .93rem; }
+    .status[data-kind="error"] { color: var(--danger); }
+    .lang { display: flex; gap: 8px; justify-content: flex-end; }
+    .lang button {
+      width: auto; min-height: 36px; margin: 0; padding: 4px 12px; font-size: .85rem;
+      background: transparent; color: var(--accent); border: 1px solid var(--border);
+    }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="lang">
+      <button type="button" data-set-lang="da">Dansk</button>
+      <button type="button" data-set-lang="en">English</button>
+    </div>
+
+    <h1 data-i18n="title">Slet din LifeSort-konto</h1>
+    <p class="muted" data-i18n="intro">
+      Log ind med din LifeSort-konto for at slette den. Vi beder om adgangskoden, fordi
+      vi skal være sikre på, at det er dig — ikke bare nogen, der kender din e-mailadresse.
+    </p>
+
+    <div class="card">
+      <h2 data-i18n="deletedTitle">Det her bliver slettet</h2>
+      <p class="muted" data-i18n="deletedBody">
+        Din konto og alt indhold: udgifter, opsparing, rejser, garantier, opgaver, vaner,
+        mål, karriere og cyklus — og alle filer, du har lagt op.
+      </p>
+      <h2 data-i18n="keptTitle">Det her kan tage lidt længere</h2>
+      <p class="muted" data-i18n="keptBody">
+        Sikkerhedskopier hos vores databaseudbyder overskrives efter deres almindelige plan.
+        Vi bruger dem ikke til noget, og de forsvinder af sig selv.
+      </p>
+    </div>
+
+    <form class="card" id="form" novalidate>
+      <label for="email" data-i18n="emailLabel">E-mail</label>
+      <input id="email" name="email" type="email" autocomplete="username" required />
+
+      <label for="password" data-i18n="passwordLabel">Adgangskode</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+      <label for="confirm" data-i18n="confirmLabel">Skriv din e-mail igen for at bekræfte</label>
+      <input id="confirm" name="confirm" type="email" autocomplete="off" required />
+
+      <button type="submit" id="submit" data-i18n="submit">Slet min konto permanent</button>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </form>
+
+    <p class="muted" data-i18n="appNote">
+      Har du stadig appen, kan du også slette kontoen under Indstillinger.
+    </p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script>
+    // Udfyldes ved udgivelse. Begge værdier er offentlige og ligger allerede i
+    // app-bundtet; servicenøglen hører ikke hjemme her.
+    var SUPABASE_URL = '__SUPABASE_URL__';
+    var SUPABASE_PUBLISHABLE_KEY = '__SUPABASE_PUBLISHABLE_KEY__';
+
+    var COPY = {
+      da: {
+        title: 'Slet din LifeSort-konto',
+        intro: 'Log ind med din LifeSort-konto for at slette den. Vi beder om adgangskoden, fordi vi skal være sikre på, at det er dig — ikke bare nogen, der kender din e-mailadresse.',
+        deletedTitle: 'Det her bliver slettet',
+        deletedBody: 'Din konto og alt indhold: udgifter, opsparing, rejser, garantier, opgaver, vaner, mål, karriere og cyklus — og alle filer, du har lagt op.',
+        keptTitle: 'Det her kan tage lidt længere',
+        keptBody: 'Sikkerhedskopier hos vores databaseudbyder overskrives efter deres almindelige plan. Vi bruger dem ikke til noget, og de forsvinder af sig selv.',
+        emailLabel: 'E-mail',
+        passwordLabel: 'Adgangskode',
+        confirmLabel: 'Skriv din e-mail igen for at bekræfte',
+        submit: 'Slet min konto permanent',
+        appNote: 'Har du stadig appen, kan du også slette kontoen under Indstillinger.',
+        mismatch: 'De to e-mailadresser er ikke ens.',
+        working: 'Sletter …',
+        wrong: 'E-mail eller adgangskode passer ikke.',
+        admin: 'Denne konto kan ikke slettes herfra. Skriv til support.',
+        failed: 'Noget gik galt. Prøv igen.',
+        done: 'Din konto er slettet. Du kan lukke siden.'
+      },
+      en: {
+        title: 'Delete your LifeSort account',
+        intro: 'Sign in with your LifeSort account to delete it. We ask for the password because we need to be sure it is you — not simply someone who knows your email address.',
+        deletedTitle: 'This gets deleted',
+        deletedBody: 'Your account and everything in it: expenses, savings, trips, warranties, tasks, habits, goals, career and cycle — and every file you uploaded.',
+        keptTitle: 'This takes a little longer',
+        keptBody: 'Backups held by our database provider roll over on their normal schedule. We do not use them for anything, and they expire on their own.',
+        emailLabel: 'Email',
+        passwordLabel: 'Password',
+        confirmLabel: 'Type your email again to confirm',
+        submit: 'Permanently delete my account',
+        appNote: 'If you still have the app, you can also delete the account under Settings.',
+        mismatch: 'The two email addresses do not match.',
+        working: 'Deleting …',
+        wrong: 'That email or password is not right.',
+        admin: 'This account cannot be deleted here. Please contact support.',
+        failed: 'Something went wrong. Try again.',
+        done: 'Your account has been deleted. You can close this page.'
+      }
+    };
+
+    var lang = (navigator.language || 'da').slice(0, 2) === 'en' ? 'en' : 'da';
+
+    function applyLanguage() {
+      document.documentElement.lang = lang;
+      var strings = COPY[lang];
+      document.querySelectorAll('[data-i18n]').forEach(function (node) {
+        var key = node.getAttribute('data-i18n');
+        if (strings[key]) node.textContent = strings[key];
+      });
+    }
+
+    document.querySelectorAll('[data-set-lang]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        lang = button.getAttribute('data-set-lang');
+        applyLanguage();
+      });
+    });
+
+    applyLanguage();
+
+    var form = document.getElementById('form');
+    var status = document.getElementById('status');
+    var submit = document.getElementById('submit');
+
+    function say(message, kind) {
+      status.textContent = message;
+      status.setAttribute('data-kind', kind || 'info');
+    }
+
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      var strings = COPY[lang];
+      var email = document.getElementById('email').value.trim();
+      var password = document.getElementById('password').value;
+      var confirm = document.getElementById('confirm').value.trim();
+
+      // Bekræftelsen findes for at et fejlklik ikke er nok. Den beviser ingenting
+      // — det gør adgangskoden.
+      if (email.toLowerCase() !== confirm.toLowerCase()) {
+        say(strings.mismatch, 'error');
+        return;
+      }
+
+      submit.disabled = true;
+      say(strings.working);
+
+      try {
+        var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+          auth: { persistSession: false }
+        });
+
+        var signIn = await client.auth.signInWithPassword({ email: email, password: password });
+        if (signIn.error) {
+          // Samme svar for forkert kodeord og ukendt bruger — ellers kunne
+          // siden bruges til at finde ud af, hvem der har en konto.
+          say(strings.wrong, 'error');
+          submit.disabled = false;
+          return;
+        }
+
+        var deletion = await client.rpc('delete_my_account');
+        if (deletion.error) {
+          var message = deletion.error.message || '';
+          say(message.indexOf('admin_account') !== -1 ? strings.admin : strings.failed, 'error');
+          submit.disabled = false;
+          return;
+        }
+
+        await client.auth.signOut();
+        form.hidden = true;
+        say(strings.done);
+      } catch (error) {
+        say(COPY[lang].failed, 'error');
+        submit.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

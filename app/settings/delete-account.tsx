@@ -1,7 +1,7 @@
 import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, TextInput } from 'react-native';
+import { Linking, Pressable, ScrollView, TextInput } from 'react-native';
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
@@ -10,6 +10,7 @@ import { sharedStyles } from '@/constants/sharedStyles';
 import { supabase } from '@/lib/supabase';
 import { useToastStore } from '@/store/useToastStore';
 import { type DeleteAccountStage, deleteAccount } from '@/core/auth/deleteAccount';
+import { ACCOUNT_DELETION_URL } from '@/core/config/publicUrls';
 
 export default function DeleteAccountScreen() {
   const { t } = useTranslation();
@@ -142,6 +143,24 @@ export default function DeleteAccountScreen() {
         disabled={!canDelete}
         onPress={handleDelete}
       />
+
+      {/* Google Play kræver, at sletning også kan ske fra en webadresse — også
+          efter afinstallation. Adressen står ét sted, så app og Play Console
+          ikke kan komme til at sige forskelligt (APP-023). */}
+      <Card style={sharedStyles.card}>
+        <Text style={{ fontWeight: '600' }}>{t('deleteAccount.webAlternativeTitle')}</Text>
+        <Text style={[{ fontSize: 13 }, { color: textMuted }]}>
+          {t('deleteAccount.webAlternativeBody', { url: ACCOUNT_DELETION_URL })}
+        </Text>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel={t('deleteAccount.openWebDeletion')}
+          onPress={() => Linking.openURL(ACCOUNT_DELETION_URL)}
+          style={{ minHeight: 44, justifyContent: 'center' }}
+        >
+          <Text style={{ fontWeight: '600' }}>{t('deleteAccount.openWebDeletion')}</Text>
+        </Pressable>
+      </Card>
     </ScrollView>
   );
 }

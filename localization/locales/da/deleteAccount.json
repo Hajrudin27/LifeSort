@@ -20,5 +20,8 @@
   "whatIsDeletedTitle": "Det her bliver slettet",
   "whatIsDeletedBody": "Din konto og alt indhold: udgifter, opsparing, rejser, garantier, opgaver, vaner, mål, karriere og cyklus — og alle filer, du har lagt op.",
   "whatIsKeptTitle": "Det her kan tage lidt længere",
-  "whatIsKeptBody": "Sikkerhedskopier hos vores databaseudbyder overskrives efter deres almindelige plan. Vi bruger dem ikke til noget, og de forsvinder af sig selv."
+  "whatIsKeptBody": "Sikkerhedskopier hos vores databaseudbyder overskrives efter deres almindelige plan. Vi bruger dem ikke til noget, og de forsvinder af sig selv.",
+  "webAlternativeTitle": "Uden appen",
+  "webAlternativeBody": "Du kan også slette din konto fra {{url}} — også hvis du har afinstalleret LifeSort.",
+  "openWebDeletion": "Åbn sletning i browseren"
 }

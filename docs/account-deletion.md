@@ -63,6 +63,49 @@ There are no third-party providers yet — no bank connection, no AI vendor — 
 there is no provider-derived data to delete. That changes with the Open Banking
 and AI work, and this list must change with it.
 
+## Deleting without the app (APP-023)
+
+Google Play requires a **web address** where someone can delete their account
+without installing the app — including after uninstalling it. Apple requires the
+in-app path; Google requires both.
+
+**The page:** [`web/account-deletion/index.html`](../web/account-deletion/index.html),
+a single self-contained file with no build step and no dependency beyond the
+Supabase client.
+
+**Identity is proved by password**, not by typing an address. If an email
+address alone were enough, the page would be a weapon rather than a right. The
+address is typed twice as well, but that only guards against a mis-tap — the
+password is what proves anything.
+
+It calls the **same** `delete_my_account` as the app, so the two can never end
+up deleting different things, and it gives the same answer for a wrong password
+as for an unknown account (ADR-0014).
+
+There is no analytics on it. Someone reaching this page is leaving; measuring
+that would be the wrong instinct.
+
+### Deploying it
+
+1. Copy `web/account-deletion/index.html` to the public site at the path in
+   `ACCOUNT_DELETION_URL`.
+2. Replace `__SUPABASE_URL__` and `__SUPABASE_PUBLISHABLE_KEY__` with the
+   project's values. Both are public and already ship inside the app bundle.
+   The **service key must never appear here** — a test asserts the file
+   contains no key at all.
+3. Confirm the page loads over HTTPS and is reachable without signing in to
+   anything else.
+
+### Play Console
+
+Under **App content → Data safety → Data deletion**, give the same URL that
+`core/config/publicUrls.ts` holds. The app links to that constant too, so the
+two cannot drift.
+
+> **The domain is an assumption.** `PUBLIC_SITE_ORIGIN` is set to
+> `https://lifesort.dk`. Confirm it before the first store submission — a URL
+> that does not resolve fails Play review.
+
 ## What is not verified here
 
 `delete_my_account` lives in the Supabase project and is **not** version

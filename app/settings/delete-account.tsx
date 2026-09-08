@@ -9,7 +9,7 @@ import { Text, useThemeColor } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { supabase } from '@/lib/supabase';
 import { useToastStore } from '@/store/useToastStore';
-import { deleteAccount } from '@/utils/auth/deleteAccount';
+import { type DeleteAccountStage, deleteAccount } from '@/core/auth/deleteAccount';
 
 export default function DeleteAccountScreen() {
   const { t } = useTranslation();
@@ -25,6 +25,10 @@ export default function DeleteAccountScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Hvor langt sletningen er nået. Brugeren skal kunne se hvad der sker med
+  // sine data, ikke bare at noget kører (APP-022).
+  const [stage, setStage] = useState<DeleteAccountStage | null>(null);
+  const [filesGone, setFilesGone] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
@@ -51,15 +55,18 @@ export default function DeleteAccountScreen() {
       return;
     }
 
-    const result = await deleteAccount();
+    const result = await deleteAccount(setStage);
 
-    if (result.error === 'admin_account') {
-      setError(t('deleteAccount.adminAccountError'));
-      setIsDeleting(false);
-      return;
-    }
-    if (result.error) {
-      setError(t('deleteAccount.genericError'));
+    if (!result.ok) {
+      // Filerne fjernes før kontoen, fordi kun en levende session må røre dem.
+      // Går det galt derefter, skal brugeren vide det — ikke opdage det senere.
+      setFilesGone(result.filesAlreadyDeleted);
+      setError(
+        result.reason === 'admin_account'
+          ? t('deleteAccount.adminAccountError')
+          : t('deleteAccount.genericError'),
+      );
+      setStage(null);
       setIsDeleting(false);
       return;
     }
@@ -77,6 +84,13 @@ export default function DeleteAccountScreen() {
         <Text style={{ fontWeight: '600' }}>{t('deleteAccount.heading')}</Text>
         <Text style={[{ fontSize: 13 }, { color: textMuted }]}>{t('deleteAccount.explanation')}</Text>
         <Text style={[{ fontSize: 13 }, { color: textMuted }]}>{t('deleteAccount.permanentWarning')}</Text>
+      </Card>
+
+      <Card style={sharedStyles.card}>
+        <Text style={{ fontWeight: '600' }}>{t('deleteAccount.whatIsDeletedTitle')}</Text>
+        <Text style={[{ fontSize: 13 }, { color: textMuted }]}>{t('deleteAccount.whatIsDeletedBody')}</Text>
+        <Text style={{ fontWeight: '600', marginTop: 8 }}>{t('deleteAccount.whatIsKeptTitle')}</Text>
+        <Text style={[{ fontSize: 13 }, { color: textMuted }]}>{t('deleteAccount.whatIsKeptBody')}</Text>
       </Card>
 
       <Card style={sharedStyles.card}>
@@ -106,6 +120,20 @@ export default function DeleteAccountScreen() {
         />
 
         {error && <Text style={{ color: danger, fontSize: 13 }}>{error}</Text>}
+        {filesGone && (
+          <Text style={{ color: danger, fontSize: 13 }}>{t('deleteAccount.filesGoneWarning')}</Text>
+        )}
+        {stage && (
+          <Text accessibilityLiveRegion="polite" style={[{ fontSize: 13 }, { color: textMuted }]}>
+            {t(
+              stage === 'files'
+                ? 'deleteAccount.stageFiles'
+                : stage === 'account'
+                  ? 'deleteAccount.stageAccount'
+                  : 'deleteAccount.stageLocal',
+            )}
+          </Text>
+        )}
       </Card>
 
       <Button

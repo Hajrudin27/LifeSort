@@ -84,7 +84,7 @@ specification §3.2. R6 implements that reading.
 `CORE_BASELINE` in the boundary test holds the 28 edges where core reaches into
 a domain today, all of them in two files:
 
-- `utils/auth/clearAllLocalData.ts` clears 14 domain stores by hand on logout.
+- `core/auth/clearLocalUserData.ts` clears 14 domain stores by hand on logout.
 - `utils/shared/dataBackup.ts` reads 14 domain stores by hand on export.
 
 Both are the same missing abstraction: there is no registry to ask "which

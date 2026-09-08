@@ -310,7 +310,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `trip_packing_items` | `travel` | `store/useTripsStore.ts` | ordinary | Hajrudin Kardasevic |
 | `trip_participants` | `travel` | `store/useTripsStore.ts` | personal | Hajrudin Kardasevic |
 | `warranties` | `warranties` | `store/useWarrantiesStore.ts` | document, financial | Hajrudin Kardasevic |
-| `attachments` | shared (`economy`, `warranties`, `travel`) | `utils/shared/attachmentSync.ts`, `utils/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
+| `attachments` | shared (`economy`, `warranties`, `travel`) | `utils/shared/attachmentSync.ts`, `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
 | `job_applications` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
 | `skills` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
 | `cv_personal_info` | `career` | `store/useCVStore.ts` | personal | Hajrudin Kardasevic |
@@ -330,7 +330,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 
 | Bucket | Module | Access point | Sensitivity | Owner |
 | --- | --- | --- | --- | --- |
-| `attachments` | shared (`economy`, `warranties`, `travel`) | `utils/shared/attachmentSync.ts` (upload / remove / short-lived signed URL), `utils/auth/deleteAccount.ts` (delete on account deletion) | document | Hajrudin Kardasevic |
+| `attachments` | shared (`economy`, `warranties`, `travel`) | `utils/shared/attachmentSync.ts` (upload / remove / short-lived signed URL), `core/auth/deleteAccount.ts` (delete on account deletion) | document | Hajrudin Kardasevic |
 
 ## §5 Shared component inventory
 
@@ -397,7 +397,7 @@ Directory-level map of the remaining shared code. Not enforced by the test.
 | Module | Domain logic | Types | Localization namespaces |
 | --- | --- | --- | --- |
 | `core-shell` | `utils/shared/` (`localDate`, `monthKey`, `dateDays`, `greeting`, `pieChartMath`, `lastWeekdayOfMonth`, `syncQueue`, `dataBackup`, `backupValidation`, `imageCompression`, `attachmentStorage`, `attachmentSync`), `hooks/` | `types/attachment.ts` | `common`, `home`, `life`, `search`, `about`, `datePicker` |
-| `account` | `utils/auth/` (`pinAuth`, `pinLockout`, `secureSessionStorage`, `clearAllLocalData`, `deleteAccount`) | `types/profile.ts` | `auth`, `profile`, `settings`, `appLock`, `deleteAccount`, `backup`, `language` |
+| `account` | `utils/auth/` (`pinAuth`, `pinLockout`, `secureSessionStorage`, `clearLocalUserData`, `deleteAccount`) | `types/profile.ts` | `auth`, `profile`, `settings`, `appLock`, `deleteAccount`, `backup`, `language` |
 | `economy` | `utils/expense/`, `utils/savings/` | `types/expense.ts`, `types/savingsGoal.ts` | `expenses`, `economy`, `savings` |
 | `food` | `utils/food/`, `data/seedRecipes*.ts` | `types/food.ts` | `food` |
 | `home` | `utils/household/` | `types/household.ts` | `household` |
@@ -437,7 +437,7 @@ later story.
 | F5 | Cross-module store import outside Home. | `app/todos/new.tsx` reads `useCycleStore` (health data) inside the `tasks` module; `app/(tabs)/economy.tsx` reads `useFoodStore`, `useTripsStore` and `useWarrantiesStore`. | APP-003, APP-039 |
 | F6 | Search reads five domain stores directly. | `app/search.tsx` references `useExpensesStore`, `useHabitsStore`, `useLifeGoalsStore`, `useTodoStore`, `useWarrantiesStore`. | APP-077 |
 | F7 | Sync is best-effort per store, with no outbox, revisions or tombstones. | `utils/shared/syncQueue.ts` swallows flush failures by design; stores upsert optimistically and report failures to `useSyncStatusStore`. | APP-031 – APP-035 |
-| F8 | Local backup export omits the health domain. | `utils/shared/dataBackup.ts` `STORE_REGISTRY` covers 15 stores but not `useCycleStore`; `utils/auth/clearAllLocalData.ts` does clear it. Intentional or not, it is undocumented behaviour. | APP-097 |
+| F8 | Local backup export omits the health domain. | `utils/shared/dataBackup.ts` `STORE_REGISTRY` covers 15 stores but not `useCycleStore`; `core/auth/clearLocalUserData.ts` does clear it. Intentional or not, it is undocumented behaviour. | APP-097 |
 | F9 | Two stores write the same table. | `store/useSettingsStore.ts` and `store/useThemeStore.ts` both upsert `settings`. | APP-009 |
 | F10 | The schema is almost entirely unversioned. | `supabase/migrations/` now exists but holds only `module_flags` (added by APP-006). Every other table in §4 is inferred from client calls and lives only in the Supabase project. A baseline migration is still missing. | APP-141 |
 

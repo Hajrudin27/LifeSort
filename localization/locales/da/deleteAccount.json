@@ -12,5 +12,13 @@
   "done": "Din konto og alle dine data er slettet.",
   "wrongPassword": "Forkert adgangskode.",
   "adminAccountError": "Denne konto har adgang til admin-panelet og kan ikke slettes herfra. Kontakt en ejer.",
-  "genericError": "Kontoen kunne ikke slettes. Prøv igen, eller skriv til support."
+  "genericError": "Kontoen kunne ikke slettes. Prøv igen, eller skriv til support.",
+  "stageFiles": "Fjerner dine filer …",
+  "stageAccount": "Sletter kontoen …",
+  "stageLocal": "Rydder telefonen …",
+  "filesGoneWarning": "Dine filer er allerede fjernet, men kontoen blev ikke slettet. Prøv igen — eller skriv til support, hvis det bliver ved.",
+  "whatIsDeletedTitle": "Det her bliver slettet",
+  "whatIsDeletedBody": "Din konto og alt indhold: udgifter, opsparing, rejser, garantier, opgaver, vaner, mål, karriere og cyklus — og alle filer, du har lagt op.",
+  "whatIsKeptTitle": "Det her kan tage lidt længere",
+  "whatIsKeptBody": "Sikkerhedskopier hos vores databaseudbyder overskrives efter deres almindelige plan. Vi bruger dem ikke til noget, og de forsvinder af sig selv."
 }

@@ -74,7 +74,7 @@ One row per data type the app holds.
   no longer held by the app).
 - **Retention** — what actually happens today on logout and on account deletion.
   `cascade` means the row is removed by `ON DELETE CASCADE` from `auth.users`
-  when `delete_my_account` runs (`utils/auth/deleteAccount.ts`).
+  when `delete_my_account` runs (`core/auth/deleteAccount.ts`).
 - **Apple** — App Privacy category. **Google** — Play Data Safety category.
 
 <!-- inventory:data:start -->
@@ -212,9 +212,9 @@ already matches APP-104.
 
 | Event | What happens | Code |
 | --- | --- | --- |
-| Sign out | Local domain stores are reset, the signed-URL cache is cleared and the PIN is deleted. Language, theme mode and seed recipes deliberately survive. Locally cached attachment files and pending notifications do **not** — §6-D4, §6-D5 | `utils/auth/clearAllLocalData.ts` |
+| Sign out | Local domain stores are reset, the signed-URL cache is cleared and the PIN is deleted. Language, theme mode and seed recipes deliberately survive. Locally cached attachment files and pending notifications do **not** — §6-D4, §6-D5 | `core/auth/clearLocalUserData.ts` |
 | Sign in as a different user | The same clean-up runs **before** the login call, so the previous user's data cannot bleed into the new session | `store/useAuthStore.ts` |
-| Account deletion | Storage objects are removed first (while the session may still touch them), then `delete_my_account` removes the account and every table cascades from `auth.users`; a daily server sweep removes orphaned files | `utils/auth/deleteAccount.ts` |
+| Account deletion | Storage objects are removed first (while the session may still touch them), then `delete_my_account` removes the account and every table cascades from `auth.users`; a daily server sweep removes orphaned files. Each stage is reported to the user, and what is retained is disclosed on the screen — see [`docs/account-deletion.md`](./account-deletion.md) | `core/auth/deleteAccount.ts` |
 | Signed download URL | Expires after 1 hour and is cached in memory only | `utils/shared/attachmentSync.ts` |
 
 The server-side pieces — the `delete_my_account` function, the cascades and the

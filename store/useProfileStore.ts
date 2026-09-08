@@ -9,10 +9,11 @@ import { savePin } from "@/utils/auth/pinAuth";
 interface ProfileState {
   profile: UserProfile;
   hasOnboarded: boolean;
+  /** Markerer onboarding som fuldført. Eksplicit — ikke udledt af et felt. */
+  markOnboarded: () => void;
   isSyncing: boolean;
   profileFetchAttempted: boolean;
   setName: (name: string) => void;
-  setAge: (age: number) => void;
   setGender: (gender: Gender) => void;
   setPartnerName: (partnerName: string) => void;
   setPin: (pin: string) => Promise<void>;
@@ -21,7 +22,7 @@ interface ProfileState {
 }
 
 async function syncProfileField(
-  fields: Partial<{ name: string; age: number; gender: Gender; partner_name: string }>,
+  fields: Partial<{ name: string; gender: Gender; partner_name: string; onboarded_at: string }>,
 ) {
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id;
@@ -37,14 +38,15 @@ export const useProfileStore = create<ProfileState>()(
       isSyncing: false,
       profileFetchAttempted: false,
 
+      markOnboarded: () => {
+        set({ hasOnboarded: true });
+        syncProfileField({ onboarded_at: new Date().toISOString() });
+      },
+
       setName: (name) => {
         const trimmed = name.trim() || undefined;
         set((state) => ({ profile: { ...state.profile, name: trimmed } }));
         syncProfileField({ name: trimmed ?? "" });
-      },
-      setAge: (age) => {
-        set((state) => ({ profile: { ...state.profile, age } }));
-        syncProfileField({ age });
       },
       setGender: (gender) => {
         set((state) => ({ profile: { ...state.profile, gender } }));
@@ -74,7 +76,7 @@ export const useProfileStore = create<ProfileState>()(
 
         const { data, error } = await supabase
           .from("profiles")
-          .select("name, age, gender, partner_name")
+          .select("name, gender, partner_name, onboarded_at")
           .eq("id", userId)
           .single();
 
@@ -83,11 +85,12 @@ export const useProfileStore = create<ProfileState>()(
           return;
         }
 
-        const hasOnboarded = !!data.name && data.age !== null;
+        // Eksplicit felt frem for et gæt. Migrationen har udfyldt det for alle,
+        // der allerede var igennem, så ingen bliver sendt gennem onboarding igen.
+        const hasOnboarded = data.onboarded_at !== null;
         set({
           profile: {
             name: data.name ?? undefined,
-            age: data.age ?? undefined,
             gender: (data.gender as Gender) ?? "unspecified",
             partnerName: data.partner_name ?? undefined,
           },

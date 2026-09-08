@@ -23,32 +23,22 @@ export default function ProfileScreen() {
 
   const profile = useProfileStore((s) => s.profile);
   const setName = useProfileStore((s) => s.setName);
-  const setAge = useProfileStore((s) => s.setAge);
   const setGender = useProfileStore((s) => s.setGender);
   const setPartnerName = useProfileStore((s) => s.setPartnerName);
   const showToast = useToastStore((s) => s.show);
 
   const [name, setLocalName] = useState(profile.name ?? '');
-  const [age, setLocalAge] = useState(profile.age?.toString() ?? '');
   const [gender, setLocalGender] = useState<Gender>(profile.gender);
   const [partnerName, setLocalPartnerName] = useState(profile.partnerName ?? '');
   const [error, setError] = useState<string | null>(null);
 
-  const parsedAge = parseInt(age, 10);
-  const canSave = name.trim().length > 0 && !isNaN(parsedAge) && parsedAge > 0;
+  // Navnet er en visningspræference, ikke en betingelse — et tomt navn er et
+  // gyldigt valg, og appen hilser så uden det.
+  const canSave = true;
 
   const save = () => {
-    if (name.trim().length === 0) {
-      setError(t('profile.nameRequiredError'));
-      return;
-    }
-    if (isNaN(parsedAge) || parsedAge <= 0) {
-      setError(t('profile.ageRequiredError'));
-      return;
-    }
     setError(null);
     setName(name);
-    setAge(parsedAge);
     setGender(gender);
     setPartnerName(partnerName);
     showToast(t('common.saved'));
@@ -64,16 +54,6 @@ export default function ProfileScreen() {
           placeholderTextColor={borderColor}
           value={name}
           onChangeText={setLocalName}
-        />
-
-        <Text style={sharedStyles.fieldLabel}>{t('profile.ageLabel')}</Text>
-        <TextInput
-          style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
-          placeholder={t('profile.agePlaceholder')}
-          placeholderTextColor={borderColor}
-          keyboardType="number-pad"
-          value={age}
-          onChangeText={setLocalAge}
         />
 
         <Text style={sharedStyles.fieldLabel}>{t('profile.genderLabel')}</Text>

@@ -5,13 +5,10 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 're
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
-import Chip from '@/components/Chip';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Gender } from '@/types/profile';
 
-const GENDERS: Gender[] = ['female', 'male', 'other', 'unspecified'];
 
 export default function AuthScreen() {
   const { t } = useTranslation();
@@ -28,14 +25,10 @@ export default function AuthScreen() {
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState<Gender>('unspecified');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const parsedAge = parseInt(age, 10);
 
   const submit = async () => {
     setError(null);
@@ -48,30 +41,13 @@ export default function AuthScreen() {
       setError(t('auth.shortPasswordError'));
       return;
     }
-    if (mode === 'signUp') {
-      if (name.trim().length === 0) {
-        setError(t('profile.nameRequiredError'));
-        return;
-      }
-      if (isNaN(parsedAge) || parsedAge <= 0) {
-        setError(t('profile.ageRequiredError'));
-        return;
-      }
-    }
-
     setIsSubmitting(true);
     try {
       if (mode === 'signIn') {
         const { error: signInError } = await signIn(email.trim(), password);
         if (signInError) setError(signInError);
       } else {
-        const { error: signUpError, session: signUpSession } = await signUp(
-          email.trim(),
-          password,
-          name.trim(),
-          parsedAge,
-          gender
-        );
+        const { error: signUpError, session: signUpSession } = await signUp(email.trim(), password);
         if (signUpError) {
           setError(signUpError);
         } else if (!signUpSession) {
@@ -118,31 +94,11 @@ export default function AuthScreen() {
             onChangeText={setPassword}
           />
 
-          {mode === 'signUp' && (
-            <>
-              <TextInput
-                style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
-                placeholder={t('auth.namePlaceholder')}
-                placeholderTextColor={borderColor}
-                value={name}
-                onChangeText={setName}
-              />
-              <TextInput
-                style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
-                placeholder={t('auth.agePlaceholder')}
-                placeholderTextColor={borderColor}
-                keyboardType="number-pad"
-                value={age}
-                onChangeText={setAge}
-              />
 
-              <Text style={sharedStyles.fieldLabel}>{t('auth.genderLabel')}</Text>
-              <View style={sharedStyles.chipRow}>
-                {GENDERS.map((g) => (
-                  <Chip key={g} label={t(`profile.gender.${g}`)} active={gender === g} onPress={() => setGender(g)} />
-                ))}
-              </View>
-            </>
+          {/* Oprettelse spørger kun om det, en konto ikke kan undvære. Navn og
+              køn er valgfrie og hører til bagefter — se APP-017. */}
+          {mode === 'signUp' && (
+            <Text style={{ color: textMuted, fontSize: 12, lineHeight: 17 }}>{t('auth.minimalFieldsNote')}</Text>
           )}
 
           {error && <Text style={{ color: danger, fontSize: 13 }}>{error}</Text>}

@@ -1,24 +1,21 @@
 {
-    "title": "Profil",
-    "nameLabel": "Navn",
-    "namePlaceholder": "Dit navn",
-    "genderLabel": "Køn",
-    "genderHint": "Bruges kun til at vise relevante moduler i appen.",
-    "gender": {
-      "female": "Kvinde",
-      "male": "Mand",
-      "other": "Andet",
-      "unspecified": "Ikke angivet"
-    },
-    "save": "Gem",
-    "ageLabel": "Alder",
-    "agePlaceholder": "Din alder",
-    "nameRequiredError": "Skriv dit navn for at fortsætte",
-    "ageRequiredError": "Skriv din alder for at fortsætte",
-    "partnerNameLabel": "Din partners navn",
-    "partnerNamePlaceholder": "Fx Walid",
-    "partnerNameHint": "Bruges til at fordele opgaver i Hjemmet-modulet mellem jer to.",
-    "onboardingTitle": "Velkommen til LifeSort",
-    "onboardingSubtitle": "Fortæl os lidt om dig selv, før vi kommer i gang.",
-    "continueButton": "Fortsæt"
-  }
+  "title": "Profil",
+  "nameLabel": "Navn",
+  "namePlaceholder": "Dit navn",
+  "genderLabel": "Køn",
+  "genderHint": "Bruges kun til at vise relevante moduler i appen.",
+  "gender": {
+    "female": "Kvinde",
+    "male": "Mand",
+    "other": "Andet",
+    "unspecified": "Ikke angivet"
+  },
+  "save": "Gem",
+  "nameRequiredError": "Skriv dit navn for at fortsætte",
+  "partnerNameLabel": "Din partners navn",
+  "partnerNamePlaceholder": "Fx Walid",
+  "partnerNameHint": "Bruges til at fordele opgaver i Hjemmet-modulet mellem jer to.",
+  "onboardingTitle": "Velkommen til LifeSort",
+  "onboardingSubtitle": "Fortæl os lidt om dig selv, før vi kommer i gang.",
+  "continueButton": "Fortsæt"
+}

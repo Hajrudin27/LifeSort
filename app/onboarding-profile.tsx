@@ -23,30 +23,24 @@ export default function OnboardingProfileScreen() {
   const tint = useThemeColor({}, "tint");
 
   const setName = useProfileStore((s) => s.setName);
-  const setAge = useProfileStore((s) => s.setAge);
   const setGender = useProfileStore((s) => s.setGender);
+  const markOnboarded = useProfileStore((s) => s.markOnboarded);
 
   const [name, setLocalName] = useState("");
-  const [age, setLocalAge] = useState("");
   const [gender, setLocalGender] = useState<Gender>("unspecified");
   const [error, setError] = useState<string | null>(null);
 
-  const parsedAge = parseInt(age, 10);
-  const canSave = name.trim().length > 0 && !isNaN(parsedAge) && parsedAge > 0;
+  // Begge felter er valgfrie. Onboarding er ikke et skema, der skal udfyldes,
+  // før appen må bruges — det er et tilbud om at gøre den personlig.
+  const canSave = true;
 
   const save = () => {
-    if (name.trim().length === 0) {
-      setError(t("profile.nameRequiredError"));
-      return;
-    }
-    if (isNaN(parsedAge) || parsedAge <= 0) {
-      setError(t("profile.ageRequiredError"));
-      return;
-    }
     setError(null);
-    setName(name);
-    setAge(parsedAge);
-    setGender(gender);
+    if (name.trim().length > 0) setName(name);
+    if (gender !== "unspecified") setGender(gender);
+    // Onboarding er fuldført, fordi brugeren sagde det — ikke fordi et bestemt
+    // felt tilfældigvis blev udfyldt (APP-017).
+    markOnboarded();
     router.replace("/(tabs)");
   };
   // Ingen router.push/back her — RootLayoutNav opdager automatisk,
@@ -76,19 +70,6 @@ export default function OnboardingProfileScreen() {
           placeholderTextColor={borderColor}
           value={name}
           onChangeText={setLocalName}
-        />
-
-        <Text style={sharedStyles.fieldLabel}>{t("profile.ageLabel")}</Text>
-        <TextInput
-          style={[
-            sharedStyles.input,
-            { borderColor, backgroundColor: surface },
-          ]}
-          placeholder={t("profile.agePlaceholder")}
-          placeholderTextColor={borderColor}
-          keyboardType="number-pad"
-          value={age}
-          onChangeText={setLocalAge}
         />
 
         <Text style={sharedStyles.fieldLabel}>{t("profile.genderLabel")}</Text>

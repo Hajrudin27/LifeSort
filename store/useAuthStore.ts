@@ -8,13 +8,12 @@ interface AuthState {
   session: Session | null;
   isLoading: boolean;
   init: () => void;
-  signUp: (
-    email: string,
-    password: string,
-    name: string,
-    age: number,
-    gender: string,
-  ) => Promise<{ error: string | null; session: Session | null }>;
+  /**
+   * Oprettelse spørger kun om det, en konto ikke kan undvære (APP-017). Navn og
+   * køn er valgfrie profilfelter, der hører til i onboarding — ikke betingelser
+   * for at få en konto.
+   */
+  signUp: (email: string, password: string) => Promise<{ error: string | null; session: Session | null }>;
   signIn: (
     email: string,
     password: string,
@@ -38,14 +37,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
 
-  signUp: async (email, password, name, age, gender) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name, age, gender },
-      },
-    });
+  signUp: async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
     return { error: error?.message ?? null, session: data.session };
   },
 

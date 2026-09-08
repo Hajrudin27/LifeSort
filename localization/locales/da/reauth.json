@@ -1,0 +1,10 @@
+{
+  "title": "Bekræft, at det er dig",
+  "body": "Handlingen sender dine data ud af appen. Vi spørger, fordi en ulåst telefon ellers er nok.",
+  "prompt": "Bekræft for at fortsætte",
+  "checking": "Venter på bekræftelse …",
+  "pinPlaceholder": "App-låsens kode",
+  "passwordPlaceholder": "Din adgangskode",
+  "confirm": "Bekræft",
+  "wrongPin": "Koden passer ikke."
+}

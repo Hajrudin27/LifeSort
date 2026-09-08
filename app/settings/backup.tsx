@@ -7,6 +7,7 @@ import Card from '@/components/Card';
 import { Text, useThemeColor } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useToastStore } from '@/store/useToastStore';
+import { useSensitiveAction } from '@/components/useSensitiveAction';
 import { exportBackup, importBackup } from '@/utils/shared/dataBackup';
 
 export default function BackupScreen() {
@@ -18,15 +19,20 @@ export default function BackupScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  const handleExport = async () => {
-    setIsExporting(true);
-    try {
-      await exportBackup();
-      showToast(t('backup.exportSuccess'));
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  // Eksport lægger hele indholdet i én fil, brugeren derefter selv deler. Det er
+  // den handling, hvor en ulåst telefon på et bord gør mest skade (APP-024).
+  const { run: runSensitive, prompt: reauthPrompt } = useSensitiveAction();
+
+  const handleExport = () =>
+    runSensitive(async () => {
+      setIsExporting(true);
+      try {
+        await exportBackup();
+        showToast(t('backup.exportSuccess'));
+      } finally {
+        setIsExporting(false);
+      }
+    });
 
   const runImport = async () => {
     setIsImporting(true);
@@ -71,6 +77,7 @@ export default function BackupScreen() {
         <Text style={{ color: textMuted, fontSize: 13 }}>{t('backup.importDescription')}</Text>
         <Button label={t('backup.importLabel')} variant="secondary" disabled={isImporting} onPress={handleImport} />
       </Card>
+      {reauthPrompt}
     </ScrollView>
   );
 }

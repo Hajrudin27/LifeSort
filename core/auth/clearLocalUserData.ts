@@ -7,6 +7,7 @@ import { clearAttachmentCache } from '@/utils/shared/attachmentStorage';
 import { clearSignedUrlCache } from '@/utils/shared/attachmentSync';
 
 import { clearResendThrottle } from './emailVerification';
+import { clearVerification } from './reauth';
 
 /**
  * Rydder alt lokalt, der hører til den bruger, som logger ud (APP-021).
@@ -68,6 +69,7 @@ export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Pr
 
   // 5. Nøglerne.
   clearSignedUrlCache();
+  clearVerification();
   await clearResendThrottle();
   await clearLocalPin();
 }

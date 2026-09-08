@@ -1,0 +1,10 @@
+{
+  "title": "Confirm it is you",
+  "body": "This sends your data out of the app. We ask because an unlocked phone would otherwise be enough.",
+  "prompt": "Confirm to continue",
+  "checking": "Waiting for confirmation …",
+  "pinPlaceholder": "App lock code",
+  "passwordPlaceholder": "Your password",
+  "confirm": "Confirm",
+  "wrongPin": "That code is not right."
+}

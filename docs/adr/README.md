@@ -36,6 +36,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0015](./0015-passwords-are-measured-by-length-only.md) | Passwords are measured by length only | Accepted | 2026-09-07 | APP-019 |
 | [0016](./0016-modules-are-chosen-never-inferred.md) | The app asks which modules you want; it never infers them | Accepted | 2026-09-07 | APP-020 |
 | [0017](./0017-logout-clears-by-sweep-not-by-list.md) | Logout clears by sweeping storage, not by remembering every store | Accepted | 2026-09-07 | APP-021 |
+| [0018](./0018-reauth-matches-the-threat-not-the-ceremony.md) | Re-authentication matches the threat, not the ceremony | Accepted | 2026-09-07 | APP-024 |
 
 ## When an ADR is required
 

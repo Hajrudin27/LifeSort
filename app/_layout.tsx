@@ -20,6 +20,7 @@ import LockScreen from "@/components/LockScreen";
 import ModuleGate from "@/components/ModuleGate";
 import PrivacyOverlay from "@/components/PrivacyOverlay";
 import Toast from "@/components/Toast";
+import { clearVerification } from "@/core/auth/reauth";
 import { parseRecoveryLink } from "@/core/auth/recoveryLink";
 import { useColorScheme } from "@/components/useColorScheme";
 import { useRecordModuleVisit } from "@/core/modules/useModuleVisit";
@@ -193,6 +194,9 @@ export default function RootLayout() {
         if (lockEnabled && session) {
           lock();
         }
+        // Beviset for "det er stadig dig" glemmes, når appen har været ude af
+        // syne. En telefon på et bord kan have skiftet hænder imens (APP-024).
+        clearVerification();
       }
       appState.current = nextState;
     });

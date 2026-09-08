@@ -370,6 +370,7 @@ module that owns it.
 | `useColorScheme` | `components/useColorScheme.ts` | `core-shell` | Hajrudin Kardasevic |
 | `useColorScheme` (web) | `components/useColorScheme.web.ts` | `core-shell` | Hajrudin Kardasevic |
 | `LockScreen` | `components/LockScreen.tsx` | `account` | Hajrudin Kardasevic |
+| `useSensitiveAction` | `components/useSensitiveAction.tsx` | `account` | Hajrudin Kardasevic |
 | `PrivacyOverlay` | `components/PrivacyOverlay.tsx` | `account` | Hajrudin Kardasevic |
 | `VerifyEmailBanner` | `components/VerifyEmailBanner.tsx` | `account` | Hajrudin Kardasevic |
 | `AttachmentList` | `components/AttachmentList.tsx` | shared (attachments: `economy`, `warranties`) | Hajrudin Kardasevic |

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Alert, Image, Pressable, StyleSheet } from "react-native";
 
 import { Text, useThemeColor, View } from "@/components/Themed";
+import { useSensitiveAction } from "@/components/useSensitiveAction";
 import { TripAttachment } from "@/types/trip";
 import { persistFile } from "@/utils/shared/attachmentStorage";
 
@@ -22,6 +23,7 @@ export default function TripAttachmentGrid({
   onRemove,
 }: Props) {
   const { t } = useTranslation();
+  const { run: runSensitive, prompt: reauthPrompt } = useSensitiveAction();
   const borderColor = useThemeColor({}, "border");
 
   const addImage = async (fromCamera: boolean) => {
@@ -63,14 +65,19 @@ export default function TripAttachmentGrid({
 
   const openAttachment = async (attachment: TripAttachment) => {
     if (attachment.kind === "image") {
+      // At se billedet inde i appen sender ingenting ud af den.
       router.push({
         pathname: "/warranties/view-image",
         params: { uri: attachment.uri },
       });
-    } else {
+      return;
+    }
+
+    // Deling sender dokumentet ud af appen — derfor et bevis først (APP-024).
+    await runSensitive(async () => {
       const available = await Sharing.isAvailableAsync();
       if (available) await Sharing.shareAsync(attachment.uri);
-    }
+    });
   };
 
   const confirmRemove = (attachmentId: string) => {
@@ -141,6 +148,7 @@ export default function TripAttachmentGrid({
           <Text style={styles.actionText}>{t("warranties.addDocument")}</Text>
         </Pressable>
       </View>
+      {reauthPrompt}
     </View>
   );
 }

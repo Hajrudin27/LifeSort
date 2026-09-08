@@ -12,6 +12,7 @@ import Colors from "@/constants/Colors";
 import { useBrandTints } from "@/hooks/useBrandTints";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useSyncStatusStore } from "@/store/useSyncStatusStore";
+import { useToastStore } from "@/store/useToastStore";
 import { useTabBarScroll } from "@/hooks/useTabBarScroll";
 import { useAppLockStore } from "@/store/useAppLockStore";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -119,6 +120,39 @@ export default function SettingsScreen() {
     setLanguage(lang);
     i18n.changeLanguage(lang);
   };
+
+  const showToast = useToastStore((s) => s.show);
+  const signOutOtherDevices = useAuthStore((s) => s.signOutOtherDevices);
+  const signOutEverywhere = useAuthStore((s) => s.signOutEverywhere);
+
+  // Hvornår den her enhed blev logget ind. Vi kan ikke vise de andre — se
+  // core/auth/sessions.ts for hvorfor.
+  const signedInAt = useMemo(() => {
+    const at = session?.user.last_sign_in_at;
+    if (!at) return null;
+    return new Date(at).toLocaleString(i18n.language === "da" ? "da-DK" : "en-GB", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  }, [session?.user.last_sign_in_at, i18n.language]);
+
+  const confirmSignOutOthers = () =>
+    Alert.alert(t("settings.signOutOthersConfirmTitle"), t("settings.signOutOthersConfirmMessage"), [
+      { text: t("warranties.cancel"), style: "cancel" },
+      {
+        text: t("settings.signOutOthers"),
+        onPress: async () => {
+          const { error } = await signOutOtherDevices();
+          showToast(error ? t("auth.errorGeneric") : t("settings.signOutOthersDone"));
+        },
+      },
+    ]);
+
+  const confirmSignOutEverywhere = () =>
+    Alert.alert(t("settings.signOutEverywhereConfirmTitle"), t("settings.signOutEverywhereConfirmMessage"), [
+      { text: t("warranties.cancel"), style: "cancel" },
+      { text: t("settings.signOutEverywhere"), style: "destructive", onPress: () => signOutEverywhere() },
+    ]);
 
   const renderRow = ({ danger: isDanger, description, icon, onPress, right, title }: SettingsRowProps) => {
     const content = (
@@ -273,6 +307,40 @@ export default function SettingsScreen() {
             onPress: () => router.push("/settings/pin"),
           })}
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionEyebrow, { color: accentTints.accent }]}>{t("settings.sessionsSectionEyebrow")}</Text>
+          <Text style={styles.sectionTitle}>{t("settings.sessionsSectionTitle")}</Text>
+        </View>
+        <View style={[styles.group, { backgroundColor: surface, borderColor }]}>
+          {renderRow({
+            icon: { ios: "iphone", android: "smartphone", web: "smartphone" },
+            title: t("settings.sessionThisDevice"),
+            description: signedInAt ? t("settings.sessionSince", { when: signedInAt }) : undefined,
+          })}
+          <View style={[styles.divider, { backgroundColor: borderColor }]} />
+          {renderRow({
+            icon: { ios: "rectangle.portrait.and.arrow.right", android: "logout", web: "logout" },
+            title: t("settings.signOutOthers"),
+            description: t("settings.signOutOthersDescription"),
+            onPress: confirmSignOutOthers,
+          })}
+          <View style={[styles.divider, { backgroundColor: borderColor }]} />
+          {renderRow({
+            icon: { ios: "xmark.circle.fill", android: "cancel", web: "cancel" },
+            title: t("settings.signOutEverywhere"),
+            description: t("settings.signOutEverywhereDescription"),
+            danger: true,
+            onPress: confirmSignOutEverywhere,
+          })}
+        </View>
+
+        {/* Ærligt om hvad appen ikke kan. En tom liste ville ligne en fejl. */}
+        <Text style={[styles.rowHint, { color: textMuted, paddingHorizontal: 4, paddingTop: 8 }]}>
+          {t("settings.sessionListUnavailable")}
+        </Text>
       </View>
 
       <View style={styles.section}>

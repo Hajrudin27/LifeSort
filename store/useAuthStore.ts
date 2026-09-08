@@ -3,6 +3,7 @@ import * as Linking from "expo-linking";
 import { create } from "zustand";
 
 import { clearLocalUserData } from "@/core/auth/clearLocalUserData";
+import { scopeAffectsThisDevice, type SessionScope } from "@/core/auth/sessions";
 import { isEmailVerified, recordSentNow } from "@/core/auth/emailVerification";
 import type { RecoveryTokens } from "@/core/auth/recoveryLink";
 import { supabase } from "@/lib/supabase";
@@ -32,7 +33,24 @@ interface AuthState {
     email: string,
     password: string,
   ) => Promise<{ error: string | null }>;
+  /**
+   * Almindeligt log ud: kun den her enhed. Supabase' standard er `global`, så
+   * uden det udtrykkelige scope ville et log ud på telefonen også lukke
+   * brugerens session på alle andre enheder (APP-025).
+   */
   signOut: () => Promise<void>;
+  /** Lukker alle andre enheder og bliver logget ind her. */
+  signOutOtherDevices: () => Promise<{ error: string | null }>;
+  /** Lukker alt, også den her enhed. */
+  signOutEverywhere: () => Promise<void>;
+}
+
+/** Afmelder med et udtrykkeligt scope og rydder op, hvis enheden er berørt. */
+async function signOutWithScope(scope: SessionScope) {
+  await supabase.auth.signOut({ scope });
+  if (scopeAffectsThisDevice(scope)) {
+    await clearLocalUserData(LOCAL_STORE_RESETS);
+  }
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -100,7 +118,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signOut: async () => {
-    await supabase.auth.signOut();
-    await clearLocalUserData(LOCAL_STORE_RESETS);
+    await signOutWithScope('local');
+  },
+
+  signOutOtherDevices: async () => {
+    const { error } = await supabase.auth.signOut({ scope: 'others' });
+    // Den her enhed er urørt, så intet lokalt skal ryddes.
+    return { error: error?.message ?? null };
+  },
+
+  signOutEverywhere: async () => {
+    await signOutWithScope('global');
   },
 }));

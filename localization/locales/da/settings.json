@@ -37,5 +37,19 @@
   "syncLastDescription": "Alt er sikkerhedskopieret. Sidst: {{when}}",
   "syncNeverDescription": "Endnu ikke sikkerhedskopieret til din konto",
   "syncPendingDescription_one": "{{count}} område venter på at blive sikkerhedskopieret. Det sker automatisk, når du er online igen.",
-  "syncPendingDescription_other": "{{count}} områder venter på at blive sikkerhedskopieret. Det sker automatisk, når du er online igen."
+  "syncPendingDescription_other": "{{count}} områder venter på at blive sikkerhedskopieret. Det sker automatisk, når du er online igen.",
+  "sessionsSectionEyebrow": "Enheder",
+  "sessionsSectionTitle": "Hvor du er logget ind",
+  "sessionThisDevice": "Denne enhed",
+  "sessionSince": "Logget ind {{when}}",
+  "sessionListUnavailable": "Vi kan ikke vise en liste over dine andre enheder — det kan LifeSort ikke spørge om uden en nøgle, der aldrig må ligge i appen. Du kan til gengæld lukke dem alle herunder.",
+  "signOutOthers": "Log ud af alle andre enheder",
+  "signOutOthersDescription": "Du bliver logget ind her. Brug den, hvis du har glemt at logge ud et andet sted.",
+  "signOutOthersConfirmTitle": "Log ud af andre enheder?",
+  "signOutOthersConfirmMessage": "Alle andre enheder bliver logget ud. Du bliver logget ind på denne.",
+  "signOutOthersDone": "De andre enheder er logget ud",
+  "signOutEverywhere": "Log ud overalt",
+  "signOutEverywhereDescription": "Lukker også denne enhed. Brug den, hvis du har mistet en telefon.",
+  "signOutEverywhereConfirmTitle": "Log ud overalt?",
+  "signOutEverywhereConfirmMessage": "Alle enheder bliver logget ud, inklusive denne. Dine data bliver ikke slettet."
 }

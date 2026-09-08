@@ -37,5 +37,19 @@
   "syncLastDescription": "Everything is backed up. Last: {{when}}",
   "syncNeverDescription": "Not backed up to your account yet",
   "syncPendingDescription_one": "{{count}} area is waiting to be backed up. This happens automatically once you are back online.",
-  "syncPendingDescription_other": "{{count}} areas are waiting to be backed up. This happens automatically once you are back online."
+  "syncPendingDescription_other": "{{count}} areas are waiting to be backed up. This happens automatically once you are back online.",
+  "sessionsSectionEyebrow": "Devices",
+  "sessionsSectionTitle": "Where you are signed in",
+  "sessionThisDevice": "This device",
+  "sessionSince": "Signed in {{when}}",
+  "sessionListUnavailable": "We cannot show a list of your other devices — LifeSort cannot ask for that without a key that must never live in an app. You can close them all below instead.",
+  "signOutOthers": "Sign out of all other devices",
+  "signOutOthersDescription": "You stay signed in here. Use this if you forgot to sign out somewhere else.",
+  "signOutOthersConfirmTitle": "Sign out other devices?",
+  "signOutOthersConfirmMessage": "Every other device will be signed out. You stay signed in on this one.",
+  "signOutOthersDone": "Your other devices have been signed out",
+  "signOutEverywhere": "Sign out everywhere",
+  "signOutEverywhereDescription": "Closes this device too. Use this if you have lost a phone.",
+  "signOutEverywhereConfirmTitle": "Sign out everywhere?",
+  "signOutEverywhereConfirmMessage": "Every device will be signed out, including this one. Your data is not deleted."
 }

@@ -347,6 +347,7 @@ module that owns it.
 | `IconGlowCircle` | `components/IconGlowCircle.tsx` | shared | Hajrudin Kardasevic |
 | `Kicker` | `components/Kicker.tsx` | shared | Hajrudin Kardasevic |
 | `MetricCard` | `components/MetricCard.tsx` | shared | Hajrudin Kardasevic |
+| `MetricCardSkeleton` | `components/MetricCardSkeleton.tsx` | shared | Hajrudin Kardasevic |
 | `ProgressBar` | `components/ProgressBar.tsx` | shared | Hajrudin Kardasevic |
 | `QuickActionCard` | `components/QuickActionCard.tsx` | shared | Hajrudin Kardasevic |
 | `RingProgress` | `components/RingProgress.tsx` | shared | Hajrudin Kardasevic |

@@ -90,5 +90,12 @@
   "maskedHelper": "Hidden here — tap to open",
   "cardActionShowValue": "Show the value on Home",
   "cardActionMaskValue": "Hide the value on Home",
-  "maskedAccessibility": "Value hidden"
+  "maskedAccessibility": "Value hidden",
+  "emptyHiddenTitle": "You have hidden every card",
+  "emptyHiddenBody": "Your data is still here. Pick a card below to show it again.",
+  "emptyNoModulesTitle": "No modules turned on",
+  "emptyNoModulesBody": "Choose what LifeSort helps you with under Settings → My modules.",
+  "emptyNoCardsTitle": "Nothing to show yet",
+  "emptyNoCardsBody": "Once you start using your modules, your overview appears here.",
+  "loadingAccessibility": "Loading your overview"
 }

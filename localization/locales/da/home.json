@@ -90,5 +90,12 @@
   "maskedHelper": "Skjult her — tryk for at åbne",
   "cardActionShowValue": "Vis værdien på forsiden",
   "cardActionMaskValue": "Skjul værdien på forsiden",
-  "maskedAccessibility": "Værdien er skjult"
+  "maskedAccessibility": "Værdien er skjult",
+  "emptyHiddenTitle": "Du har skjult alle kort",
+  "emptyHiddenBody": "Dine data er der stadig. Vælg et kort nedenfor for at vise det igen.",
+  "emptyNoModulesTitle": "Ingen moduler valgt til",
+  "emptyNoModulesBody": "Vælg hvad LifeSort skal hjælpe dig med under Indstillinger → Mine moduler.",
+  "emptyNoCardsTitle": "Intet at vise endnu",
+  "emptyNoCardsBody": "Når du begynder at bruge dine moduler, dukker overblikket op her.",
+  "loadingAccessibility": "Henter dit overblik"
 }

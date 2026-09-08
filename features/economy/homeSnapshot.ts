@@ -1,4 +1,5 @@
 import type { HomeSnapshot } from '@/core/modules/moduleRegistry';
+import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useIncomeStore } from '@/store/useIncomeStore';
 import { useSavingsGoalsStore } from '@/store/useSavingsGoalsStore';
@@ -11,6 +12,10 @@ import { getMonthKey } from '@/utils/shared/monthKey';
  * Home får ét tal og en hjælpetekst, aldrig en liste af udgifter.
  */
 export async function economyHomeSnapshot(): Promise<HomeSnapshot | null> {
+  // Vent på disken. Ellers regnes kortet ud på en tom store, og brugeren får
+  // "0 kr." serveret som et faktum. Se APP-014.
+  await whenStoresHydrated([useIncomeStore, useExpensesStore, useSavingsGoalsStore]);
+
   const monthKey = getMonthKey(new Date());
 
   const netIncome = useIncomeStore.getState().incomeByMonth[monthKey] ?? 0;

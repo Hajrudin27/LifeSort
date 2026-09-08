@@ -1,10 +1,13 @@
 import type { HomeSnapshot } from '@/core/modules/moduleRegistry';
+import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useFoodStore } from '@/store/useFoodStore';
 import { getISOWeekKey, getWeeksInMonth } from '@/utils/food/foodWeek';
 import { getMonthKey } from '@/utils/shared/monthKey';
 
 /** Mad-modulets kort til Home (APP-011): hvad er der tilbage af ugens budget. */
 export async function foodHomeSnapshot(): Promise<HomeSnapshot | null> {
+  await whenStoresHydrated([useFoodStore]);
+
   const now = new Date();
   const monthKey = getMonthKey(now);
   const weekKey = getISOWeekKey(now);

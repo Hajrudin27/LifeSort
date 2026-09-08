@@ -158,6 +158,45 @@ Sensitivity belongs to what a card **shows**, not to the module's name: an empty
 travel card says "plan your first trip" and is classified `ordinary`, so it is
 not masked for appearance's sake.
 
+## §6 Loading and empty states (APP-014)
+
+The distinction that matters is between **"we don't know yet"** and **"there is
+nothing"**. Saying the second while the first is true is the worst message an
+app can give by accident: it reads as lost data.
+
+`resolveHomeGridState` decides, as a pure function, so slow storage
+(`preferencesHydrated: false`) and a slow session (`isLoading: true`) can be
+tested without a device.
+
+| State | Shown |
+| --- | --- |
+| `loading` | Skeleton cards, same height as real ones so nothing jumps |
+| `ready` | The cards |
+| `empty-hidden` | "You have hidden every card" — your data is still here |
+| `empty-no-modules` | "No modules turned on" — with where to turn them on |
+| `empty-no-cards` | "Nothing to show yet" |
+
+An empty state always says **why** and what to do about it, and names the thing
+the user can fix first: if they have hidden cards, that is the answer, not "turn
+on modules".
+
+### Cards never present an unloaded store as fact
+
+The providers read persisted stores. Zustand rehydrates asynchronously, so a
+provider that ran immediately would compute from an *empty* store and render
+**"0 kr." as a fact** to someone with thousands saved. That is worse than a
+spinner: it looks like lost data, and nothing on screen suggests the number is
+wrong.
+
+Each provider therefore awaits its own stores via `whenStoresHydrated`, using
+zustand's own persist API rather than adding a flag to every store. Home stays
+in `loading` until the cards come back.
+
+### Last known values survive a refresh
+
+`useHomeSnapshots` never clears what it has before new results arrive, so
+pull-to-refresh leaves the current cards in place rather than flashing empty.
+
 ## What Home still reads directly
 
 Four of the ten baselined couplings are gone. Six remain, and they are not

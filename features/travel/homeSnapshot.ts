@@ -1,10 +1,13 @@
 import type { HomeSnapshot } from '@/core/modules/moduleRegistry';
+import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useTripsStore } from '@/store/useTripsStore';
 import { daysUntil } from '@/utils/shared/dateDays';
 import { todayIso } from '@/utils/shared/localDate';
 
 /** Rejse-modulets kort til Home (APP-011): hvor længe til næste tur. */
 export async function travelHomeSnapshot(): Promise<HomeSnapshot | null> {
+  await whenStoresHydrated([useTripsStore]);
+
   const today = todayIso();
   const upcoming = [...useTripsStore.getState().trips]
     .filter((trip) => trip.startDate >= today)

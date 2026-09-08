@@ -6,12 +6,14 @@ import { Alert, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Pressable, 
 
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
+import { resolveHomeGridState, skeletonCardCount } from '@/core/modules/homeGridState';
 import { isMaskable, MASKED_VALUE, resolveCardDetail } from '@/core/modules/homePrivacy';
 import { hiddenModuleIds, rankHomeSnapshots } from '@/core/modules/homeRanking';
 import { useHomeSnapshots } from '@/core/modules/homeSnapshots';
 import { getModule } from '@/core/modules/moduleRegistry';
 import { HOME_SNAPSHOT_PROVIDERS } from '@/features/homeSnapshots';
 import MetricCard from '@/components/MetricCard';
+import MetricCardSkeleton from '@/components/MetricCardSkeleton';
 import QuickActionCard from '@/components/QuickActionCard';
 import Screen from '@/components/Screen';
 import SectionHeader from '@/components/SectionHeader';
@@ -83,7 +85,7 @@ export default function HomeScreen() {
   // ---- Data ----
   // Home beder modulerne om små, typede kort. Den kender ikke længere en
   // eneste domæne-store til det — se docs/home-snapshots.md.
-  const { snapshots, reload: reloadSnapshots } = useHomeSnapshots(HOME_SNAPSHOT_PROVIDERS);
+  const { snapshots, isLoading: snapshotsLoading, reload: reloadSnapshots } = useHomeSnapshots(HOME_SNAPSHOT_PROVIDERS);
 
   // Rækkefølgen er brugerens, ikke appens: fastgjort > presserende > senest
   // brugt, og intet andet. Se ADR-0011.
@@ -98,6 +100,24 @@ export default function HomeScreen() {
 
   const rankedSnapshots = rankHomeSnapshots(snapshots, { pinned, hidden, lastOpenedAt });
   const hiddenCards = hiddenModuleIds({ pinned, hidden, lastOpenedAt });
+
+  const visibleCards = rankedSnapshots
+    .map((snapshot) => ({
+      snapshot,
+      cardDetail: resolveCardDetail(snapshot, { hidden, detail }, layoutHasHydrated),
+    }))
+    // Følsomme kort holdes tilbage, indtil vi ved hvad brugeren har valgt (APP-013).
+    .filter((card) => card.cardDetail !== 'hidden');
+
+  // Forskellen på "vi ved det ikke endnu" og "der er ingenting" afgøres ét sted,
+  // så Home aldrig påstår det sidste, mens det første er sandt.
+  const gridState = resolveHomeGridState({
+    isLoading: snapshotsLoading,
+    preferencesHydrated: layoutHasHydrated,
+    visibleCardCount: visibleCards.length,
+    hiddenCardCount: hiddenCards.length,
+    availableProviderCount: snapshots.length,
+  });
 
   const openCardActions = (snapshot: (typeof rankedSnapshots)[number], label: string) => {
     const moduleId = snapshot.moduleId;
@@ -502,15 +522,41 @@ export default function HomeScreen() {
 
       {/* Overview snapshot grid */}
       <SectionHeader title={t('home.overviewTitle')} subtitle={t('home.overviewSubtitle')} />
+      {gridState === 'loading' && (
+        <View
+          style={styles.grid}
+          accessibilityLabel={t('home.loadingAccessibility')}
+          accessibilityRole="progressbar"
+        >
+          {Array.from({ length: skeletonCardCount(snapshots.length) }, (_, index) => (
+            <MetricCardSkeleton key={index} style={styles.gridCell} />
+          ))}
+        </View>
+      )}
+
+      {/* Aldrig "der er ingenting" uden også at sige hvorfor, og hvad man gør
+          ved det. En tom skærm uden forklaring ligner tabte data. */}
+      {gridState !== 'loading' && gridState !== 'ready' && (
+        <Card style={sharedStyles.emptyCard}>
+          <Text style={styles.emptyTitle}>
+            {gridState === 'empty-hidden'
+              ? t('home.emptyHiddenTitle')
+              : gridState === 'empty-no-modules'
+                ? t('home.emptyNoModulesTitle')
+                : t('home.emptyNoCardsTitle')}
+          </Text>
+          <Text style={[styles.emptyBody, { color: textMuted }]}>
+            {gridState === 'empty-hidden'
+              ? t('home.emptyHiddenBody')
+              : gridState === 'empty-no-modules'
+                ? t('home.emptyNoModulesBody')
+                : t('home.emptyNoCardsBody')}
+          </Text>
+        </Card>
+      )}
+
       <View style={styles.grid}>
-        {rankedSnapshots
-          .map((snapshot) => ({
-            snapshot,
-            cardDetail: resolveCardDetail(snapshot, { hidden, detail }, layoutHasHydrated),
-          }))
-          // Følsomme kort holdes tilbage, indtil vi ved hvad brugeren har valgt.
-          .filter((card) => card.cardDetail !== 'hidden')
-          .map(({ snapshot, cardDetail }) => {
+        {visibleCards.map(({ snapshot, cardDetail }) => {
           const masked = cardDetail === 'masked';
           return (
           <MetricCard
@@ -573,6 +619,8 @@ export default function HomeScreen() {
 }
 
 const styles = {
+  emptyTitle: { fontSize: 15, fontWeight: '700' as const },
+  emptyBody: { fontSize: 13, lineHeight: 19, marginTop: 4 },
   hiddenRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 8, backgroundColor: 'transparent' },
   hiddenChip: {
     minHeight: 44,

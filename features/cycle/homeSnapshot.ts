@@ -1,4 +1,5 @@
 import type { HomeSnapshot } from '@/core/modules/moduleRegistry';
+import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useCycleStore } from '@/store/useCycleStore';
 import { getCurrentCycleDay, getDaysUntilNextPeriod } from '@/utils/cycle/cyclePredictions';
 
@@ -10,6 +11,8 @@ import { getCurrentCycleDay, getDaysUntilNextPeriod } from '@/utils/cycle/cycleP
  * APP-013 give brugeren en maskeret udgave til når skærmen ses af andre.
  */
 export async function cycleHomeSnapshot(): Promise<HomeSnapshot | null> {
+  await whenStoresHydrated([useCycleStore]);
+
   const now = new Date();
   const state = useCycleStore.getState();
 

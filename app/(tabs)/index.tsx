@@ -6,6 +6,7 @@ import { Alert, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Pressable, 
 
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
+import { isMaskable, MASKED_VALUE, resolveCardDetail } from '@/core/modules/homePrivacy';
 import { hiddenModuleIds, rankHomeSnapshots } from '@/core/modules/homeRanking';
 import { useHomeSnapshots } from '@/core/modules/homeSnapshots';
 import { getModule } from '@/core/modules/moduleRegistry';
@@ -91,13 +92,29 @@ export default function HomeScreen() {
   const lastOpenedAt = useHomeLayoutStore((s) => s.lastOpenedAt);
   const togglePinned = useHomeLayoutStore((s) => s.togglePinned);
   const toggleHidden = useHomeLayoutStore((s) => s.toggleHidden);
+  const detail = useHomeLayoutStore((s) => s.detail);
+  const setCardDetail = useHomeLayoutStore((s) => s.setCardDetail);
+  const layoutHasHydrated = useHomeLayoutStore((s) => s.hasHydrated);
 
   const rankedSnapshots = rankHomeSnapshots(snapshots, { pinned, hidden, lastOpenedAt });
   const hiddenCards = hiddenModuleIds({ pinned, hidden, lastOpenedAt });
 
-  const openCardActions = (moduleId: (typeof rankedSnapshots)[number]['moduleId'], label: string) => {
+  const openCardActions = (snapshot: (typeof rankedSnapshots)[number], label: string) => {
+    const moduleId = snapshot.moduleId;
     const isPinned = pinned.includes(moduleId);
+    const currentDetail = resolveCardDetail(snapshot, { hidden, detail }, layoutHasHydrated);
+
     Alert.alert(t('home.cardActionsTitle'), label, [
+      // Maskering tilbydes kun, hvor der er noget at maskere — en indkøbsliste
+      // har ingen hemmeligheder.
+      ...(isMaskable(snapshot.sensitivity)
+        ? [
+            {
+              text: currentDetail === 'masked' ? t('home.cardActionShowValue') : t('home.cardActionMaskValue'),
+              onPress: () => setCardDetail(moduleId, currentDetail === 'masked' ? 'full' : 'masked'),
+            },
+          ]
+        : []),
       {
         text: isPinned ? t('home.cardActionUnpin') : t('home.cardActionPin'),
         onPress: () => togglePinned(moduleId),
@@ -486,20 +503,38 @@ export default function HomeScreen() {
       {/* Overview snapshot grid */}
       <SectionHeader title={t('home.overviewTitle')} subtitle={t('home.overviewSubtitle')} />
       <View style={styles.grid}>
-        {rankedSnapshots.map((snapshot) => (
+        {rankedSnapshots
+          .map((snapshot) => ({
+            snapshot,
+            cardDetail: resolveCardDetail(snapshot, { hidden, detail }, layoutHasHydrated),
+          }))
+          // Følsomme kort holdes tilbage, indtil vi ved hvad brugeren har valgt.
+          .filter((card) => card.cardDetail !== 'hidden')
+          .map(({ snapshot, cardDetail }) => {
+          const masked = cardDetail === 'masked';
+          return (
           <MetricCard
             key={snapshot.moduleId}
             style={styles.gridCell}
             icon={SNAPSHOT_ICONS[snapshot.moduleId] ?? SNAPSHOT_ICONS.default}
             label={t(snapshot.titleKey)}
             value={
-              snapshot.value ??
-              (snapshot.valueKey ? t(snapshot.valueKey, snapshot.valueParams) : '—')
+              masked
+                ? MASKED_VALUE
+                : snapshot.value ??
+                  (snapshot.valueKey ? t(snapshot.valueKey, snapshot.valueParams) : '—')
             }
-            helper={snapshot.helperKey ? t(snapshot.helperKey, snapshot.helperParams) : undefined}
+            helper={
+              masked
+                ? t('home.maskedHelper')
+                : snapshot.helperKey
+                  ? t(snapshot.helperKey, snapshot.helperParams)
+                  : undefined
+            }
             tone={snapshot.priority === 'urgent' ? danger : snapshot.priority === 'important' ? warning : accentTints.accent}
             onPress={() => router.push(snapshot.route as any)}
-            onLongPress={() => openCardActions(snapshot.moduleId, t(snapshot.titleKey))}
+            onLongPress={() => openCardActions(snapshot, t(snapshot.titleKey))}
+            accessibilityLabel={masked ? `${t(snapshot.titleKey)} — ${t('home.maskedAccessibility')}` : undefined}
             accessibilityHint={t('home.cardActionsHint')}
             accessibilityActions={[
               { name: 'pin', label: pinned.includes(snapshot.moduleId) ? t('home.cardActionUnpin') : t('home.cardActionPin') },
@@ -510,7 +545,8 @@ export default function HomeScreen() {
               if (event.nativeEvent.actionName === 'hide') toggleHidden(snapshot.moduleId);
             }}
           />
-        ))}
+          );
+        })}
       </View>
 
       {/* Uden en vej tilbage ville "skjul" i praksis være "slet kortet". */}

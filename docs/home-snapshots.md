@@ -113,6 +113,51 @@ one tap — without a way back, "hide" reads as "delete".
 
 Pinning and hiding are device-local and are not synced.
 
+## §5 Privacy on a screen someone else can see (APP-013)
+
+Home is the screen you hold up, hand over or leave on a table. Every card can
+therefore be shown at one of three levels:
+
+| Level | What is shown |
+| --- | --- |
+| `full` | Title, value, helper |
+| `masked` | Title and `•••`; the value and helper are replaced |
+| `hidden` | Not on Home at all (APP-012) |
+
+Masking keeps the **title**. A card with no heading is not private, only
+confusing — and the user still needs to know the card is there.
+
+### Defaults
+
+| Sensitivity | Default | Why |
+| --- | --- | --- |
+| `health` | **masked** | One glance at "Cycle day 12" reveals something the user never chose to say. Specification §8.7 asks for the same posture on Home widgets. |
+| `financial`, `personal`, `document` | full | An amount on your own phone is a different kind of fact, and masking everything would make Home useless — at which point the user turns masking off and is left with nothing. |
+| `ordinary` | full, not maskable | A shopping list has no secrets. |
+
+The default is a protection, not a lock: health can be unmasked, and anything
+maskable can be masked, per module, from the card's own long-press menu.
+
+**Open question for review:** the travel card's helper is a raw trip name, the
+most identifying thing on Home. It stays visible by default because it always
+was, but it is the strongest candidate for changing that — a one-line change in
+`defaultDetail` now that the mechanism exists.
+
+### No sensitive flash while loading
+
+Before the user's choices are read from disk, we do not know what they picked.
+Guessing "full" would show the cycle day for a frame, exactly while the phone is
+being handed to someone.
+
+So a maskable card is **withheld entirely** until preferences have hydrated —
+not merely masked, because a masked card would still reveal that the user has
+the module at all, and that may be precisely what they hid. Ordinary cards
+render immediately, so Home is not blank while the disk is read.
+
+Sensitivity belongs to what a card **shows**, not to the module's name: an empty
+travel card says "plan your first trip" and is classified `ordinary`, so it is
+not masked for appearance's sake.
+
 ## What Home still reads directly
 
 Four of the ten baselined couplings are gone. Six remain, and they are not

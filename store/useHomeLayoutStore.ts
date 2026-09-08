@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { EMPTY_HOME_LAYOUT, type HomeLayoutPreferences } from '@/core/modules/homeRanking';
+import type { HomePrivacyPreferences } from '@/core/modules/homePrivacy';
 import type { ModuleId } from '@/core/modules/moduleRegistry';
 
 /**
@@ -16,7 +17,13 @@ import type { ModuleId } from '@/core/modules/moduleRegistry';
  * At skjule et kort skjuler kortet. Modulet er der stadig, dataene er der
  * stadig, og kortet kan hentes tilbage fra bunden af Home.
  */
-interface HomeLayoutState extends HomeLayoutPreferences {
+interface HomeLayoutState extends HomeLayoutPreferences, Pick<HomePrivacyPreferences, 'detail'> {
+  /**
+   * Om indstillingerne er læst fra disk endnu. Følsomme kort maskeres, indtil
+   * de er — se homePrivacy.resolveCardDetail.
+   */
+  hasHydrated: boolean;
+  setCardDetail: (moduleId: ModuleId, detail: 'full' | 'masked') => void;
   togglePinned: (moduleId: ModuleId) => void;
   toggleHidden: (moduleId: ModuleId) => void;
   restoreAllHidden: () => void;
@@ -27,6 +34,11 @@ export const useHomeLayoutStore = create<HomeLayoutState>()(
   persist(
     (set) => ({
       ...EMPTY_HOME_LAYOUT,
+      detail: {},
+      hasHydrated: false,
+
+      setCardDetail: (moduleId, detail) =>
+        set((state) => ({ detail: { ...state.detail, [moduleId]: detail } })),
 
       togglePinned: (moduleId) =>
         set((state) => ({
@@ -58,8 +70,12 @@ export const useHomeLayoutStore = create<HomeLayoutState>()(
       partialize: (state) => ({
         pinned: state.pinned,
         hidden: state.hidden,
+        detail: state.detail,
         lastOpenedAt: state.lastOpenedAt,
       }),
+      onRehydrateStorage: () => () => {
+        useHomeLayoutStore.setState({ hasHydrated: true });
+      },
     },
   ),
 );

@@ -86,5 +86,9 @@
   "hiddenSectionTitle": "Hidden cards",
   "hiddenSectionSubtitle": "The card is off Home. The module and your data are still there.",
   "restoreCard": "Show again",
-  "pinnedBadge": "Pinned"
+  "pinnedBadge": "Pinned",
+  "maskedHelper": "Hidden here — tap to open",
+  "cardActionShowValue": "Show the value on Home",
+  "cardActionMaskValue": "Hide the value on Home",
+  "maskedAccessibility": "Value hidden"
 }

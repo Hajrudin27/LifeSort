@@ -86,5 +86,9 @@
   "hiddenSectionTitle": "Skjulte kort",
   "hiddenSectionSubtitle": "Kortet er væk fra forsiden. Modulet og dine data er der stadig.",
   "restoreCard": "Vis igen",
-  "pinnedBadge": "Fastgjort"
+  "pinnedBadge": "Fastgjort",
+  "maskedHelper": "Skjult her — tryk for at åbne",
+  "cardActionShowValue": "Vis værdien på forsiden",
+  "cardActionMaskValue": "Skjul værdien på forsiden",
+  "maskedAccessibility": "Værdien er skjult"
 }

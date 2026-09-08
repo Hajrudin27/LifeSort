@@ -134,7 +134,7 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
     titleKey: 'modules.names.account',
     descriptionKey: 'modules.descriptions.account',
     sensitivity: ['personal'],
-    routeRoots: ['/settings', '/auth', '/language', '/onboarding-profile', '/onboarding-pin', '/new-password'],
+    routeRoots: ['/settings', '/auth', '/language', '/onboarding-profile', '/onboarding-pin', '/onboarding-modules', '/new-password'],
     notificationCategory: 'security',
   },
   economy: {

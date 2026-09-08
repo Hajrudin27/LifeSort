@@ -191,6 +191,7 @@ to Supabase tables in §3.
 | `/modules` | `app/modules.tsx` | `core-shell` | `useEnabledModulesStore`<br>`useHomeLayoutStore`<br>`useModuleFlagsStore` | ordinary | Hajrudin Kardasevic |
 | `/review` | `app/review.tsx` | `core-shell` | `useEnabledModulesStore`<br>`useReviewStore` | financial | Hajrudin Kardasevic |
 | `/onboarding-pin` | `app/onboarding-pin.tsx` | `account` | `useProfileStore` | personal | Hajrudin Kardasevic |
+| `/onboarding-modules` | `app/onboarding-modules.tsx` | `account` | `useProfileStore` | ordinary | Hajrudin Kardasevic |
 | `/new-password` | `app/new-password.tsx` | `account` | `useAuthStore`<br>`useToastStore` | personal | Hajrudin Kardasevic |
 | `/onboarding-profile` | `app/onboarding-profile.tsx` | `account` | `useProfileStore` | personal | Hajrudin Kardasevic |
 | `/savings/[id]` | `app/savings/[id].tsx` | `economy` | `useSavingsGoalsStore` | financial | Hajrudin Kardasevic |
@@ -363,6 +364,7 @@ module that owns it.
 | `Toast` | `components/Toast.tsx` | shared | Hajrudin Kardasevic |
 | `FloatingTabBar` | `components/FloatingTabBar.tsx` | `core-shell` | Hajrudin Kardasevic |
 | `ModuleGate` | `components/ModuleGate.tsx` | `core-shell` | Hajrudin Kardasevic |
+| `ModuleChoiceList` | `components/ModuleChoiceList.tsx` | `core-shell` | Hajrudin Kardasevic |
 | `useClientOnlyValue` | `components/useClientOnlyValue.ts` | `core-shell` | Hajrudin Kardasevic |
 | `useClientOnlyValue` (web) | `components/useClientOnlyValue.web.ts` | `core-shell` | Hajrudin Kardasevic |
 | `useColorScheme` | `components/useColorScheme.ts` | `core-shell` | Hajrudin Kardasevic |

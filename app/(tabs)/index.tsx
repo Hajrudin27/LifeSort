@@ -155,7 +155,6 @@ export default function HomeScreen() {
   };
 
   const profileName = useProfileStore((s) => s.profile.name);
-  const gender = useProfileStore((s) => s.profile.gender);
 
   // Økonomi, mad og opsparing læses ikke længere her — modulerne leverer deres
   // egne kort (APP-011). Kun madbudgettets tilstedeværelse bruges stadig, af

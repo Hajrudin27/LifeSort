@@ -8,7 +8,6 @@ import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useModuleEnabled } from '@/core/modules/useModuleEnabled';
-import { useProfileStore } from '@/store/useProfileStore';
 
 type IconName = { ios: string; android: string; web: string };
 
@@ -49,16 +48,15 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
   const theme = Colors[colorScheme];
-  const gender = useProfileStore((s) => s.profile.gender);
-
   // Brugerens eget valg af moduler (APP-010). Et fravalgt modul forsvinder fra
   // navigationen — men ruten virker stadig, og dataene bliver liggende. Det er
   // forskellen på et fravalg og en kill switch.
   const economyEnabled = useModuleEnabled('economy');
-  const cycleEnabled = useModuleEnabled('cycle');
 
-  // Køns-gaten er stadig APP-071's at fjerne; her lægges brugerens valg oveni.
-  const showCycleTab = gender === 'female' && cycleEnabled;
+  // Cyklus vises, fordi brugeren har valgt modulet til — ikke fordi appen har
+  // gættet ud fra et køn (APP-020). Den tidligere udledning blev oversat til et
+  // eksplicit valg i migrationen, så ingen oplevede en ændring.
+  const showCycleTab = useModuleEnabled('cycle');
   const navBorder = 'rgba(253,246,237,0.1)';
   const headerButtonBackground = colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(22,19,15,0.05)';
 

@@ -4,14 +4,11 @@ import { ScrollView, TextInput } from "react-native";
 
 import Button from "@/components/Button";
 import Card from "@/components/Card";
-import Chip from "@/components/Chip";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
 import { useProfileStore } from "@/store/useProfileStore";
-import { Gender } from "@/types/profile";
 import { router } from "expo-router";
 
-const GENDERS: Gender[] = ["female", "male", "other", "unspecified"];
 
 export default function OnboardingProfileScreen() {
   const { t } = useTranslation();
@@ -23,11 +20,8 @@ export default function OnboardingProfileScreen() {
   const tint = useThemeColor({}, "tint");
 
   const setName = useProfileStore((s) => s.setName);
-  const setGender = useProfileStore((s) => s.setGender);
-  const markOnboarded = useProfileStore((s) => s.markOnboarded);
 
   const [name, setLocalName] = useState("");
-  const [gender, setLocalGender] = useState<Gender>("unspecified");
   const [error, setError] = useState<string | null>(null);
 
   // Begge felter er valgfrie. Onboarding er ikke et skema, der skal udfyldes,
@@ -37,11 +31,9 @@ export default function OnboardingProfileScreen() {
   const save = () => {
     setError(null);
     if (name.trim().length > 0) setName(name);
-    if (gender !== "unspecified") setGender(gender);
-    // Onboarding er fuldført, fordi brugeren sagde det — ikke fordi et bestemt
-    // felt tilfældigvis blev udfyldt (APP-017).
-    markOnboarded();
-    router.replace("/(tabs)");
+    // Videre til det spørgsmål, der faktisk former appen: hvad skal den hjælpe
+    // med? Onboarding afsluttes dér (APP-020).
+    router.push("/onboarding-modules");
   };
   // Ingen router.push/back her — RootLayoutNav opdager automatisk,
   // at onboarding er fuldført, og viser resten af appen i stedet.
@@ -71,21 +63,6 @@ export default function OnboardingProfileScreen() {
           value={name}
           onChangeText={setLocalName}
         />
-
-        <Text style={sharedStyles.fieldLabel}>{t("profile.genderLabel")}</Text>
-        <View style={sharedStyles.chipRow}>
-          {GENDERS.map((g) => (
-            <Chip
-              key={g}
-              label={t(`profile.gender.${g}`)}
-              active={gender === g}
-              onPress={() => setLocalGender(g)}
-            />
-          ))}
-        </View>
-        <Text style={[styles.hint, { color: textMuted }]}>
-          {t("profile.genderHint")}
-        </Text>
 
         {error && <Text style={{ color: danger, fontSize: 13 }}>{error}</Text>}
       </Card>

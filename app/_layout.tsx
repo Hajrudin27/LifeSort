@@ -285,6 +285,10 @@ function RootLayoutNav({ language }: { language: string | null }) {
             options={{ headerShown: false, presentation: "fullScreenModal" }}
           />
           <Stack.Screen
+            name="onboarding-modules"
+            options={{ headerShown: false, presentation: "fullScreenModal" }}
+          />
+          <Stack.Screen
             name="expenses/index"
             options={{
               title: t("expenses.screenTitle"),

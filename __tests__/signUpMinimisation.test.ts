@@ -62,7 +62,11 @@ describe('navn og køn er valgfrie', () => {
   it('onboarding kan gennemføres uden at udfylde noget', () => {
     const onboarding = read('app/onboarding-profile.tsx');
     expect(onboarding).toContain('const canSave = true;');
-    expect(onboarding).toContain('markOnboarded()');
+  });
+
+  it('afsluttes eksplicit på sidste trin, ikke af et udfyldt felt', () => {
+    // APP-020 flyttede afslutningen til modul-valget, som er det sidste trin.
+    expect(read('app/onboarding-modules.tsx')).toContain('markOnboarded()');
   });
 
   it('profilen kan gemmes uden et navn', () => {

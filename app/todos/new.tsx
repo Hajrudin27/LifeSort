@@ -11,6 +11,7 @@ import Hero from "@/components/Hero";
 import { Text, useThemeColor } from "@/components/Themed";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useBrandTints } from "@/hooks/useBrandTints";
+import { useModuleEnabled } from "@/core/modules/useModuleEnabled";
 import { useCycleStore } from "@/store/useCycleStore";
 import { useProfileStore } from "@/store/useProfileStore";
 import { useTodoStore } from "@/store/useTodoStore";
@@ -51,13 +52,15 @@ export default function NewTodoScreen() {
   const [dueDate, setDueDate] = useState("");
   const [dueMode, setDueMode] = useState<"none" | "today" | "tomorrow" | "week" | "custom">("none");
 
-  const gender = useProfileStore((s) => s.profile.gender);
+  const cycleEnabled = useModuleEnabled('cycle');
   const cycles = useCycleStore((s) => s.cycles);
   const avgCycleLength = useCycleStore((s) => s.avgCycleLength);
   const lutealPhaseLength = useCycleStore((s) => s.lutealPhaseLength);
 
+  // Faseoplysningen vises, hvis brugeren har cyklus-modulet slået til — ikke
+  // ud fra et køn (APP-020).
   const dueDatePhase =
-    gender === "female" && dueDate
+    cycleEnabled && dueDate
       ? getPhaseForDate(dueDate, cycles, avgCycleLength, 5, lutealPhaseLength)
       : null;
 

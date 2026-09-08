@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 
 import { Text, useThemeColor } from "@/components/Themed";
+import AppLockSuggestion from "@/components/AppLockSuggestion";
 import VerifyEmailBanner from "@/components/VerifyEmailBanner";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
@@ -250,6 +251,9 @@ export default function SettingsScreen() {
 
       {/* Vises kun, hvis adressen mangler at blive bekræftet (APP-018). */}
       <VerifyEmailBanner />
+
+      {/* Vises kun, når et modul med helbredsdata er slået til og låsen fra (APP-026). */}
+      <AppLockSuggestion />
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>

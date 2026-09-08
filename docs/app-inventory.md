@@ -369,6 +369,7 @@ module that owns it.
 | `useClientOnlyValue` (web) | `components/useClientOnlyValue.web.ts` | `core-shell` | Hajrudin Kardasevic |
 | `useColorScheme` | `components/useColorScheme.ts` | `core-shell` | Hajrudin Kardasevic |
 | `useColorScheme` (web) | `components/useColorScheme.web.ts` | `core-shell` | Hajrudin Kardasevic |
+| `AppLockSuggestion` | `components/AppLockSuggestion.tsx` | `account` | Hajrudin Kardasevic |
 | `LockScreen` | `components/LockScreen.tsx` | `account` | Hajrudin Kardasevic |
 | `useSensitiveAction` | `components/useSensitiveAction.tsx` | `account` | Hajrudin Kardasevic |
 | `PrivacyOverlay` | `components/PrivacyOverlay.tsx` | `account` | Hajrudin Kardasevic |

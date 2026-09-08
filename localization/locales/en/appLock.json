@@ -24,5 +24,14 @@
   "noHardwareTitle": "Not available",
   "noHardwareMessage": "Your device doesn't support Face ID or fingerprint. Contact support if you believe this is an error.",
   "changePinLabel": "Create/change PIN code",
-  "pinSettingsTitle": "PIN code"
+  "pinSettingsTitle": "PIN code",
+  "forgotPin": "Forgotten your code?",
+  "forgotPinTitle": "Sign out to continue",
+  "forgotPinMessage": "The code cannot be recovered — it only exists on this phone. If you sign out, everything that is synced comes back next time you sign in. Files that only live on this phone will be lost.",
+  "forgotPinConfirm": "Sign out",
+  "recommendTitle": "Lock the app on this phone",
+  "recommendBody": "You have turned on an area that holds health data. A code or your fingerprint keeps whoever picks up the phone out of it.",
+  "recommendEnable": "Turn on app lock",
+  "recommendDismiss": "Not now",
+  "serverNote": "The app lock protects this phone only. Your account is protected by your password."
 }

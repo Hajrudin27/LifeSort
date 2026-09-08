@@ -43,7 +43,7 @@ The stored record is nonetheless built properly:
 - Raising the iteration count later is a data-compatible change thanks to the
   version field.
 - Recovery from a forgotten PIN is signing out, because the PIN is not
-  recoverable by design.
+  recoverable by design. **This was stated here before it existed** — the lock screen offered no way out until APP-026 added one. A decision recorded but not built is worth no more than one never taken.
 
 ## Alternatives considered
 

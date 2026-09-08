@@ -24,5 +24,14 @@
   "noHardwareTitle": "Ikke tilgængelig",
   "noHardwareMessage": "Din enhed understøtter ikke Face ID eller fingeraftryk. Kontakt support, hvis du mener dette er en fejl.",
   "changePinLabel": "Opret/skift PIN-kode",
-  "pinSettingsTitle": "PIN-kode"
+  "pinSettingsTitle": "PIN-kode",
+  "forgotPin": "Glemt din kode?",
+  "forgotPinTitle": "Log ud for at komme videre",
+  "forgotPinMessage": "Koden kan ikke gendannes — den findes kun på telefonen. Logger du ud, kommer alt det, der er synkroniseret, tilbage næste gang du logger ind. Filer, der kun ligger på telefonen, går tabt.",
+  "forgotPinConfirm": "Log ud",
+  "recommendTitle": "Lås appen på denne telefon",
+  "recommendBody": "Du har slået et område til med helbredsdata. En kode eller dit fingeraftryk holder den, der samler telefonen op, ude af den.",
+  "recommendEnable": "Slå app-lås til",
+  "recommendDismiss": "Ikke nu",
+  "serverNote": "App-låsen beskytter kun denne telefon. Din konto er beskyttet af din adgangskode."
 }

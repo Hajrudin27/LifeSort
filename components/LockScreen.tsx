@@ -2,11 +2,12 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput } from 'react-native';
+import { Alert, Pressable, TextInput } from 'react-native';
 
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { useAccentTints } from '@/hooks/useAccentTints';
 import { useAppLockStore } from '@/store/useAppLockStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { verifyPin } from '@/utils/auth/pinAuth';
 import {
   FREE_ATTEMPTS,
@@ -36,6 +37,22 @@ export default function LockScreen() {
   const danger = useThemeColor({}, 'danger');
 
   const unlock = useAppLockStore((s) => s.unlock);
+  const signOut = useAuthStore((s) => s.signOut);
+
+  // Advarslen er ikke pynt: log ud rydder telefonen, og filer der aldrig nåede
+  // op i skyen (fx rejsedokumenter) findes ikke andre steder.
+  const confirmForgotPin = () =>
+    Alert.alert(t('appLock.forgotPinTitle'), t('appLock.forgotPinMessage'), [
+      { text: t('warranties.cancel'), style: 'cancel' },
+      {
+        text: t('appLock.forgotPinConfirm'),
+        style: 'destructive',
+        onPress: async () => {
+          unlock();
+          await signOut();
+        },
+      },
+    ]);
 
   const [showPinInput, setShowPinInput] = useState(false);
   const [pin, setPin] = useState('');
@@ -207,6 +224,15 @@ export default function LockScreen() {
           </Pressable>
         </View>
       )}
+
+      {/* Vejen ud. Uden den er en glemt kode det samme som en ubrugelig app —
+          koden kan ikke gendannes, for den ligger kun her (APP-026). */}
+      <Pressable accessibilityRole="button" onPress={confirmForgotPin} style={styles.forgotButton}>
+        <Text style={[styles.switchBack, { color: textMuted }]}>{t('appLock.forgotPin')}</Text>
+      </Pressable>
+
+      {/* Grænsen, sagt hvor brugeren møder låsen. */}
+      <Text style={[styles.limitNote, { color: textMuted }]}>{t('appLock.serverNote')}</Text>
     </View>
   );
 }
@@ -232,6 +258,8 @@ const styles = {
     justifyContent: 'center' as const,
   },
   title: { fontSize: 20, fontWeight: '800' as const },
+  forgotButton: { minHeight: 44, justifyContent: 'center' as const, marginTop: 4 },
+  limitNote: { fontSize: 11, lineHeight: 16, textAlign: 'center' as const, maxWidth: 280 },
   retryButton: { borderWidth: 1.5, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 24, marginTop: 8 },
   retryText: { fontWeight: '700' as const },
   pinSection: { width: '100%' as const, maxWidth: 280, alignItems: 'center' as const, gap: 10, marginTop: 8 },

@@ -38,6 +38,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0017](./0017-logout-clears-by-sweep-not-by-list.md) | Logout clears by sweeping storage, not by remembering every store | Accepted | 2026-09-07 | APP-021 |
 | [0018](./0018-reauth-matches-the-threat-not-the-ceremony.md) | Re-authentication matches the threat, not the ceremony | Accepted | 2026-09-07 | APP-024 |
 | [0019](./0019-sign-out-affects-one-device-unless-asked.md) | Signing out affects one device unless the user asks otherwise | Accepted | 2026-09-07 | APP-025 |
+| [0020](./0020-the-app-lock-guards-the-phone-not-the-account.md) | The app lock guards the phone, not the account | Accepted | 2026-09-07 | APP-026 |
 
 ## When an ADR is required
 

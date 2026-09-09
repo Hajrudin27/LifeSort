@@ -33,10 +33,13 @@ export default function OnboardingProfileScreen() {
     if (name.trim().length > 0) setName(name);
     // Videre til det spørgsmål, der faktisk former appen: hvad skal den hjælpe
     // med? Onboarding afsluttes dér (APP-020).
-    router.push("/onboarding-modules");
+    //
+    // `replace`, ikke `push`: onboarding er en lige vej, ikke en stak man kan
+    // bladre i. Der er ingen vej tilbage hertil — skærmen er en fullScreenModal
+    // uden header og uden luk-bevægelse — så et ekstra historik-punkt kan kun
+    // blive liggende under appen bagefter. Det var præcis det, der skete.
+    router.replace("/onboarding-modules");
   };
-  // Ingen router.push/back her — RootLayoutNav opdager automatisk,
-  // at onboarding er fuldført, og viser resten af appen i stedet.
 
   return (
     <ScrollView

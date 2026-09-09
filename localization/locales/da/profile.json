@@ -17,5 +17,6 @@
   "partnerNameHint": "Bruges til at fordele opgaver i Hjemmet-modulet mellem jer to.",
   "onboardingTitle": "Velkommen til LifeSort",
   "onboardingSubtitle": "Fortæl os lidt om dig selv, før vi kommer i gang.",
-  "continueButton": "Fortsæt"
+  "continueButton": "Fortsæt",
+  "onboardingSaveButton": "Kom i gang"
 }

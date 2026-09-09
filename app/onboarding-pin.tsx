@@ -42,7 +42,10 @@ export default function OnboardingPinScreen() {
     setIsSaving(true);
     try {
       await setPin(pin);
-      router.replace("/(tabs)");
+      // Samme grund som på modulskærmen: replace ville lade /auth blive
+      // liggende under appen. Herfra sender vagten brugeren videre til resten
+      // af onboarding, fordi onboarded_at endnu ikke er sat.
+      router.dismissTo("/(tabs)");
     } finally {
       setIsSaving(false);
     }

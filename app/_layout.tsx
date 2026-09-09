@@ -8,6 +8,7 @@ import {
   router,
   Stack,
   ThemeProvider,
+  usePathname,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef, useState } from "react";
@@ -20,11 +21,15 @@ import LockScreen from "@/components/LockScreen";
 import ModuleGate from "@/components/ModuleGate";
 import PrivacyOverlay from "@/components/PrivacyOverlay";
 import Toast from "@/components/Toast";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
+import {
+  ONBOARDING_ENTRY_ROUTE,
+  shouldRedirectToOnboarding,
+} from "@/core/auth/onboardingRoutes";
 import { clearVerification } from "@/core/auth/reauth";
 import { parseRecoveryLink } from "@/core/auth/recoveryLink";
-import { useColorScheme } from "@/components/useColorScheme";
 import { useRecordModuleVisit } from "@/core/modules/useModuleVisit";
-import Colors from "@/constants/Colors";
 import "@/localization/i18n";
 import i18n from "@/localization/i18n";
 import { useAppLockStore } from "@/store/useAppLockStore";
@@ -113,7 +118,9 @@ export default function RootLayout() {
   const fetchCycle = useCycleStore((s) => s.fetchFromSupabase);
   const fetchModuleFlags = useModuleFlagsStore((s) => s.fetchFromSupabase);
   const beginPasswordRecovery = useAuthStore((s) => s.beginPasswordRecovery);
-  const fetchEnabledModules = useEnabledModulesStore((s) => s.fetchFromSupabase);
+  const fetchEnabledModules = useEnabledModulesStore(
+    (s) => s.fetchFromSupabase,
+  );
 
   const appLockHasHydrated = useAppLockStore((s) => s.hasHydrated);
   const lockEnabled = useAppLockStore((s) => s.lockEnabled);
@@ -147,7 +154,9 @@ export default function RootLayout() {
 
     // Appen kan være startet AF linket, eller allerede have kørt.
     Linking.getInitialURL().then(handleUrl);
-    const subscription = Linking.addEventListener("url", (event) => handleUrl(event.url));
+    const subscription = Linking.addEventListener("url", (event) =>
+      handleUrl(event.url),
+    );
     return () => subscription.remove();
   }, []);
 
@@ -189,17 +198,23 @@ export default function RootLayout() {
   // Lås appen igen, når den vender tilbage fra baggrunden (fx efter at have
   // været minimeret) — ikke ved almindelige, interne skærmskift i appen.
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
-      if (appState.current.match(/inactive|background/) && nextState === "active") {
-        if (lockEnabled && session) {
-          lock();
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextState: AppStateStatus) => {
+        if (
+          appState.current.match(/inactive|background/) &&
+          nextState === "active"
+        ) {
+          if (lockEnabled && session) {
+            lock();
+          }
+          // Beviset for "det er stadig dig" glemmes, når appen har været ude af
+          // syne. En telefon på et bord kan have skiftet hænder imens (APP-024).
+          clearVerification();
         }
-        // Beviset for "det er stadig dig" glemmes, når appen har været ude af
-        // syne. En telefon på et bord kan have skiftet hænder imens (APP-024).
-        clearVerification();
-      }
-      appState.current = nextState;
-    });
+        appState.current = nextState;
+      },
+    );
     return () => subscription.remove();
   }, [lockEnabled, session?.user.id]);
 
@@ -239,7 +254,13 @@ export default function RootLayout() {
 
   const waitingForProfile = !!session && !profileFetchAttempted;
 
-  if (!loaded || !hasHydrated || authIsLoading || waitingForProfile || !lockCheckDone) {
+  if (
+    !loaded ||
+    !hasHydrated ||
+    authIsLoading ||
+    waitingForProfile ||
+    !lockCheckDone
+  ) {
     return null;
   }
 
@@ -248,6 +269,8 @@ export default function RootLayout() {
 
 function RootLayoutNav({ language }: { language: string | null }) {
   const colorScheme = useColorScheme();
+
+  const pathname = usePathname();
 
   // "Senest brugt" til rækkefølgen på Home (APP-012). Registreres her, hvor alle
   // ruter kommer forbi, uanset hvordan brugeren nåede frem.
@@ -265,9 +288,12 @@ function RootLayoutNav({ language }: { language: string | null }) {
       >
         {!language && <Redirect href="/language" />}
         {language && !session && <Redirect href="/auth" />}
-        {language && session && !hasOnboarded && (
-          <Redirect href="/onboarding-profile" />
-        )}
+        {shouldRedirectToOnboarding({
+          hasLanguage: !!language,
+          hasSession: !!session,
+          hasOnboarded,
+          pathname,
+        }) && <Redirect href={ONBOARDING_ENTRY_ROUTE} />}
         <Stack
           screenOptions={{ headerShadowVisible: false, headerBackTitle: "" }}
         >
@@ -306,7 +332,10 @@ function RootLayoutNav({ language }: { language: string | null }) {
               title: t("expenses.newScreenTitle"),
             }}
           />
-          <Stack.Screen name="modal" options={{ presentation: "modal", title: t("about.title") }} />
+          <Stack.Screen
+            name="modal"
+            options={{ presentation: "modal", title: t("about.title") }}
+          />
           <Stack.Screen
             name="expenses/edit/[id]"
             options={{ title: t("expenses.edit") }}
@@ -634,19 +663,31 @@ function RootLayoutNav({ language }: { language: string | null }) {
           />
           <Stack.Screen
             name="settings/modules"
-            options={{ title: t("modules.settingsTitle"), headerBackTitle: t("settings.title") }}
+            options={{
+              title: t("modules.settingsTitle"),
+              headerBackTitle: t("settings.title"),
+            }}
           />
           <Stack.Screen
             name="modules"
-            options={{ title: t("modules.launcherTitle"), headerBackTitle: t("life.title") }}
+            options={{
+              title: t("modules.launcherTitle"),
+              headerBackTitle: t("life.title"),
+            }}
           />
           <Stack.Screen
             name="review"
-            options={{ title: t("review.title"), headerBackTitle: t("settings.title") }}
+            options={{
+              title: t("review.title"),
+              headerBackTitle: t("settings.title"),
+            }}
           />
           <Stack.Screen
             name="new-password"
-            options={{ title: t("auth.newPasswordTitle"), presentation: "fullScreenModal" }}
+            options={{
+              title: t("auth.newPasswordTitle"),
+              presentation: "fullScreenModal",
+            }}
           />
           <Stack.Screen
             name="cycle/history"
@@ -691,8 +732,20 @@ function RootLayoutNav({ language }: { language: string | null }) {
             name="cycle/health-info/[id]"
             options={{ title: t("healthInfo.title") }}
           />
-          <Stack.Screen name="expenses/upcoming" options={{ title: t("expenses.upcomingLabel"), headerBackTitle: t("expenses.screenTitle") }} />
-          <Stack.Screen name="cycle/log-day" options={{ presentation: 'modal', title: t('cycle.logAnotherDayLabel') }} />
+          <Stack.Screen
+            name="expenses/upcoming"
+            options={{
+              title: t("expenses.upcomingLabel"),
+              headerBackTitle: t("expenses.screenTitle"),
+            }}
+          />
+          <Stack.Screen
+            name="cycle/log-day"
+            options={{
+              presentation: "modal",
+              title: t("cycle.logAnotherDayLabel"),
+            }}
+          />
         </Stack>
         <Toast />
         <ModuleGate />

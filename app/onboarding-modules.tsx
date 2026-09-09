@@ -29,7 +29,11 @@ export default function OnboardingModulesScreen() {
     // Onboarding er fuldført, fordi brugeren siger det — ikke fordi et bestemt
     // felt blev udfyldt (APP-017).
     markOnboarded();
-    router.replace('/(tabs)');
+    // `dismissTo`, ikke `replace`: replace bytter kun det øverste punkt i
+    // stakken ud, så alt under onboarding-skærmen blev liggende — appen kom
+    // frem, men onboarding lå der stadig, og man kunne komme tilbage til den.
+    // dismissTo lukker alt ned til appen selv og efterlader intet af flowet.
+    router.dismissTo('/(tabs)');
   };
 
   return (

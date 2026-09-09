@@ -17,5 +17,6 @@
   "partnerNameHint": "Used to split tasks in the Household module between the two of you.",
   "onboardingTitle": "Welcome to LifeSort",
   "onboardingSubtitle": "Tell us a bit about yourself before we get started.",
-  "continueButton": "Continue"
+  "continueButton": "Continue",
+  "onboardingSaveButton": "Get started"
 }

@@ -14,6 +14,15 @@ import path from 'path';
 const REPO_ROOT = path.resolve(__dirname, '..');
 const read = (file: string) => fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
 
+/** Finder en migration på dens navn uden tidsstempel — Supabase omdøber dem. */
+function readMigration(suffix: string): string {
+  const dir = path.join(REPO_ROOT, 'supabase', 'migrations');
+  const file = fs.readdirSync(dir).find((name) => name.endsWith(suffix));
+  if (!file) throw new Error(`Ingen migration der ender på "${suffix}"`);
+  return fs.readFileSync(path.join(dir, file), 'utf8');
+}
+
+
 function sourceFiles(dirs: string[]): string[] {
   const found: string[] = [];
   const walk = (current: string) => {
@@ -74,7 +83,9 @@ describe('intet modul udledes af køn', () => {
 
 describe('onboarding spørger om moduler', () => {
   it('slutter med modulvalget', () => {
-    expect(read('app/onboarding-profile.tsx')).toContain('router.push("/onboarding-modules")');
+    // `replace`, ikke `push`: trinnet skal ikke blive liggende i historikken
+    // under appen bagefter. Se onboardingGuard.test.ts.
+    expect(read('app/onboarding-profile.tsx')).toContain('router.replace("/onboarding-modules")');
     expect(read('app/onboarding-modules.tsx')).toContain('markOnboarded()');
   });
 
@@ -98,7 +109,7 @@ describe('onboarding spørger om moduler', () => {
 });
 
 describe('migrationen bevarer den nuværende oplevelse', () => {
-  const migration = read('supabase/migrations/20260907150000_seed_cycle_module_choice.sql');
+  const migration = readMigration('_seed_cycle_module_choice.sql');
 
   it('oversætter den gamle udledning til et eksplicit valg', () => {
     expect(migration).toMatch(/insert into public\.user_modules/);

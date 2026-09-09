@@ -14,6 +14,15 @@ import path from 'path';
 const REPO_ROOT = path.resolve(__dirname, '..');
 const read = (file: string) => fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
 
+/** Finder en migration på dens navn uden tidsstempel — Supabase omdøber dem. */
+function readMigration(suffix: string): string {
+  const dir = path.join(REPO_ROOT, 'supabase', 'migrations');
+  const file = fs.readdirSync(dir).find((name) => name.endsWith(suffix));
+  if (!file) throw new Error(`Ingen migration der ender på "${suffix}"`);
+  return fs.readFileSync(path.join(dir, file), 'utf8');
+}
+
+
 describe('oprettelsesskærmen', () => {
   const source = read('app/auth.tsx');
 
@@ -75,7 +84,7 @@ describe('navn og køn er valgfrie', () => {
 });
 
 describe('migrationen efterlader ingen bag sig', () => {
-  const migration = read('supabase/migrations/20260907140000_profiles_onboarded_at.sql');
+  const migration = readMigration('_profiles_onboarded_at.sql');
 
   it('udfylder onboarded_at for dem, der allerede var igennem', () => {
     // Ellers ville hele den eksisterende brugerbase blive sendt gennem

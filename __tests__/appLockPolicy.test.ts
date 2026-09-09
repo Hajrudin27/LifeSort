@@ -100,6 +100,9 @@ describe('låsen erstatter aldrig serverens kontrol', () => {
       'app/modal.tsx',
       'components/AppLockSuggestion.tsx',
       'components/LockScreen.tsx',
+      // APP-027 only classifies the persisted lock surface. It must not treat
+      // the lock as server authorization.
+      'core/storage/dataProfileRegistry.ts',
       'features/localStores.ts',
     ];
 

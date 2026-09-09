@@ -40,6 +40,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0019](./0019-sign-out-affects-one-device-unless-asked.md) | Signing out affects one device unless the user asks otherwise | Accepted | 2026-09-07 | APP-025 |
 | [0020](./0020-the-app-lock-guards-the-phone-not-the-account.md) | The app lock guards the phone, not the account | Accepted | 2026-09-07 | APP-026 |
 | [0021](./0021-recovery-opens-a-route-by-state-not-by-name.md) | Password recovery opens a route by state, never by name | Accepted | 2026-09-09 | APP-019 |
+| [0022](./0022-data-profiles-are-contracts-over-logical-domains.md) | Data profiles are contracts over logical domains | Accepted | 2026-09-09 | APP-027 |
 
 ## When an ADR is required
 

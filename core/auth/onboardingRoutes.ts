@@ -30,11 +30,29 @@ export const ONBOARDING_ROUTES = [
   '/onboarding-pin',
 ] as const;
 
+/**
+ * Skærmen hvor et nyt kodeord sættes.
+ *
+ * Den står MED VILJE ikke på ONBOARDING_ROUTES. En rute på den liste er åben,
+ * fordi den hedder det den hedder — og så ville enhver kunne springe onboarding
+ * over ved at navigere hertil. Adgangen hertil afgøres af, om der faktisk er en
+ * gendannelse i gang; se `shouldRedirectToOnboarding`.
+ */
+export const PASSWORD_RECOVERY_ROUTE = '/new-password';
+
+/** Uden query-streng og uden afsluttende skråstreg. */
+function normalisePath(pathname: string): string {
+  return pathname.split('?')[0].replace(/\/+$/, '') || '/';
+}
+
 export function isOnboardingRoute(pathname: string): boolean {
-  // Uden query-streng, og uden afsluttende skråstreg, så '/onboarding-modules/'
-  // og '/onboarding-modules?x=1' behandles som den rute, de er.
-  const path = pathname.split('?')[0].replace(/\/+$/, '') || '/';
-  return (ONBOARDING_ROUTES as readonly string[]).includes(path);
+  // Så '/onboarding-modules/' og '/onboarding-modules?x=1' behandles som den
+  // rute, de er.
+  return (ONBOARDING_ROUTES as readonly string[]).includes(normalisePath(pathname));
+}
+
+export function isPasswordRecoveryRoute(pathname: string): boolean {
+  return normalisePath(pathname) === PASSWORD_RECOVERY_ROUTE;
 }
 
 export type OnboardingGuardState = {
@@ -43,6 +61,14 @@ export type OnboardingGuardState = {
   hasSession: boolean;
   /** Kommer fra profiles.onboarded_at — aldrig udledt af et udfyldt felt. */
   hasOnboarded: boolean;
+  /**
+   * Er der en kodeordsgendannelse i gang lige nu?
+   *
+   * Sandt kun mens appen har byttet et gyldigt `type=recovery`-link til en
+   * session, og kodeordet endnu ikke er sat. Det er en tilstand, ikke et
+   * rutenavn — og det er hele pointen: se kommentaren i funktionen nedenfor.
+   */
+  isRecoveringPassword: boolean;
   pathname: string;
 };
 
@@ -56,6 +82,7 @@ export function shouldRedirectToOnboarding({
   hasLanguage,
   hasSession,
   hasOnboarded,
+  isRecoveringPassword,
   pathname,
 }: OnboardingGuardState): boolean {
   // Sprog og login har deres egne vagter og kommer før den her.
@@ -64,6 +91,19 @@ export function shouldRedirectToOnboarding({
   if (hasOnboarded) return false;
 
   // Er brugeren allerede i gang med flowet, skal hun have lov at komme videre
-  // i det. Det er hele rettelsen.
-  return !isOnboardingRoute(pathname);
+  // i det. Det er hele rettelsen af baglåsen.
+  if (isOnboardingRoute(pathname)) return false;
+
+  // En bruger, der har glemt sit kodeord uden at have gennemført onboarding,
+  // skal kunne sætte et nyt. Ellers er kontoen låst inde bag et trin, hun ikke
+  // kan nå uden netop det kodeord, hun mangler.
+  //
+  // Undtagelsen er en KONJUNKTION: både en gendannelse i gang OG den rute, der
+  // sætter kodeordet. Rutenavnet alene giver ingenting, og tilstanden alene
+  // åbner ikke resten af appen. `isRecoveringPassword` kan kun blive sand
+  // inde i beginPasswordRecovery — altså efter et link med `type=recovery` og
+  // to tokens, som serveren har accepteret. Det kan man ikke navigere sig til.
+  if (isRecoveringPassword && isPasswordRecoveryRoute(pathname)) return false;
+
+  return true;
 }

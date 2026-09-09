@@ -52,7 +52,11 @@ export default function NewPasswordScreen() {
         return;
       }
       showToast(t('auth.resetDoneToast'));
-      router.replace('/');
+      // `dismissTo`, ikke `replace`: replace bytter kun det øverste punkt ud og
+      // ville efterlade kodeordsskærmen i historikken. Herfra sender vagten en
+      // bruger uden fuldført onboarding videre dertil — gendannelsen er brugt
+      // op, og adgangen til skærmen er lukket igen.
+      router.dismissTo('/');
     } finally {
       setIsSubmitting(false);
     }

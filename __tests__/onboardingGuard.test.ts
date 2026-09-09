@@ -5,9 +5,11 @@ import path from 'path';
 
 import {
   isOnboardingRoute,
+  isPasswordRecoveryRoute,
   ONBOARDING_ENTRY_ROUTE,
   ONBOARDING_ROUTES,
   type OnboardingGuardState,
+  PASSWORD_RECOVERY_ROUTE,
   shouldRedirectToOnboarding,
 } from '@/core/auth/onboardingRoutes';
 
@@ -28,6 +30,7 @@ const state = (partial: Partial<OnboardingGuardState> = {}): OnboardingGuardStat
   hasLanguage: true,
   hasSession: true,
   hasOnboarded: false,
+  isRecoveringPassword: false,
   pathname: '/',
   ...partial,
 });
@@ -260,5 +263,146 @@ describe('onboardings tekster findes på begge sprog', () => {
     }
 
     expect(missing).toEqual([]);
+  });
+});
+
+/**
+ * Tredje runde: den bruger, der har glemt sit kodeord UDEN at have gennemført
+ * onboarding.
+ *
+ * Vagten sendte hende væk fra /new-password, fordi ruten ikke står på
+ * onboarding-listen. Linket fra mailen blev brugt op, kodeordet aldrig sat, og
+ * kontoen var reelt låst inde bag et trin, hun ikke kunne nå uden netop det
+ * kodeord, hun manglede.
+ *
+ * Rettelsen er IKKE at sætte ruten på listen. Alt på den liste er åbent, fordi
+ * det hedder det, det hedder — og så kunne man springe onboarding over ved at
+ * navigere hertil. Adgangen hænger på en tilstand: er der en gendannelse i
+ * gang? Se ADR-0021.
+ */
+describe('kodeordsgendannelse uden fuldført onboarding', () => {
+  it('må sætte et nyt kodeord, mens gendannelsen står på', () => {
+    expect(
+      shouldRedirectToOnboarding(
+        state({ isRecoveringPassword: true, pathname: PASSWORD_RECOVERY_ROUTE }),
+      ),
+    ).toBe(false);
+  });
+
+  it('men kan ikke bruge ruten til at snige sig uden om onboarding', () => {
+    // Ingen gendannelse i gang: ruten er lige så lukket som resten af appen.
+    expect(
+      shouldRedirectToOnboarding(state({ pathname: PASSWORD_RECOVERY_ROUTE })),
+    ).toBe(true);
+  });
+
+  it('og tilstanden alene åbner ikke resten af appen', () => {
+    // Undtagelsen er en konjunktion. Var den det ikke, ville et gyldigt link
+    // være en generalnøgle til hele appen uden onboarding.
+    for (const pathname of ['/', '/economy', '/settings', '/settings/modules']) {
+      expect(
+        shouldRedirectToOnboarding(state({ isRecoveringPassword: true, pathname })),
+      ).toBe(true);
+    }
+  });
+
+  it('holder ruten ude af onboarding-listen', () => {
+    // Står den dér, gælder undtagelsen på navnet alene — præcis hullet.
+    expect(ONBOARDING_ROUTES).not.toContain(PASSWORD_RECOVERY_ROUTE);
+    expect(isOnboardingRoute(PASSWORD_RECOVERY_ROUTE)).toBe(false);
+  });
+
+  it('genkender ruten trods skråstreg og query', () => {
+    expect(isPasswordRecoveryRoute('/new-password')).toBe(true);
+    expect(isPasswordRecoveryRoute('/new-password/')).toBe(true);
+    expect(isPasswordRecoveryRoute('/new-password?type=recovery')).toBe(true);
+    for (const pathname of ['/new-password-x', '/newpassword', '/onboarding-profile', '/']) {
+      expect(isPasswordRecoveryRoute(pathname)).toBe(false);
+    }
+  });
+
+  it('rører ikke en bruger, der er igennem onboarding', () => {
+    for (const isRecoveringPassword of [true, false]) {
+      for (const pathname of ['/', '/settings', PASSWORD_RECOVERY_ROUTE]) {
+        expect(
+          shouldRedirectToOnboarding(state({ hasOnboarded: true, isRecoveringPassword, pathname })),
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('gør stadig ingenting uden sprog eller session', () => {
+    expect(
+      shouldRedirectToOnboarding(
+        state({ hasSession: false, isRecoveringPassword: true, pathname: PASSWORD_RECOVERY_ROUTE }),
+      ),
+    ).toBe(false);
+  });
+});
+
+/**
+ * Tilstanden er kun værd at stole på, hvis den ikke kan sættes andre steder end
+ * dér, hvor serveren har godkendt linkets tokens.
+ */
+describe('hvornår en gendannelse regnes for i gang', () => {
+  const store = read('store/useAuthStore.ts');
+
+  it('sættes kun efter at serveren har accepteret linkets tokens', () => {
+    const occurrences = store.match(/isRecoveringPassword: true/g) ?? [];
+    expect(occurrences).toHaveLength(1);
+
+    const begin = store.slice(store.indexOf('beginPasswordRecovery: async'));
+    const body = begin.slice(0, begin.indexOf('setNewPassword: async'));
+    expect(body).toContain('isRecoveringPassword: true');
+    // Efter fejl-returneringen — ellers ville et afvist link tælle som adgang.
+    expect(body.indexOf('if (error) return')).toBeLessThan(
+      body.indexOf('isRecoveringPassword: true'),
+    );
+  });
+
+  it('lukker igen, når kodeordet er sat', () => {
+    const setNew = store.slice(store.indexOf('setNewPassword: async'));
+    const body = setNew.slice(0, setNew.indexOf('signIn: async'));
+    expect(body).toContain('isRecoveringPassword: false');
+    expect(body.indexOf('if (error) return')).toBeLessThan(
+      body.indexOf('isRecoveringPassword: false'),
+    );
+  });
+
+  it('lukker også ved log ud og ved almindeligt login', () => {
+    expect(store).toMatch(/if \(!session\) set\(\{ isRecoveringPassword: false \}\)/);
+    const signIn = store.slice(store.indexOf('signIn: async'));
+    expect(signIn.slice(0, signIn.indexOf('signOut:'))).toContain('isRecoveringPassword: false');
+  });
+
+  it('overlever ikke en genstart', () => {
+    // Ingen persist på auth-store'en: flaget dør med processen, så en genstart
+    // ikke kan genoplive adgangen til skærmen.
+    expect(store).not.toMatch(/persist\(/);
+  });
+});
+
+describe('layoutet giver vagten den rigtige tilstand', () => {
+  const layout = read('app/_layout.tsx');
+
+  it('læser gendannelsestilstanden fra auth-store\'en', () => {
+    expect(layout).toContain('useAuthStore((s) => s.isRecoveringPassword)');
+    expect(layout).toContain('isRecoveringPassword,');
+  });
+
+  it('åbner ikke skærmen på rutenavnet alene', () => {
+    expect(layout).not.toMatch(/pathname\s*===\s*["']\/new-password["']/);
+  });
+
+  it('efterlader ikke gendannelsen i historikken', () => {
+    // Samme grund som i onboarding: replace bytter kun det øverste punkt ud.
+    expect(layout).toContain('router.replace("/new-password")');
+    expect(read('app/new-password.tsx')).toContain("router.dismissTo('/')");
+    expect(read('app/new-password.tsx')).not.toContain("router.replace('/')");
+  });
+
+  it('bruger ingen timere til at holde tilstand og navigation sammen', () => {
+    const handler = layout.slice(layout.indexOf('const handleUrl'));
+    expect(handler.slice(0, 600)).not.toMatch(/setTimeout|requestAnimationFrame/);
   });
 });

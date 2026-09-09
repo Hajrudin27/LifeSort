@@ -14,6 +14,16 @@ interface AuthState {
   isLoading: boolean;
   /** Har brugeren bevist, at hun kan læse adressen? Se APP-018. */
   isEmailVerified: boolean;
+  /**
+   * Er der en kodeordsgendannelse i gang? Sand fra det øjeblik et gyldigt
+   * `type=recovery`-link er byttet til en session, og indtil kodeordet er sat
+   * (eller sessionen forsvinder). Vagten i rod-layoutet bruger den til at åbne
+   * /new-password for en bruger, der ikke er igennem onboarding — se ADR-0021.
+   *
+   * Den persisteres bevidst ikke: en genstart skal ikke kunne genoplive
+   * adgangen til skærmen.
+   */
+  isRecoveringPassword: boolean;
   /** Sender bekræftelsesmailen igen. Spærretiden håndteres af kaldstedet. */
   resendVerificationEmail: (email: string) => Promise<{ error: string | null }>;
   /** Beder om et nulstillingslink. Svarer altid det samme — se ADR-0014. */
@@ -57,6 +67,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   session: null,
   isLoading: true,
   isEmailVerified: false,
+  isRecoveringPassword: false,
 
   init: () => {
     // Hent en evt. eksisterende session med det samme (fx efter app-genstart)
@@ -67,6 +78,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Lyt løbende på login/logout/token-fornyelse
     supabase.auth.onAuthStateChange((_event, session) => {
       set({ session, isLoading: false, isEmailVerified: isEmailVerified(session) });
+      // Ingen session, ingen gendannelse. Dækker log ud ad alle veje.
+      // Der ryddes KUN når sessionen er væk: setSession i
+      // beginPasswordRecovery udløser selv den her lytter med en gyldig
+      // session, og måtte ikke slå flaget fra, lige efter det blev sat.
+      if (!session) set({ isRecoveringPassword: false });
     });
   },
 
@@ -97,12 +113,22 @@ export const useAuthStore = create<AuthState>((set) => ({
       access_token: accessToken,
       refresh_token: refreshToken,
     });
-    return { error: error?.message ?? null };
+    if (error) return { error: error.message };
+
+    // Først her — når serveren har godkendt begge tokens. Det er dét, der gør
+    // flaget til en autorisationstilstand og ikke bare "nogen åbnede et link".
+    set({ isRecoveringPassword: true });
+    return { error: null };
   },
 
   setNewPassword: async (password) => {
     const { error } = await supabase.auth.updateUser({ password });
-    return { error: error?.message ?? null };
+    if (error) return { error: error.message };
+
+    // Gendannelsen er brugt op. Adgangen til /new-password lukker med det
+    // samme, så skærmen ikke kan nås igen bagefter.
+    set({ isRecoveringPassword: false });
+    return { error: null };
   },
 
   signIn: async (email, password) => {
@@ -110,6 +136,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     // data aldrig kan blandes med en tidligere, allerede-logget-ud
     // brugers lokale rester.
     await clearLocalUserData(LOCAL_STORE_RESETS);
+    // Et almindeligt login er ikke en gendannelse, uanset hvad der gik forud.
+    set({ isRecoveringPassword: false });
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,

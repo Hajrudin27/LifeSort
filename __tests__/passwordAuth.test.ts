@@ -127,3 +127,35 @@ describe('nulstilling afslører ikke, hvem der har en konto', () => {
     expect(screen).not.toMatch(/resetError|resetPasswordError/);
   });
 });
+
+/**
+ * Gendannelsen skal stadig kunne gennemføres — også for den bruger, der aldrig
+ * nåede igennem onboarding. Se ADR-0021.
+ */
+describe('nulstillingen kan gennemføres', () => {
+  const layout = read('app/_layout.tsx');
+  const store = read('store/useAuthStore.ts');
+  const screen = read('app/new-password.tsx');
+
+  it('går kun videre, når serveren har accepteret linket', () => {
+    // Et afvist link må hverken åbne skærmen eller tælle som gendannelse.
+    expect(layout).toContain('const { error: recoveryError } = await beginPasswordRecovery(tokens);');
+    expect(layout).toMatch(/if \(!recoveryError\) router\.replace\("\/new-password"\)/);
+  });
+
+  it('sætter kodeordet på den session, linket åbnede', () => {
+    expect(store).toContain('await supabase.auth.updateUser({ password })');
+    expect(store).toContain('access_token: accessToken');
+    expect(store).toContain('refresh_token: refreshToken');
+  });
+
+  it('siger til og går videre, når det lykkedes', () => {
+    expect(screen).toContain("showToast(t('auth.resetDoneToast'))");
+    expect(screen).toContain("router.dismissTo('/')");
+  });
+
+  it('bliver på skærmen, hvis det gik galt', () => {
+    // Ellers ville brugeren blive sendt videre med sit gamle kodeord i behold.
+    expect(screen).toMatch(/if \(updateError\) \{[\s\S]{0,200}return;/);
+  });
+});

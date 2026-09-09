@@ -149,7 +149,10 @@ export default function RootLayout() {
       if (!tokens) return;
 
       const { error: recoveryError } = await beginPasswordRecovery(tokens);
-      if (!recoveryError) router.push("/new-password");
+      // `replace`, ikke `push`: sessionen fra linket kan nå at udløse vagten,
+      // så brugeren står på onboarding, når vi kommer hertil. Et push ville
+      // lægge kodeordsskærmen ovenpå og efterlade trinnet under den bagefter.
+      if (!recoveryError) router.replace("/new-password");
     };
 
     // Appen kan være startet AF linket, eller allerede have kørt.
@@ -279,6 +282,9 @@ function RootLayoutNav({ language }: { language: string | null }) {
   const { t } = useTranslation();
   const hasOnboarded = useProfileStore((s) => s.hasOnboarded);
   const session = useAuthStore((s) => s.session);
+  // Åbner /new-password for en bruger, der endnu ikke er igennem onboarding —
+  // og kun dét, og kun mens gendannelsen står på (ADR-0021).
+  const isRecoveringPassword = useAuthStore((s) => s.isRecoveringPassword);
   const isLocked = useAppLockStore((s) => s.isLocked);
 
   return (
@@ -292,6 +298,7 @@ function RootLayoutNav({ language }: { language: string | null }) {
           hasLanguage: !!language,
           hasSession: !!session,
           hasOnboarded,
+          isRecoveringPassword,
           pathname,
         }) && <Redirect href={ONBOARDING_ENTRY_ROUTE} />}
         <Stack

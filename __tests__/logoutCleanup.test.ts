@@ -26,6 +26,11 @@ jest.mock('@/utils/auth/pinAuth', () => ({
   clearLocalPin: jest.fn(() => Promise.resolve()),
 }));
 
+jest.mock('@/core/storage/cycleHealthEncryptedStorage', () => ({
+  clearCycleHealthEncryptionKey: jest.fn(() => Promise.resolve()),
+  withCycleHealthEncryptedStorageCleanup: jest.fn((cleanup: () => Promise<unknown>) => cleanup()),
+}));
+
 jest.mock('expo-file-system/legacy', () => ({
   documentDirectory: 'file:///doc/',
   getInfoAsync: jest.fn(() => Promise.resolve({ exists: true })),
@@ -149,6 +154,56 @@ describe('log ud rydder faktisk op', () => {
     const { clearLocalPin } = require('@/utils/auth/pinAuth');
     await clearLocalUserData([]);
     expect(clearLocalPin).toHaveBeenCalled();
+  });
+
+  it('sletter cykluslagerets krypteringsnøgle', async () => {
+    const { clearCycleHealthEncryptionKey } = require('@/core/storage/cycleHealthEncryptedStorage');
+    await clearLocalUserData([]);
+    expect(clearCycleHealthEncryptionKey).toHaveBeenCalled();
+  });
+
+  it('holder cykluslagerets oprydningsvindue rundt om nulstilling, diskfejning og nøglesletning', async () => {
+    const events: string[] = [];
+    const {
+      clearCycleHealthEncryptionKey,
+      withCycleHealthEncryptedStorageCleanup,
+    } = require('@/core/storage/cycleHealthEncryptedStorage');
+
+    withCycleHealthEncryptedStorageCleanup.mockImplementationOnce(async (cleanup: () => Promise<unknown>) => {
+      events.push('begin-cycle-cleanup');
+      try {
+        return await cleanup();
+      } finally {
+        events.push('finish-cycle-cleanup');
+      }
+    });
+    clearCycleHealthEncryptionKey.mockImplementationOnce(async () => {
+      events.push('clear-cycle-key');
+    });
+
+    await AsyncStorage.setItem('lifesort-cycle', '{"state":{"cycles":[]}}');
+    const originalMultiRemove = (AsyncStorage.multiRemove as jest.Mock).getMockImplementation();
+    (AsyncStorage.multiRemove as jest.Mock).mockImplementationOnce(async (keys: readonly string[]) => {
+      events.push('remove-user-storage');
+      return originalMultiRemove?.(keys);
+    });
+
+    await clearLocalUserData([
+      {
+        key: 'lifesort-cycle',
+        reset: () => {
+          events.push('reset-cycle-store');
+        },
+      },
+    ]);
+
+    expect(events).toEqual([
+      'begin-cycle-cleanup',
+      'reset-cycle-store',
+      'remove-user-storage',
+      'clear-cycle-key',
+      'finish-cycle-cleanup',
+    ]);
   });
 
   it('nulstiller hukommelsen, ikke kun disken', async () => {

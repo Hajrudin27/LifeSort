@@ -227,8 +227,9 @@ to Supabase tables in §3.
 Every file in `store/`. "Local storage" is where the Zustand state is persisted
 today; "Supabase tables" are the tables the store itself reads or writes.
 
-All persisted stores currently use plain (unencrypted) AsyncStorage, including
-`useCycleStore` — see §8-F1.
+Most persisted stores currently use plain AsyncStorage. `useCycleStore` is the
+exception: APP-028 stores an AES-GCM encrypted envelope in AsyncStorage and keeps
+the key material in SecureStore.
 
 <!-- inventory:stores:start -->
 
@@ -260,7 +261,7 @@ All persisted stores currently use plain (unencrypted) AsyncStorage, including
 | `useCareerStore` | `store/useCareerStore.ts` | `career` | `lifesort-career` | AsyncStorage (plain) | `job_applications`, `skills` | personal | Hajrudin Kardasevic |
 | `useCVStore` | `store/useCVStore.ts` | `career` | `lifesort-cv` | AsyncStorage (plain) | `cv_personal_info`, `cv_education`, `cv_experience`, `cv_languages`, `cv_versions` | personal, document | Hajrudin Kardasevic |
 | `useSkillCategoriesStore` | `store/useSkillCategoriesStore.ts` | `career` | `lifesort-skill-categories` | AsyncStorage (plain) | – | ordinary | Hajrudin Kardasevic |
-| `useCycleStore` | `store/useCycleStore.ts` | `cycle` | `lifesort-cycle` | AsyncStorage (plain) — see §8-F1 | `cycles`, `symptom_logs`, `cycle_settings`, `health_conditions`, `symptom_glossary` | health | Hajrudin Kardasevic |
+| `useCycleStore` | `store/useCycleStore.ts` | `cycle` | `lifesort-cycle` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/cycleHealthEncryptedStorage.ts` | `cycles`, `symptom_logs`, `cycle_settings`, `health_conditions`, `symptom_glossary` | health | Hajrudin Kardasevic |
 
 <!-- inventory:stores:end -->
 
@@ -432,7 +433,7 @@ later story.
 
 | # | Finding | Evidence | Owning story |
 | --- | --- | --- | --- |
-| F1 | Health data is persisted in plain AsyncStorage. | `store/useCycleStore.ts` uses `createJSONStorage(() => AsyncStorage)` with key `lifesort-cycle`. | APP-028 |
+| F1 | ~~Health data is persisted in plain AsyncStorage.~~ **Closed by APP-028.** | `store/useCycleStore.ts` now uses `core/storage/cycleHealthEncryptedStorage.ts`, which writes an AES-GCM envelope to `lifesort-cycle` and keeps the key material in SecureStore. | APP-028 |
 | F2 | Reproductive-health visibility is gated on gender. | `app/(tabs)/_layout.tsx`: `showCycleTab = gender === 'female'`. The `/cycle` routes stay reachable directly regardless. | APP-071 |
 | F3 | Module ids in the repo do not match the spec `ModuleId` union. | Repo uses `tasks` (todos) and the platform-level `core-shell` / `account`; the spec union has no `tasks` and omits shell/account. `documents`, `pregnancy` and `gifts` have no implementation. | APP-009 |
 | F4 | Home imports eleven domain stores directly. | `app/(tabs)/index.tsx` references `useCycleStore`, `useExpensesStore`, `useFoodStore`, `useHabitsStore`, `useHouseholdStore`, `useIncomeStore`, `useProfileStore`, `useSavingsGoalsStore`, `useTodoStore`, `useTripsStore`, `useWarrantiesStore`. | APP-011 |

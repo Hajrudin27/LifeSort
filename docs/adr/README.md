@@ -41,6 +41,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0020](./0020-the-app-lock-guards-the-phone-not-the-account.md) | The app lock guards the phone, not the account | Accepted | 2026-09-07 | APP-026 |
 | [0021](./0021-recovery-opens-a-route-by-state-not-by-name.md) | Password recovery opens a route by state, never by name | Accepted | 2026-09-09 | APP-019 |
 | [0022](./0022-data-profiles-are-contracts-over-logical-domains.md) | Data profiles are contracts over logical domains | Accepted | 2026-09-09 | APP-027 |
+| [0023](./0023-cycle-health-persistence-is-encrypted-as-one-store.md) | Cycle health persistence is encrypted as one store | Accepted | 2026-09-09 | APP-028 |
 
 ## When an ADR is required
 

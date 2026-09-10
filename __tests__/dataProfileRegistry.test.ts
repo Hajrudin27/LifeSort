@@ -211,7 +211,7 @@ describe('APP-027 logical domain contracts', () => {
 
 describe('APP-027 physical persistence surfaces', () => {
   it('has no duplicate physical surface ids and no dangling domain references', () => {
-    expect(PERSISTENCE_SURFACES).toHaveLength(83);
+    expect(PERSISTENCE_SURFACES).toHaveLength(84);
     expect(new Set(registeredSurfaceIds).size).toBe(PERSISTENCE_SURFACES.length);
 
     for (const surface of PERSISTENCE_SURFACES) {
@@ -296,6 +296,9 @@ describe('APP-027 physical persistence surfaces', () => {
     expect(sourceText('utils/shared/dataBackup.ts')).toContain('FileSystem.documentDirectory}${fileName}');
     expect(sourceText('utils/auth/pinAuth.ts')).toContain("const PIN_KEY = 'lifesort-app-pin-hash'");
     expect(sourceText('utils/auth/pinLockout.ts')).toContain("const LOCKOUT_KEY = 'lifesort-pin-lockout'");
+    expect(sourceText('core/storage/cycleHealthEncryptedStorage.ts')).toContain(
+      "const KEYCHAIN_KEY = 'lifesort-cycle-health-key'",
+    );
     expect(fs.existsSync(path.join(REPO_ROOT, 'data', 'seedRecipes.ts'))).toBe(true);
 
     const specialSurfaces = PERSISTENCE_SURFACES.filter((surface) =>

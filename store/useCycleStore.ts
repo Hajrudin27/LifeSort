@@ -1,7 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { cycleHealthEncryptedStorage } from '@/core/storage/cycleHealthEncryptedStorage';
 import { supabase } from '@/lib/supabase';
 import { CycleEntry, FlowIntensity, Symptom, SymptomLog } from '@/types/cycle';
 import { HealthConditionRecord, SymptomGlossaryRecord } from '@/types/healthInfo';
@@ -244,7 +244,7 @@ export const useCycleStore = create<CycleState>()(
     }),
     {
       name: 'lifesort-cycle',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => cycleHealthEncryptedStorage),
     }
   )
 );

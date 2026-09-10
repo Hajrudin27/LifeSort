@@ -1,7 +1,7 @@
 # LifeSort - Data Profile Registry
 
 **Story:** APP-027 (E3 - Storage & sync platform, P0)
-**Status:** Declarative registry; no storage migration, encryption, outbox or sync behavior implemented here.
+**Status:** Declarative registry, updated by APP-028 to reflect encrypted cycle-health persistence. Outbox, sync behavior and generic migrations remain deferred.
 **Owner of this document:** Hajrudin Kardasevic
 **Code source:** [`core/storage/dataProfileRegistry.ts`](../core/storage/dataProfileRegistry.ts)
 **Verified by:** [`__tests__/dataProfileRegistry.test.ts`](../__tests__/dataProfileRegistry.test.ts)
@@ -15,9 +15,10 @@ plaintext local persistence is allowed, whether encrypted local persistence is
 required, who is authoritative, whether normal clients may write, and whether a
 domain is global reference data.
 
-APP-027 does not split stores, encrypt existing values or change network
-behavior. It records the truth of the current application so APP-028 through
-APP-038 can change that truth deliberately.
+APP-027 originally did not split stores, encrypt existing values or change
+network behavior. APP-028 deliberately changed one recorded fact: the current
+cycle store remains one physical `lifesort-cycle` key, but the value is now an
+AES-GCM encrypted envelope whose key material lives in SecureStore.
 
 ## Profiles
 
@@ -67,12 +68,12 @@ Counts are enforced in tests: **A = 23, B = 6, C = 2, D = 4, total = 35**.
 | `career.applications` | A | career | `async-storage:lifesort-career`, `supabase-table:job_applications` | Ambiguous: application notes may later need Profile B review. |
 | `career.skills` | A | career | `async-storage:lifesort-career`, `async-storage:lifesort-skill-categories`, `supabase-table:skills` | Skills and skill-category labels. |
 | `career.cv` | A | career | `async-storage:lifesort-cv`, `supabase-table:cv_personal_info`, `supabase-table:cv_education`, `supabase-table:cv_experience`, `supabase-table:cv_languages`, `supabase-table:cv_versions` | Ambiguous: document-like career data; review before APP-029. |
-| `cycle.user-health` | B | cycle | `async-storage:lifesort-cycle`, `supabase-table:cycles`, `supabase-table:symptom_logs`, `supabase-table:cycle_settings` | Health/cycle data; APP-028 owns encryption. |
+| `cycle.user-health` | B | cycle | `async-storage:lifesort-cycle`, `secure-store:lifesort-cycle-health-key`, `supabase-table:cycles`, `supabase-table:symptom_logs`, `supabase-table:cycle_settings` | Health/cycle data encrypted at rest by APP-028. |
 | `cycle.reference-content` | D | cycle | `async-storage:lifesort-cycle`, `supabase-table:health_conditions`, `supabase-table:symptom_glossary` | Reviewed global health reference content. |
 
 ## Physical Surfaces
 
-The code-level registry is the exhaustive machine-readable mobile list: **83
+The code-level registry is the exhaustive machine-readable mobile list: **84
 physical persistence surfaces**. Its tests prove
 that it covers every current Zustand persist key, every direct AsyncStorage key
 outside Zustand that belongs to this app, every client-referenced Supabase table,
@@ -89,7 +90,7 @@ several logical domains:
 | `async-storage:lifesort-food-v2` | A, D | plaintext-allowed | User food data and cached/reference catalogue data share one store. |
 | `async-storage:lifesort-trips` | A, B | encrypted-required | Trip rows are Profile A, but trip documents and expense attachments are Profile B. |
 | `async-storage:lifesort-warranties` | A, B | encrypted-required | Warranty records are Profile A, but attached receipt/document metadata is Profile B. |
-| `async-storage:lifesort-cycle` | B, D | encrypted-required | User cycle data and reviewed health reference content share one store. |
+| `async-storage:lifesort-cycle` | B, D | encrypted-required | User cycle data and reviewed health reference content still share one store, so the whole persisted payload is encrypted. |
 
 Unknown physical surfaces fail closed in the API: plaintext local persistence is
 not allowed, Profile B is assumed possible, and the strongest protection result
@@ -117,11 +118,12 @@ storage surfaces for the mobile data-profile registry.
 
 ## Deferred By Design
 
-APP-027 does not implement APP-028 encrypted health storage, APP-029 sensitive
-document cache, APP-030 cryptographic UUID changes, APP-031 durable outbox,
-APP-032 idempotency, APP-033 revisions/`updated_at`, APP-034 tombstones,
-APP-035 conflict handling, APP-036 sync UX, APP-037 connectivity-aware sync or
-APP-038 migration harness. It creates the contracts those stories can use.
+APP-028 now covers only the `cycle.user-health` local persistence surface and
+its narrow legacy plaintext migration. APP-029 sensitive document cache,
+APP-030 cryptographic UUID changes, APP-031 durable outbox, APP-032
+idempotency, APP-033 revisions/`updated_at`, APP-034 tombstones, APP-035
+conflict handling, APP-036 sync UX, APP-037 connectivity-aware sync and APP-038
+migration harness remain deferred.
 
 ## Human Review Notes
 

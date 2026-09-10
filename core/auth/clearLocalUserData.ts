@@ -13,6 +13,7 @@ import { userDataKeys } from '@/core/storage/localDataScopes';
 import { clearLocalPin } from '@/utils/auth/pinAuth';
 import { clearAttachmentCache } from '@/utils/shared/attachmentStorage';
 import { clearSignedUrlCache } from '@/utils/shared/attachmentSync';
+import { clearAttachmentViewerSources } from '@/utils/shared/attachmentViewerSource';
 
 import { clearResendThrottle } from './emailVerification';
 import { clearVerification } from './reauth';
@@ -46,6 +47,8 @@ export type LocalStoreReset = {
 };
 
 export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Promise<void> {
+  // Drop sensitive navigation handoffs before waiting on any storage cleanup.
+  clearAttachmentViewerSources();
   let pendingCleanupError: unknown;
 
   await withCycleHealthEncryptedStorageCleanup(async () => withDocumentCacheCleanup(async () => {

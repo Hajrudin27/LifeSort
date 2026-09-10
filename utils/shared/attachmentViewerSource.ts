@@ -15,6 +15,11 @@ type ImageAttachment = Pick<Attachment | TripAttachment, 'id' | 'uri' | 'name'> 
 
 const viewerSources = new Map<string, AttachmentViewerSource>();
 
+/** Drop pending user-scoped handoffs on logout/account switch. */
+export function clearAttachmentViewerSources(): void {
+  viewerSources.clear();
+}
+
 export function registerAttachmentViewerSource(attachment: ImageAttachment): string {
   const sourceId = randomUUID();
   viewerSources.set(sourceId, {

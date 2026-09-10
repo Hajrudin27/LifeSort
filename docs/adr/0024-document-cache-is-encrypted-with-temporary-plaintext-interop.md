@@ -95,6 +95,12 @@ final sweep. Temporary-file deletion is best-effort and nonfatal; legacy
 plaintext source deletion during migration is a separate, required security
 delete.
 
+Pending image-viewer handoffs are also user-scoped attachment metadata. Logout
+and account-switch cleanup synchronously clear their in-memory map before any
+asynchronous storage cleanup. Normal one-time consumption and randomUUID source
+tokens remain unchanged; nothing is persisted and no session-resource framework
+is introduced.
+
 Document thumbnails do not resolve attachment bytes. They render an icon from
 metadata only, so PDFs and other documents are decrypted only when the user
 initiates a share/open flow that actually needs an OS-readable file URI.

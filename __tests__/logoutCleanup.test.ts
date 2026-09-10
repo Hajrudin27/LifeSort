@@ -6,6 +6,7 @@ import path from 'path';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { clearLocalUserData } from '@/core/auth/clearLocalUserData';
+import * as viewerSources from '@/utils/shared/attachmentViewerSource';
 import {
   DEVICE_SCOPED_KEYS,
   isOwnedKey,
@@ -123,6 +124,29 @@ describe('log ud rydder faktisk op', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     await AsyncStorage.clear();
+  });
+
+  it('clears pending viewer handoffs before asynchronous account cleanup', async () => {
+    const ids = ['first', 'second'].map((id) => viewerSources.registerAttachmentViewerSource({
+      id,
+      uri: `file:///doc/attachments/${id}.lsenc`,
+      name: `${id}.jpg`,
+      kind: 'image',
+      storagePath: `old-user/expense/owner/${id}.jpg`,
+    }));
+    const clear = jest.spyOn(viewerSources, 'clearAttachmentViewerSources');
+    const cleanup = clearLocalUserData([]);
+    try {
+      expect(clear).toHaveBeenCalledTimes(1);
+      for (const id of ids) expect(viewerSources.consumeAttachmentViewerSource(id)).toBeNull();
+      await cleanup;
+      await expect(clearLocalUserData([])).resolves.toBeUndefined();
+      expect(clear).toHaveBeenCalledTimes(2);
+    } finally {
+      await cleanup;
+      clear.mockRestore();
+      viewerSources.clearAttachmentViewerSources();
+    }
   });
 
   it('fjerner brugerens nøgler fra disken og beholder enhedens', async () => {

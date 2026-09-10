@@ -256,6 +256,15 @@ export const DATA_DOMAINS = [
     ...profileA({ expectsServerSync: false }),
   },
   {
+    id: 'core.outbox',
+    title: 'Durable ordinary mutation outbox',
+    module: 'core-shell',
+    description: 'Account-bound pending mutations for syncable Profile A domains without sensitive storage surfaces. Sensitive payload integration is deferred.',
+    storageSurfaces: ['async-storage:lifesort-outbox'],
+    evidence: ['core/sync/outbox.ts'],
+    ...profileA({ expectsServerSync: false }),
+  },
+  {
     id: 'core.module-flags',
     title: 'Module kill switches',
     module: 'core-shell',
@@ -581,6 +590,7 @@ function surface(
 }
 
 export const PERSISTENCE_SURFACES = [
+  surface('async-storage:lifesort-outbox', 'async-storage', 'Durable outbox JSON via Zustand storage adapter', 'device', ['core.outbox'], ['core/sync/outbox.ts']),
   surface('async-storage:lifesort-profile', 'async-storage', 'Zustand key lifesort-profile', 'device', ['account.profile', 'account.onboarding'], ['store/useProfileStore.ts']),
   surface('async-storage:lifesort-verification-last-sent', 'async-storage', 'AsyncStorage key lifesort-verification-last-sent', 'device', ['account.password-recovery-throttle'], ['core/auth/emailVerification.ts']),
   surface('async-storage:lifesort-app-lock', 'async-storage', 'Zustand key lifesort-app-lock', 'device', ['account.app-lock'], ['store/useAppLockStore.ts']),

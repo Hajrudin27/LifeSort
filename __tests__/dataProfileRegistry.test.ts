@@ -205,13 +205,13 @@ describe('APP-027 logical domain contracts', () => {
       B: domainsByProfile('B').length,
       C: domainsByProfile('C').length,
       D: domainsByProfile('D').length,
-    }).toEqual({ A: 23, B: 6, C: 2, D: 4 });
+    }).toEqual({ A: 24, B: 6, C: 2, D: 4 });
   });
 });
 
 describe('APP-027 physical persistence surfaces', () => {
   it('has no duplicate physical surface ids and no dangling domain references', () => {
-    expect(PERSISTENCE_SURFACES).toHaveLength(86);
+    expect(PERSISTENCE_SURFACES).toHaveLength(87);
     expect(new Set(registeredSurfaceIds).size).toBe(PERSISTENCE_SURFACES.length);
 
     for (const surface of PERSISTENCE_SURFACES) {
@@ -234,13 +234,15 @@ describe('APP-027 physical persistence surfaces', () => {
     const registeredZustandKeys = PERSISTENCE_SURFACES
       .filter((surface) => surface.kind === 'async-storage')
       .map((surface) => surface.id.replace(/^async-storage:/, ''))
-      .filter((key) => !['lifesort-verification-last-sent', 'supabase-session-web-or-legacy'].includes(key))
+      .filter((key) => !['lifesort-verification-last-sent', 'supabase-session-web-or-legacy', 'lifesort-outbox'].includes(key))
       .sort();
 
     expect(registeredZustandKeys).toEqual(persistKeysInStores());
   });
 
   it('accounts for direct AsyncStorage keys outside Zustand persist', () => {
+    expect(getPersistenceSurface('async-storage:lifesort-outbox')).toBeTruthy();
+    expect(sourceText('core/sync/outbox.ts')).toContain("OUTBOX_STORAGE_KEY = 'lifesort-outbox'");
     expect(getPersistenceSurface('async-storage:lifesort-verification-last-sent')).toBeTruthy();
     expect(sourceText('core/auth/emailVerification.ts')).toContain("const LAST_SENT_KEY = 'lifesort-verification-last-sent'");
     expect(getPersistenceSurface('async-storage:supabase-session-web-or-legacy')).toBeTruthy();

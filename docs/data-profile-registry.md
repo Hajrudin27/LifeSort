@@ -1,7 +1,7 @@
 # LifeSort - Data Profile Registry
 
 **Story:** APP-027 (E3 - Storage & sync platform, P0)
-**Status:** Declarative registry, updated by APP-029 to reflect encrypted document-cache files and metadata. Outbox, sync behavior and generic migrations remain deferred.
+**Status:** Declarative registry, updated through APP-031 for encrypted health/document storage and the ordinary durable outbox. Remote sync behavior and generic migrations remain deferred.
 **Owner of this document:** Hajrudin Kardasevic
 **Code source:** [`core/storage/dataProfileRegistry.ts`](../core/storage/dataProfileRegistry.ts)
 **Verified by:** [`__tests__/dataProfileRegistry.test.ts`](../__tests__/dataProfileRegistry.test.ts)
@@ -22,6 +22,16 @@ AES-GCM encrypted envelope whose key material lives in SecureStore. APP-029
 adds the same at-rest protection to local document-cache bytes and to the
 mixed expense/trip/warranty Zustand stores that carry attachment metadata.
 
+APP-031 outbox entries keep `dataDomain: DataDomainId` separate from
+`entityType: string`. The data domain determines sensitivity/storage policy;
+the entity type is a stable, non-empty LifeSort-owned kind retained as the
+durable mutation identity/routing key, never as authorization. For example,
+`home.household` can classify both `household.task` and `household.shopping-item`.
+The plaintext outbox validates dataDomain against the existing syncable Profile A
+rule and rejects any domain with a Profile B surface. Sensitive integration remains
+deferred. Entity types are stored without inferring kinds from payloads or adding
+a dispatcher, server mapping or worker.
+
 ## Profiles
 
 | Profile | Contract |
@@ -33,7 +43,7 @@ mixed expense/trip/warranty Zustand stores that carry attachment metadata.
 
 ## Logical Domains
 
-Counts are enforced in tests: **A = 23, B = 6, C = 2, D = 4, total = 35**.
+Counts are enforced in tests: **A = 24, B = 6, C = 2, D = 4, total = 36**.
 
 | Domain | Profile | Module | Current physical surfaces | Notes |
 | --- | --- | --- | --- | --- |
@@ -48,6 +58,7 @@ Counts are enforced in tests: **A = 23, B = 6, C = 2, D = 4, total = 35**.
 | `core.home-layout` | A | core-shell | `async-storage:lifesort-home-layout` | Pinned, hidden and masked cards. |
 | `core.monthly-review-preference` | A | core-shell | `async-storage:lifesort-monthly-review` | Boolean preference only. |
 | `core.sync-status` | A | core-shell | `async-storage:sync-status` | Local sync failure status without record payloads. |
+| `core.outbox` | A | core-shell | `async-storage:lifesort-outbox` | Account-bound durable mutation queue. Only syncable Profile A domains without any Profile B surface are accepted; sensitive integration remains deferred. |
 | `core.module-flags` | D | core-shell | `async-storage:lifesort-module-flags`, `supabase-table:module_flags` | Operator kill switches; cached so closed modules stay closed offline. |
 | `core.local-backup-archive` | B | core-shell | `filesystem:document-directory/lifesort-backup-json` | Current backup excludes cycle data but may include attachment metadata. APP-097 owns export policy. |
 | `economy.expenses` | A | economy | `async-storage:lifesort-expenses`, `supabase-table:expenses`, `supabase-table:expense_category_budgets` | User-created finances are Profile A per APP-027 guidance. |
@@ -75,7 +86,7 @@ Counts are enforced in tests: **A = 23, B = 6, C = 2, D = 4, total = 35**.
 
 ## Physical Surfaces
 
-The code-level registry is the exhaustive machine-readable mobile list: **86
+The code-level registry is the exhaustive machine-readable mobile list: **87
 physical persistence surfaces**. Its tests prove
 that it covers every current Zustand persist key, every direct AsyncStorage key
 outside Zustand that belongs to this app, every client-referenced Supabase table,

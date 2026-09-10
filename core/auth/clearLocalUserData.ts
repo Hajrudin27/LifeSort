@@ -10,6 +10,7 @@ import {
   withDocumentCacheCleanup,
 } from '@/core/storage/documentCacheStorage';
 import { userDataKeys } from '@/core/storage/localDataScopes';
+import { withOutboxCleanup } from '@/core/sync/outbox';
 import { clearLocalPin } from '@/utils/auth/pinAuth';
 import { clearAttachmentCache } from '@/utils/shared/attachmentStorage';
 import { clearSignedUrlCache } from '@/utils/shared/attachmentSync';
@@ -51,7 +52,7 @@ export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Pr
   clearAttachmentViewerSources();
   let pendingCleanupError: unknown;
 
-  await withCycleHealthEncryptedStorageCleanup(async () => withDocumentCacheCleanup(async () => {
+  await withCycleHealthEncryptedStorageCleanup(async () => withDocumentCacheCleanup(async () => withOutboxCleanup(async () => {
     try {
       // 1. Hukommelsen.
       for (const store of resets) {
@@ -96,5 +97,5 @@ export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Pr
     }
 
     if (pendingCleanupError) throw pendingCleanupError;
-  }));
+  })));
 }

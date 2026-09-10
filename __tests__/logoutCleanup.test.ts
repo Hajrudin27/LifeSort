@@ -6,6 +6,7 @@ import path from 'path';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { clearLocalUserData } from '@/core/auth/clearLocalUserData';
+import { createOutbox, OUTBOX_STORAGE_KEY } from '@/core/sync/outbox';
 import * as viewerSources from '@/utils/shared/attachmentViewerSource';
 import {
   DEVICE_SCOPED_KEYS,
@@ -126,6 +127,17 @@ describe('log ud rydder faktisk op', () => {
     await AsyncStorage.clear();
   });
 
+  it('revokes the outbox and clears its persisted data before another account', async () => {
+    const old = createOutbox('account-a');
+    await old.enqueue({ dataDomain: 'tasks.todos', entityType: 'todo', entityId: 'todo-1', operation: 'delete' });
+    const cleanup = clearLocalUserData([]);
+    await expect(old.list()).rejects.toThrow(/unavailable/);
+    await cleanup;
+    expect(await AsyncStorage.getItem(OUTBOX_STORAGE_KEY)).toBeNull();
+    expect(await createOutbox('account-b').list()).toEqual([]);
+    await expect(old.enqueue({ dataDomain: 'tasks.todos', entityType: 'todo', entityId: 'todo-2', operation: 'delete' })).rejects.toThrow(/unavailable/);
+  });
+
   it('clears pending viewer handoffs before asynchronous account cleanup', async () => {
     const ids = ['first', 'second'].map((id) => viewerSources.registerAttachmentViewerSource({
       id,
@@ -236,8 +248,9 @@ describe('log ud rydder faktisk op', () => {
 
     await AsyncStorage.setItem('lifesort-cycle', '{"state":{"cycles":[]}}');
     const originalMultiRemove = (AsyncStorage.multiRemove as jest.Mock).getMockImplementation();
-    (AsyncStorage.multiRemove as jest.Mock).mockImplementationOnce(async (keys: readonly string[]) => {
-      events.push('remove-user-storage');
+    (AsyncStorage.multiRemove as jest.Mock).mockImplementation(async (keys: readonly string[]) => {
+      if (keys.includes(OUTBOX_STORAGE_KEY)) events.push('remove-outbox-storage');
+      else if (keys.includes('lifesort-cycle')) events.push('remove-user-storage');
       return originalMultiRemove?.(keys);
     });
 
@@ -249,10 +262,12 @@ describe('log ud rydder faktisk op', () => {
         },
       },
     ]);
+    (AsyncStorage.multiRemove as jest.Mock).mockImplementation(originalMultiRemove!);
 
     expect(events).toEqual([
       'begin-cycle-cleanup',
       'begin-document-cleanup',
+      'remove-outbox-storage',
       'reset-cycle-store',
       'remove-user-storage',
       'clear-document-key',

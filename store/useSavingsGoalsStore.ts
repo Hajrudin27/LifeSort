@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -8,10 +9,6 @@ import {
   SavingsGoal,
   SavingsGoalIcon,
 } from "@/types/savingsGoal";
-
-function makeContributionId() {
-  return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
 
 type GoalEditableFields = Pick<
   SavingsGoal,
@@ -121,7 +118,7 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
       extraSavings: 0,
 
       addGoal: (input) => {
-        const id = Date.now().toString();
+        const id = newEntityId();
         const newGoal: SavingsGoal = {
           id,
           createdAt: new Date().toISOString(),
@@ -145,7 +142,7 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
 
       addContribution: (id, amount) => {
         const contribution: SavingsContribution = {
-          id: makeContributionId(),
+          id: newEntityId(),
           goalId: id,
           amount,
           date: new Date().toISOString(),
@@ -168,7 +165,7 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
       distributeContributions: (allocations) => {
         const newContributions: SavingsContribution[] = allocations.map(
           (a) => ({
-            id: makeContributionId(),
+            id: newEntityId(),
             goalId: a.id,
             amount: a.amount,
             date: new Date().toISOString(),
@@ -193,13 +190,13 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
 
       transferBetweenGoals: (fromId, toId, amount) => {
         const fromContribution: SavingsContribution = {
-          id: makeContributionId(),
+          id: newEntityId(),
           goalId: fromId,
           amount: -amount,
           date: new Date().toISOString(),
         };
         const toContribution: SavingsContribution = {
-          id: makeContributionId(),
+          id: newEntityId(),
           goalId: toId,
           amount,
           date: new Date().toISOString(),

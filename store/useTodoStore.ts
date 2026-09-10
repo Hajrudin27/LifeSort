@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -6,10 +7,6 @@ import { supabase } from '@/lib/supabase';
 import { trackSync } from '@/store/useSyncStatusStore';
 import { TodoImportance, TodoItem } from '@/types/life';
 import { createSyncQueue } from '@/utils/shared/syncQueue';
-
-function newId() {
-  return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
 
 interface TodoState {
   todos: TodoItem[];
@@ -65,7 +62,7 @@ export const useTodoStore = create<TodoState>()(
       todos: [],
 
       addTodo: (input) => {
-        const newTodo: TodoItem = { id: newId(), completed: false, createdAt: new Date().toISOString(), ...input };
+        const newTodo: TodoItem = { id: newEntityId(), completed: false, createdAt: new Date().toISOString(), ...input };
         set((state) => ({ todos: [...state.todos, newTodo] }));
         syncUpsertTodo(newTodo);
       },

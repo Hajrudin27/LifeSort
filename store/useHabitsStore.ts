@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -5,10 +6,6 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
 import { trackSync } from '@/store/useSyncStatusStore';
 import { Habit, HabitDirection } from '@/types/life';
-
-function newId() {
-  return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
 
 interface HabitsState {
   habits: Habit[];
@@ -54,7 +51,7 @@ export const useHabitsStore = create<HabitsState>()(
       habits: [],
 
       addHabit: (input) => {
-        const newHabit: Habit = { id: newId(), logs: [], createdAt: new Date().toISOString(), ...input };
+        const newHabit: Habit = { id: newEntityId(), logs: [], createdAt: new Date().toISOString(), ...input };
         set((state) => ({ habits: [...state.habits, newHabit] }));
         syncUpsertHabit(newHabit);
       },
@@ -81,7 +78,7 @@ export const useHabitsStore = create<HabitsState>()(
               ...h,
               logs: alreadyLogged
                 ? h.logs.filter((l) => l.date.slice(0, 10) !== dateKey)
-                : [...h.logs, { id: newId(), date: dateKey }],
+                : [...h.logs, { id: newEntityId(), date: dateKey }],
             };
           }),
         }));

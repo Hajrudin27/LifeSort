@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -5,10 +6,6 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
 import { trackSync } from '@/store/useSyncStatusStore';
 import { LifeGoal } from '@/types/life';
-
-function newId() {
-  return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
 
 interface LifeGoalsState {
   goals: LifeGoal[];
@@ -58,7 +55,7 @@ export const useLifeGoalsStore = create<LifeGoalsState>()(
       goals: [],
 
       addGoal: (input) => {
-        const id = newId();
+        const id = newEntityId();
         const newGoal: LifeGoal = { id, subGoals: [], createdAt: new Date().toISOString(), ...input };
         set((state) => ({ goals: [...state.goals, newGoal] }));
         syncUpsertGoal(newGoal);
@@ -79,7 +76,7 @@ export const useLifeGoalsStore = create<LifeGoalsState>()(
       addSubGoal: (goalId, title) => {
         set((state) => ({
           goals: state.goals.map((g) =>
-            g.id === goalId ? { ...g, subGoals: [...g.subGoals, { id: newId(), title, completed: false }] } : g
+            g.id === goalId ? { ...g, subGoals: [...g.subGoals, { id: newEntityId(), title, completed: false }] } : g
           ),
         }));
         const target = get().goals.find((g) => g.id === goalId);

@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -14,10 +15,6 @@ import {
 } from '@/types/household';
 import { createSyncQueue } from '@/utils/shared/syncQueue';
 import { todayIso } from '@/utils/shared/localDate';
-
-function newId() {
-  return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
 
 function otherAssignee(assignee: TaskAssignee): TaskAssignee {
   return assignee === 'me' ? 'partner' : 'me';
@@ -128,7 +125,7 @@ export const useHouseholdStore = create<HouseholdState>()(
       tasks: [],
       addTask: (input) => {
         const newTask: HouseholdTask = {
-          id: newId(),
+          id: newEntityId(),
           createdAt: new Date().toISOString(),
           assignedTo: input.assignedTo ?? 'me',
           rotates: input.rotates ?? false,
@@ -164,7 +161,7 @@ export const useHouseholdStore = create<HouseholdState>()(
 
       shoppingItems: [],
       addShoppingItem: (label) => {
-        const newItem: HouseholdItem = { id: newId(), label, checked: false };
+        const newItem: HouseholdItem = { id: newEntityId(), label, checked: false };
         set((state) => ({ shoppingItems: [...state.shoppingItems, newItem] }));
         syncUpsertShoppingItem(newItem);
       },
@@ -182,7 +179,7 @@ export const useHouseholdStore = create<HouseholdState>()(
 
       movingItems: [],
       addMovingItem: (label) => {
-        const newItem: MovingItem = { id: newId(), label, checked: false };
+        const newItem: MovingItem = { id: newEntityId(), label, checked: false };
         set((state) => ({ movingItems: [...state.movingItems, newItem] }));
         syncUpsertMovingItem(newItem);
       },

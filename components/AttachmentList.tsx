@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import * as DocumentPicker from 'expo-document-picker';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -91,7 +92,7 @@ export default function AttachmentList({ attachments, onAdd, onRemove }: Props) 
     if (result.canceled) return;
     const asset = result.assets[0];
     const compressed = await compressImage(asset.uri, asset.width, asset.height);
-    const id = Date.now().toString();
+    const id = newEntityId();
     const uri = await persistFile(compressed.uri, id);
     onAdd({ id, uri, name: 'photo.jpg', kind: 'image' });
   };
@@ -101,7 +102,7 @@ export default function AttachmentList({ attachments, onAdd, onRemove }: Props) 
     if (result.canceled) return;
     const asset = result.assets[0];
     const compressed = await compressImage(asset.uri, asset.width, asset.height);
-    const id = Date.now().toString();
+    const id = newEntityId();
     const uri = await persistFile(compressed.uri, id);
     onAdd({ id, uri, name: 'photo.jpg', kind: 'image' });
   };
@@ -109,7 +110,7 @@ export default function AttachmentList({ attachments, onAdd, onRemove }: Props) 
   const addDocument = async () => {
     const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
     if (result.canceled) return;
-    const id = Date.now().toString();
+    const id = newEntityId();
     const uri = await persistFile(result.assets[0].uri, result.assets[0].name);
     onAdd({ id, uri, name: result.assets[0].name, kind: 'document' });
   };

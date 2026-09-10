@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -7,10 +8,6 @@ import { supabase } from '@/lib/supabase';
 import { trackSync, reportSyncFailure } from '@/store/useSyncStatusStore';
 import i18n from '@/localization/i18n';
 import { GlobalOffer, GlobalStandardPrice, GroceryOffer, GroceryPurchase, MealType, PantryItem, Recipe, RecipeIngredient, SavedPlanSlot, ShoppingListItem, StandardPrice } from '@/types/food';
-
-function newId() {
-  return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
 
 async function getUserId(): Promise<string | null> {
   const { data: userData } = await supabase.auth.getUser();
@@ -134,7 +131,7 @@ export const useFoodStore = create<FoodState>()(
       globalOffers: [],
 
       addStandardPrice: (input) => {
-        const newEntry: StandardPrice = { id: newId(), ...input };
+        const newEntry: StandardPrice = { id: newEntityId(), ...input };
         set((state) => ({ standardPrices: [...state.standardPrices, newEntry] }));
         getUserId().then((userId) => {
           if (userId) supabase.from('food_standard_prices').upsert(standardPriceToRow(userId, newEntry)).then(logIfError('addStandardPrice'));
@@ -165,7 +162,7 @@ export const useFoodStore = create<FoodState>()(
       },
 
       addPurchase: (amount, date) => {
-        const newPurchase: GroceryPurchase = { id: newId(), amount, date: date ?? new Date().toISOString() };
+        const newPurchase: GroceryPurchase = { id: newEntityId(), amount, date: date ?? new Date().toISOString() };
         set((state) => ({ purchases: [...state.purchases, newPurchase] }));
         getUserId().then((userId) => {
           if (userId) supabase.from('food_purchases').upsert(purchaseToRow(userId, newPurchase)).then(logIfError('addPurchase'));
@@ -179,7 +176,7 @@ export const useFoodStore = create<FoodState>()(
       },
 
       addPantryItem: (input) => {
-        const newItem: PantryItem = { id: newId(), addedAt: new Date().toISOString(), ...input };
+        const newItem: PantryItem = { id: newEntityId(), addedAt: new Date().toISOString(), ...input };
         set((state) => ({ pantryItems: [...state.pantryItems, newItem] }));
         getUserId().then((userId) => {
           if (userId) supabase.from('food_pantry_items').upsert(pantryItemToRow(userId, newItem)).then(logIfError('addPantryItem'));
@@ -193,7 +190,7 @@ export const useFoodStore = create<FoodState>()(
       },
 
       addShoppingItem: (label) => {
-        const newItem: ShoppingListItem = { id: newId(), label, checked: false };
+        const newItem: ShoppingListItem = { id: newEntityId(), label, checked: false };
         set((state) => ({ shoppingItems: [...state.shoppingItems, newItem] }));
         getUserId().then((userId) => {
           if (userId) supabase.from('food_shopping_items').upsert(shoppingItemToRow(userId, newItem)).then(logIfError('addShoppingItem'));
@@ -218,7 +215,7 @@ export const useFoodStore = create<FoodState>()(
       },
 
       addOffer: (input) => {
-        const newOffer: GroceryOffer = { id: newId(), source: 'manual', ...input };
+        const newOffer: GroceryOffer = { id: newEntityId(), source: 'manual', ...input };
         set((state) => ({ offers: [...state.offers, newOffer] }));
         getUserId().then((userId) => {
           if (userId) supabase.from('food_offers').upsert(offerToRow(userId, newOffer)).then(logIfError('addOffer'));
@@ -232,7 +229,7 @@ export const useFoodStore = create<FoodState>()(
       },
 
       addRecipe: (input) => {
-        const newRecipe: Recipe = { id: newId(), tags: [], ...input };
+        const newRecipe: Recipe = { id: newEntityId(), tags: [], ...input };
         set((state) => ({ recipes: [...state.recipes, newRecipe] }));
         getUserId().then((userId) => {
           if (userId) supabase.from('food_recipes').upsert(recipeToRow(userId, newRecipe)).then(logIfError('addRecipe'));

@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -10,10 +11,6 @@ import {
   SkillCategory,
   SkillLevel,
 } from "@/types/career";
-
-function newId() {
-  return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
 
 type ApplicationEditableFields = Pick<JobApplication, "company" | "position" | "status" | "appliedDate" | "link" | "notes">;
 type SkillEditableFields = Pick<Skill, "name" | "category" | "level">;
@@ -98,7 +95,7 @@ export const useCareerStore = create<CareerState>()(
     (set, get) => ({
       applications: [],
       addApplication: (input) => {
-        const newApp: JobApplication = { id: newId(), createdAt: new Date().toISOString(), ...input };
+        const newApp: JobApplication = { id: newEntityId(), createdAt: new Date().toISOString(), ...input };
         set((state) => ({ applications: [...state.applications, newApp] }));
         syncUpsertApplication(newApp);
       },
@@ -118,7 +115,7 @@ export const useCareerStore = create<CareerState>()(
 
       skills: [],
       addSkill: (input) => {
-        const newSkill: Skill = { id: newId(), createdAt: new Date().toISOString(), ...input };
+        const newSkill: Skill = { id: newEntityId(), createdAt: new Date().toISOString(), ...input };
         set((state) => ({ skills: [...state.skills, newSkill] }));
         syncUpsertSkill(newSkill);
       },

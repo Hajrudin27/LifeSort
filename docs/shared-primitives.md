@@ -79,25 +79,20 @@ replacing the 43 rendering sites is mechanical and safe. Migrate storage second,
 behind a versioned local migration, because it changes persisted shape and needs
 the rollback path from APP-038.
 
-## 3. `EntityId` — no canonical implementation
+## 3. `EntityId` — canonical implementation
 
-**Copies:**
+APP-030 introduced `newEntityId()` in `core/ids.ts`, using Expo Crypto's
+cryptographic UUID v4 API with no weak fallback. All 39 opaque client entity
+creation sites now use it, including attachment entities and recurring instances.
+The former timestamp/random generator allowlists are empty and remain guarded.
 
-| Generator | Files |
-| --- | --- |
-| `` `${Date.now()}-${Math.round(Math.random() * 1e6)}` `` | 10 — ten stores, verbatim |
-| `Date.now().toString()` | 5 — `useExpensesStore`, `useSavingsGoalsStore`, `useWarrantiesStore`, `AttachmentList`, `TripAttachmentGrid` |
+Generate once, then pass the same value into parent/series/owner references.
+Existing IDs remain opaque strings; hydration and updates never rewrite them or
+require a UUID format. Semantic keys, seed IDs, server-owned identities, reminder
+names, and APP-029 cache/viewer identifiers keep their own contracts.
 
-**Consequence:** the second form has millisecond resolution and nothing else, so
-two ids minted in the same tick are identical. `components/AttachmentList.tsx`
-mints three in a row and `TripAttachmentGrid` two — attaching several files
-quickly is exactly the case that collides. Neither form is collision-resistant
-across devices, which matters once the same account writes from two phones.
-
-**Plan (APP-030):** one `core/ids` module over `expo-crypto`'s CSPRNG. New
-entities only; existing ids stay as they are, since they are referenced by rows
-already in Supabase and by attachment paths in storage. The two generators are
-deleted as their call sites move.
+See [ADR-0025](./adr/0025-new-client-entity-ids-are-cryptographic-uuids.md) and the
+[complete ID inventory and compatibility audit](./app-030-id-audit.md).
 
 ## 4. `Reminder` — no canonical implementation
 

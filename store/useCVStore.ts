@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -5,10 +6,6 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
 import { reportSyncFailure } from '@/store/useSyncStatusStore';
 import { CVPersonalInfo, CvVersion, EducationEntry, ExperienceEntry, LanguageEntry, LanguageProficiency } from '@/types/cv';
-
-function newId() {
-  return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
 
 interface CVState {
   personalInfo: CVPersonalInfo;
@@ -112,7 +109,7 @@ export const useCVStore = create<CVState>()(
 
       education: [],
       addEducation: (input) => {
-        const newEntry: EducationEntry = { id: newId(), ...input };
+        const newEntry: EducationEntry = { id: newEntityId(), ...input };
         set((state) => ({ education: [...state.education, newEntry] }));
         getUserId().then((userId) => {
           if (!userId) return;
@@ -145,7 +142,7 @@ export const useCVStore = create<CVState>()(
 
       experience: [],
       addExperience: (input) => {
-        const newEntry: ExperienceEntry = { id: newId(), ...input };
+        const newEntry: ExperienceEntry = { id: newEntityId(), ...input };
         set((state) => ({ experience: [...state.experience, newEntry] }));
         getUserId().then((userId) => {
           if (!userId) return;
@@ -178,7 +175,7 @@ export const useCVStore = create<CVState>()(
 
       languages: [],
       addLanguage: (name, proficiency) => {
-        const newEntry: LanguageEntry = { id: newId(), name, proficiency };
+        const newEntry: LanguageEntry = { id: newEntityId(), name, proficiency };
         set((state) => ({ languages: [...state.languages, newEntry] }));
         getUserId().then((userId) => {
           if (!userId) return;
@@ -211,7 +208,7 @@ export const useCVStore = create<CVState>()(
 
       versions: [],
       addVersion: (input) => {
-        const newVersion: CvVersion = { id: newId(), createdAt: new Date().toISOString(), ...input };
+        const newVersion: CvVersion = { id: newEntityId(), createdAt: new Date().toISOString(), ...input };
         set((state) => ({ versions: [...state.versions, newVersion] }));
         getUserId().then((userId) => {
           if (!userId) return;

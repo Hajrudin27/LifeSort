@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import { uploadAttachment } from '@/utils/shared/attachmentSync';
 import {
   deleteCachedAttachmentFile,
@@ -58,5 +59,33 @@ describe('attachment upload temp ownership', () => {
     expect(mockDeleteCachedAttachmentFile).toHaveBeenCalledWith('file:///cache/lifesort-decrypted-attachments/upload.jpg');
     expect(mockUpload).toHaveBeenCalled();
     expect(mockUpsert).toHaveBeenCalled();
+  });
+
+  it.each(['expense', 'warranty'] as const)('accepts UUID %s paths and preserves entity/owner references in uploaded metadata', async (ownerType) => {
+    const ownerId = newEntityId();
+    const id = newEntityId();
+    const result = await uploadAttachment(ownerType, ownerId, {
+      id, uri: 'file:///doc/attachments/image.lsenc', name: 'image.jpg', kind: 'image',
+    });
+    const storagePath = `user_1/${ownerType}/${ownerId}/${id}.jpg`;
+    expect(result).toEqual({ storagePath });
+    expect(mockUpload).toHaveBeenCalledWith(storagePath, expect.any(Blob), expect.any(Object));
+    expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({ id, owner_id: ownerId, storage_path: storagePath }));
+  });
+
+  it.each(['../escape', 'folder/id', 'id.with.dots', 'id\\escape', '%2e%2e'])('still rejects unsafe ID segments: %s', async (unsafe) => {
+    for (const [ownerId, id] of [[unsafe, newEntityId()], [newEntityId(), unsafe]]) {
+      await expect(uploadAttachment('expense', ownerId, {
+        id, uri: 'file:///doc/attachments/image.lsenc', name: 'image.jpg', kind: 'image',
+      })).resolves.toBeNull();
+    }
+    expect(mockUpload).not.toHaveBeenCalled();
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  it('still accepts legacy timestamp-shaped owner and attachment IDs', async () => {
+    await expect(uploadAttachment('expense', '1725206400000', {
+      id: '1725206400001', uri: 'file:///doc/attachments/old.lsenc', name: 'old.pdf', kind: 'document',
+    })).resolves.toEqual({ storagePath: 'user_1/expense/1725206400000/1725206400001.pdf' });
   });
 });

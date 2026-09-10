@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import * as DocumentPicker from "expo-document-picker";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -84,9 +85,10 @@ export default function TripAttachmentGrid({
     if (result.canceled) return;
 
     const asset = result.assets[0];
+    const id = newEntityId();
     const uri = await persistFile(asset.uri, asset.fileName ?? "photo.jpg");
     onAdd({
-      id: Date.now().toString(),
+      id,
       uri,
       name: asset.fileName ?? "photo.jpg",
       kind: "image",
@@ -100,9 +102,10 @@ export default function TripAttachmentGrid({
     if (result.canceled) return;
 
     const asset = result.assets[0];
+    const id = newEntityId();
     const uri = await persistFile(asset.uri, asset.name);
     onAdd({
-      id: Date.now().toString(),
+      id,
       uri,
       name: asset.name,
       kind: "document",

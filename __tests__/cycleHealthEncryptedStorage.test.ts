@@ -27,7 +27,7 @@ jest.mock('expo-secure-store', () => ({
 }));
 
 jest.mock('expo-crypto', () => {
-  const { randomBytes, createCipheriv, createDecipheriv } = require('crypto');
+  const { randomBytes, randomUUID, createCipheriv, createDecipheriv } = require('crypto');
 
   class AESEncryptionKey {
     private readonly mockKey: Buffer;
@@ -87,6 +87,7 @@ jest.mock('expo-crypto', () => {
   }
 
   return {
+    randomUUID: jest.fn(() => randomUUID()),
     AESEncryptionKey,
     AESSealedData,
     aesEncryptAsync: jest.fn(

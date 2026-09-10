@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -91,7 +92,7 @@ export const useExpensesStore = create<ExpensesState>()(
       categoryBudgets: {},
 
       addExpense: (input) => {
-        const id = Date.now().toString();
+        const id = newEntityId();
         const newExpense: Expense = {
           id,
           seriesId: id, // ny udgift starter sin egen serie
@@ -165,7 +166,6 @@ export const useExpensesStore = create<ExpensesState>()(
         let createdInstances: Expense[] = [];
 
         set((state) => {
-          const existingIds = new Set(state.expenses.map((e) => e.id));
           const seriesIds = Array.from(new Set(state.expenses.map((e) => e.seriesId ?? e.id)));
           const newInstances: Expense[] = [];
 
@@ -188,12 +188,10 @@ export const useExpensesStore = create<ExpensesState>()(
             if (!latestBefore) continue;
             if (!latestBefore.isRecurring) continue;
 
-            const newId = `${seriesId}-${monthKey}`;
-            if (existingIds.has(newId)) continue; // ekstra sikkerhedsnet mod dobbelt-kald
-
             newInstances.push({
               ...latestBefore,
-              id: newId,
+              id: newEntityId(),
+              seriesId, // også når en ældre rod kun har id og intet seriesId
               nextPaymentDate: `${monthKey}-${latestBefore.nextPaymentDate.slice(8)}`,
               attachments: [], // en ny måneds instans arver ALDRIG forrige måneds kvittering
               createdAt: new Date().toISOString(),

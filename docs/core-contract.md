@@ -98,16 +98,14 @@ The baseline is a ratchet, like R1's: a new violation fails, and an entry that
 is no longer a violation fails until it is deleted. **Never add a line to make a
 test pass.**
 
-## Known duplication awaiting core
+## Entity IDs in core
 
-Recorded here because it is the clearest evidence for this contract; **not fixed
-by APP-004.**
+APP-030 resolved the duplicated timestamp/random ID generators through
+`core/ids.ts`: `newEntityId()` returns a cryptographic UUID v4 from Expo Crypto.
+It has no domain dependencies and no weak fallback. New opaque persistent client
+entities use it; references reuse the generated value. Existing IDs are preserved
+as opaque strings, with no migration or UUID-only validation.
 
-| Duplication | Where | Owning story |
-| --- | --- | --- |
-| The identical id generator `` `${Date.now()}-${Math.round(Math.random() * 1e6)}` `` is copied verbatim into 10 stores. | `store/useCVStore.ts`, `useCareerStore.ts`, `useCycleStore.ts`, `useFoodStore.ts`, `useHabitsStore.ts`, `useHouseholdStore.ts`, `useLifeGoalsStore.ts`, `useSavingsGoalsStore.ts`, `useTodoStore.ts`, `useTripsStore.ts` | APP-030 |
-| A weaker `Date.now().toString()` variant that can collide inside one millisecond — `AttachmentList` mints three ids in a row this way, `TripAttachmentGrid` two. | `components/AttachmentList.tsx`, `components/TripAttachmentGrid.tsx`, `store/useExpensesStore.ts`, `store/useSavingsGoalsStore.ts`, `store/useWarrantiesStore.ts` | APP-030 |
-
-One `core/ids` module replaces all of it. APP-030 owns that change because it
-also decides the CSPRNG and the migration for existing ids; doing it here would
-be a data-shape change dressed up as a folder move.
+Semantic keys, external IDs and cache identifiers retain their own contracts.
+See [ADR-0025](./adr/0025-new-client-entity-ids-are-cryptographic-uuids.md) and the
+[APP-030 audit](./app-030-id-audit.md) for scope and legacy compatibility.

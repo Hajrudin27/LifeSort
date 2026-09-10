@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -19,10 +20,6 @@ import {
   cancelTripPackingReminder,
   scheduleTripPackingReminder,
 } from "@/utils/trip/tripReminder";
-
-function newId() {
-  return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
 
 interface TripsState {
   trips: Trip[];
@@ -167,7 +164,7 @@ export const useTripsStore = create<TripsState>()(
       myUserId: null,
 
       addTrip: (input, defaultPackingItems, copyFromTripId) => {
-        const id = newId();
+        const id = newEntityId();
         const newTrip: Trip = {
           id,
           documents: [],
@@ -183,7 +180,7 @@ export const useTripsStore = create<TripsState>()(
           : defaultPackingItems;
 
         const newPackingItems: PackingItem[] = itemsToCreate.map(({ label, category }) => ({
-          id: newId(),
+          id: newEntityId(),
           tripId: id,
           label,
           checked: false,
@@ -255,7 +252,7 @@ export const useTripsStore = create<TripsState>()(
 
       addTripExpense: async (input) => {
         const { currency, amount, ...rest } = input;
-        const id = newId();
+        const id = newEntityId();
 
         let finalAmount = amount;
         let originalAmount: number | undefined;
@@ -330,7 +327,7 @@ export const useTripsStore = create<TripsState>()(
       },
 
       addPackingItem: (tripId, label, category) => {
-        const newItem: PackingItem = { id: newId(), tripId, label, checked: false, isDefault: false, category };
+        const newItem: PackingItem = { id: newEntityId(), tripId, label, checked: false, isDefault: false, category };
         set((state) => ({
           packingItems: [...state.packingItems, newItem],
         }));

@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -76,7 +77,7 @@ export const useWarrantiesStore = create<WarrantiesState>()(
     (set, get) => ({
       warranties: [],
       addWarranty: (input) => {
-        const id = Date.now().toString();
+        const id = newEntityId();
         const newWarranty: Warranty = {
           id,
           attachments: [],

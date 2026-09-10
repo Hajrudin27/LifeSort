@@ -1,3 +1,4 @@
+import { newEntityId } from '@/core/ids';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -5,10 +6,6 @@ import { cycleHealthEncryptedStorage } from '@/core/storage/cycleHealthEncrypted
 import { supabase } from '@/lib/supabase';
 import { CycleEntry, FlowIntensity, Symptom, SymptomLog } from '@/types/cycle';
 import { HealthConditionRecord, SymptomGlossaryRecord } from '@/types/healthInfo';
-
-function newId() {
-  return `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
 
 async function getUserId(): Promise<string | null> {
   const { data: userData } = await supabase.auth.getUser();
@@ -96,7 +93,7 @@ export const useCycleStore = create<CycleState>()(
       symptomGlossary: [],
 
       startPeriod: (startDate) => {
-        const newCycle: CycleEntry = { id: newId(), startDate, createdAt: new Date().toISOString() };
+        const newCycle: CycleEntry = { id: newEntityId(), startDate, createdAt: new Date().toISOString() };
         set((state) => ({ cycles: [...state.cycles, newCycle] }));
         syncUpsertCycle(newCycle);
       },
@@ -127,7 +124,7 @@ export const useCycleStore = create<CycleState>()(
               symptomLogs: state.symptomLogs.map((l) => (l.date === date ? { ...l, symptoms, flow, notes } : l)),
             };
           }
-          return { symptomLogs: [...state.symptomLogs, { id: newId(), date, symptoms, flow, notes }] };
+          return { symptomLogs: [...state.symptomLogs, { id: newEntityId(), date, symptoms, flow, notes }] };
         });
         const target = get().symptomLogs.find((l) => l.date === date);
         if (target) syncUpsertSymptomLog(target);

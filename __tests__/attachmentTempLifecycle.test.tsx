@@ -1,6 +1,10 @@
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import React, { useEffect } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 
+import * as entityIds from '@/core/ids';
+import { persistFile } from '@/utils/shared/attachmentStorage';
 import AttachmentList from '@/components/AttachmentList';
 import TripAttachmentGrid from '@/components/TripAttachmentGrid';
 import ViewImageScreen from '@/app/warranties/view-image';
@@ -372,5 +376,78 @@ describe('APP-029 temporary plaintext attachment lifecycle', () => {
     await act(async () => {
       renderer.unmount();
     });
+  });
+});
+
+
+describe('APP-030 attachment entity creation', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it.each([
+    ['camera', 0],
+    ['library', 1],
+    ['document', 2],
+  ] as const)('trip %s does not persist a file when entity UUID generation fails', async (_source, actionIndex) => {
+    const pick = { canceled: false, assets: [{ uri: 'file:///picked.jpg', fileName: 'photo.jpg', name: 'document.pdf' }] };
+    (ImagePicker.launchCameraAsync as jest.Mock).mockResolvedValue(pick);
+    (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValue(pick);
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue(pick);
+    const onAdd = jest.fn();
+    let renderer!: TestRenderer.ReactTestRenderer;
+    await act(async () => {
+      renderer = TestRenderer.create(<TripAttachmentGrid attachments={[]} onAdd={onAdd} onRemove={jest.fn()} />);
+    });
+    const actions = [...new Set(renderer.root.findAll((node) =>
+      node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function',
+    ).map((node) => node.props.onPress as () => Promise<void>))];
+    const failure = new Error('secure UUID generation unavailable');
+    const generateId = jest.spyOn(entityIds, 'newEntityId').mockImplementationOnce(() => { throw failure; });
+    try {
+      expect(actions).toHaveLength(3);
+      await act(async () => {
+        await expect(actions[actionIndex]()).rejects.toThrow(failure);
+      });
+      expect(generateId).toHaveBeenCalledTimes(1);
+      expect(persistFile).not.toHaveBeenCalled();
+      expect(onAdd).not.toHaveBeenCalled();
+    } finally {
+      generateId.mockRestore();
+      await act(async () => { renderer.unmount(); });
+    }
+  });
+
+  it.each(['list', 'trip'] as const)('%s camera, library and document actions create distinct UUID v4 IDs', async (kind) => {
+    const pick = { canceled: false, assets: [{ uri: 'file:///picked.jpg', fileName: 'photo.jpg', name: 'document.pdf', width: 10, height: 10 }] };
+    (ImagePicker.launchCameraAsync as jest.Mock).mockResolvedValue(pick);
+    (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValue(pick);
+    (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValue(pick);
+    const onAdd = jest.fn();
+    let renderer!: TestRenderer.ReactTestRenderer;
+    await act(async () => {
+      renderer = TestRenderer.create(kind === 'list'
+        ? <AttachmentList attachments={[]} onAdd={onAdd} onRemove={jest.fn()} />
+        : <TripAttachmentGrid attachments={[]} onAdd={onAdd} onRemove={jest.fn()} />);
+    });
+    const actions = [...new Set(renderer.root.findAll((node) =>
+      node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function',
+    ).map((node) => node.props.onPress as () => Promise<void>))];
+    expect(actions).toHaveLength(3);
+    // Repeat without advancing time: a timestamp-only generator would collide.
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(123);
+    try {
+      for (let repeat = 0; repeat < 2; repeat++) {
+        for (const action of actions) await act(async () => { await action(); });
+      }
+      const attachments = onAdd.mock.calls.map(([attachment]) => attachment);
+      expect(attachments).toHaveLength(6);
+      expect(persistFile).toHaveBeenCalledTimes(6);
+      expect(attachments.every((a) => a.uri === 'file:///picked.jpg')).toBe(true);
+      expect(attachments.map((a) => a.kind)).toEqual(['image', 'image', 'document', 'image', 'image', 'document']);
+      expect(attachments.every((a) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(a.id))).toBe(true);
+      expect(new Set(attachments.map((a) => a.id)).size).toBe(6);
+    } finally {
+      clock.mockRestore();
+      await act(async () => { renderer.unmount(); });
+    }
   });
 });

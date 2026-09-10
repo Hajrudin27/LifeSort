@@ -17,28 +17,11 @@ import path from 'path';
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 
-/** Den stærkere af de to id-generatorer. Kopieret ordret. */
-const ID_GENERATOR_TIMESTAMP_RANDOM = [
-  'store/useCVStore.ts',
-  'store/useCareerStore.ts',
-  'store/useCycleStore.ts',
-  'store/useFoodStore.ts',
-  'store/useHabitsStore.ts',
-  'store/useHouseholdStore.ts',
-  'store/useLifeGoalsStore.ts',
-  'store/useSavingsGoalsStore.ts',
-  'store/useTodoStore.ts',
-  'store/useTripsStore.ts',
-];
+/** APP-030 removed every weak generator; no exceptions may be added. */
+const ID_GENERATOR_TIMESTAMP_RANDOM: string[] = [];
 
 /** Den svage variant: kolliderer inden for samme millisekund. */
-const ID_GENERATOR_TIMESTAMP_ONLY = [
-  'components/AttachmentList.tsx',
-  'components/TripAttachmentGrid.tsx',
-  'store/useExpensesStore.ts',
-  'store/useSavingsGoalsStore.ts',
-  'store/useWarrantiesStore.ts',
-];
+const ID_GENERATOR_TIMESTAMP_ONLY: string[] = [];
 
 /** Fire moduler der hver især planlægger en lokal notifikation. */
 const REMINDER_MODULES = [
@@ -116,16 +99,15 @@ function expectFrozen(actual: string[], baseline: string[], what: string) {
 describe('EntityId', () => {
   it('får ingen nye kopier af tidsstempel-plus-tilfældigt id', () => {
     const actual = filesMatching(
-      ['store', 'utils', 'components', 'app'],
+      ['store', 'utils', 'components', 'app', 'hooks', 'features', 'core'],
       /Date\.now\(\)\}-\$\{Math\.round\(Math\.random/,
     );
     expectFrozen(actual, ID_GENERATOR_TIMESTAMP_RANDOM, 'id-generatoren `${Date.now()}-${Math.random()}`');
   });
 
   it('får ingen nye kopier af den variant der kan kollidere', () => {
-    // Date.now().toString() har kun millisekund-opløsning. AttachmentList laver
-    // tre id'er i træk på den måde.
-    const actual = filesMatching(['store', 'utils', 'components', 'app'], /Date\.now\(\)\.toString\(\)/);
+    // Timestamp-only entity IDs are forbidden, including attachment creation.
+    const actual = filesMatching(['store', 'utils', 'components', 'app', 'hooks', 'features', 'core'], /Date\.now\(\)\.toString\(\)/);
     expectFrozen(actual, ID_GENERATOR_TIMESTAMP_ONLY, 'id-generatoren `Date.now().toString()`');
   });
 });

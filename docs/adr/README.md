@@ -43,6 +43,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0022](./0022-data-profiles-are-contracts-over-logical-domains.md) | Data profiles are contracts over logical domains | Accepted | 2026-09-09 | APP-027 |
 | [0023](./0023-cycle-health-persistence-is-encrypted-as-one-store.md) | Cycle health persistence is encrypted as one store | Accepted | 2026-09-09 | APP-028 |
 | [0024](./0024-document-cache-is-encrypted-with-temporary-plaintext-interop.md) | Document cache is encrypted with temporary plaintext interop | Accepted | 2026-09-10 | APP-029 |
+| [0025](./0025-new-client-entity-ids-are-cryptographic-uuids.md) | New client entity IDs are cryptographic UUIDs | Accepted | 2026-09-10 | APP-030 |
 
 ## When an ADR is required
 

@@ -1,11 +1,12 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { documentMetadataEncryptedStorage } from "@/core/storage/documentCacheStorage";
 import { supabase } from "@/lib/supabase";
 import { trackSync } from '@/store/useSyncStatusStore';
 import { Attachment } from "@/types/attachment";
 import { Warranty, WarrantyType } from "@/types/warranty";
+import { cleanupAttachments, deleteCachedAttachmentFile } from "@/utils/shared/attachmentStorage";
 import { deleteAttachmentRemote, fetchAttachmentsFor, uploadAttachment } from "@/utils/shared/attachmentSync";
 import {
   cancelWarrantyReminder,
@@ -117,10 +118,12 @@ export const useWarrantiesStore = create<WarrantiesState>()(
         return newExpiry;
       },
       removeWarranty: (id) => {
+        const target = get().warranties.find((w) => w.id === id);
         cancelWarrantyReminder(id);
         set((state) => ({
           warranties: state.warranties.filter((w) => w.id !== id),
         }));
+        cleanupAttachments(target?.attachments);
         syncDeleteWarranty(id);
       },
       addAttachment: (warrantyId, attachment) => {
@@ -163,6 +166,7 @@ export const useWarrantiesStore = create<WarrantiesState>()(
               : w,
           ),
         }));
+        if (attachment?.uri) deleteCachedAttachmentFile(attachment.uri);
         deleteAttachmentRemote(attachmentId, attachment?.storagePath);
       },
 
@@ -214,7 +218,7 @@ export const useWarrantiesStore = create<WarrantiesState>()(
     }),
     {
       name: "lifesort-warranties",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => documentMetadataEncryptedStorage),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.warranties = state.warranties.map((w) => ({

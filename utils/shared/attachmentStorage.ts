@@ -1,28 +1,16 @@
-import * as FileSystem from "expo-file-system/legacy";
-
-const ATTACHMENTS_DIR = `${FileSystem.documentDirectory}attachments/`;
-
-async function ensureDirExists() {
-  const dirInfo = await FileSystem.getInfoAsync(ATTACHMENTS_DIR);
-  if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(ATTACHMENTS_DIR, {
-      intermediates: true,
-    });
-  }
-}
+import {
+  ATTACHMENTS_DIR,
+  clearPersistentAttachmentCache,
+  clearTemporaryAttachmentCache,
+  deleteCachedAttachmentFile,
+  persistEncryptedAttachmentFile,
+} from '@/core/storage/documentCacheStorage';
 
 export async function persistFile(
   sourceUri: string,
   suggestedName: string,
 ): Promise<string> {
-  await ensureDirExists();
-  const extension = suggestedName.includes(".")
-    ? suggestedName.split(".").pop()
-    : "jpg";
-  const filename = `${Date.now()}-${Math.round(Math.random() * 1e6)}.${extension}`;
-  const destination = `${ATTACHMENTS_DIR}${filename}`;
-  await FileSystem.copyAsync({ from: sourceUri, to: destination });
-  return destination;
+  return persistEncryptedAttachmentFile(sourceUri);
 }
 
 /**
@@ -37,12 +25,23 @@ export async function persistFile(
  */
 export async function clearAttachmentCache(): Promise<void> {
   try {
-    const dirInfo = await FileSystem.getInfoAsync(ATTACHMENTS_DIR);
-    if (dirInfo.exists) {
-      await FileSystem.deleteAsync(ATTACHMENTS_DIR, { idempotent: true });
-    }
+    await clearPersistentAttachmentCache();
+    await clearTemporaryAttachmentCache();
   } catch {
     // Log ud må aldrig fejle, fordi en fil ikke kunne slettes. Næste forsøg
     // rydder resten.
   }
 }
+
+export function cleanupAttachmentUris(uris: Iterable<string | null | undefined>): void {
+  for (const uri of uris) {
+    if (!uri || uri.startsWith('http')) continue;
+    void deleteCachedAttachmentFile(uri).catch(() => undefined);
+  }
+}
+
+export function cleanupAttachments(attachments: readonly { uri?: string | null }[] | null | undefined): void {
+  cleanupAttachmentUris((attachments ?? []).map((attachment) => attachment.uri));
+}
+
+export { ATTACHMENTS_DIR, deleteCachedAttachmentFile };

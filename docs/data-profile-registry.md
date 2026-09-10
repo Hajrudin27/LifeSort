@@ -1,7 +1,7 @@
 # LifeSort - Data Profile Registry
 
 **Story:** APP-027 (E3 - Storage & sync platform, P0)
-**Status:** Declarative registry, updated by APP-028 to reflect encrypted cycle-health persistence. Outbox, sync behavior and generic migrations remain deferred.
+**Status:** Declarative registry, updated by APP-029 to reflect encrypted document-cache files and metadata. Outbox, sync behavior and generic migrations remain deferred.
 **Owner of this document:** Hajrudin Kardasevic
 **Code source:** [`core/storage/dataProfileRegistry.ts`](../core/storage/dataProfileRegistry.ts)
 **Verified by:** [`__tests__/dataProfileRegistry.test.ts`](../__tests__/dataProfileRegistry.test.ts)
@@ -18,7 +18,9 @@ domain is global reference data.
 APP-027 originally did not split stores, encrypt existing values or change
 network behavior. APP-028 deliberately changed one recorded fact: the current
 cycle store remains one physical `lifesort-cycle` key, but the value is now an
-AES-GCM encrypted envelope whose key material lives in SecureStore.
+AES-GCM encrypted envelope whose key material lives in SecureStore. APP-029
+adds the same at-rest protection to local document-cache bytes and to the
+mixed expense/trip/warranty Zustand stores that carry attachment metadata.
 
 ## Profiles
 
@@ -52,7 +54,7 @@ Counts are enforced in tests: **A = 23, B = 6, C = 2, D = 4, total = 35**.
 | `economy.income` | A | economy | `async-storage:lifesort-income-v2`, `supabase-table:income` | User-created income entries. |
 | `economy.savings` | A | economy | `async-storage:lifesort-savings-goals`, `supabase-table:savings_goals`, `supabase-table:savings_history`, `supabase-table:savings_extra` | User-created savings goals and contributions. |
 | `economy.categories` | A | economy | `async-storage:lifesort-categories`, `supabase-table:categories` | Built-in plus user-created categories. |
-| `economy.attachments` | B | economy | `async-storage:lifesort-expenses`, `supabase-table:attachments`, `supabase-storage-bucket:attachments`, `filesystem:document-directory/attachments` | Receipt files and metadata attached to expenses. |
+| `economy.attachments` | B | economy | `async-storage:lifesort-expenses`, `supabase-table:attachments`, `supabase-storage-bucket:attachments`, `filesystem:document-directory/attachments`, `filesystem:cache-directory/lifesort-decrypted-attachments`, `secure-store:lifesort-document-cache-key` | Receipt files and metadata attached to expenses. Local bytes and metadata are encrypted; temporary decrypted copies are cache-only interoperability files. |
 | `food.user-grocery-finance` | A | food | `async-storage:lifesort-food-v2`, `supabase-table:food_monthly_budget`, `supabase-table:food_purchases`, `supabase-table:food_offers`, `supabase-table:food_standard_prices` | User-created grocery budgets, purchases, offers and prices. |
 | `food.user-planning` | A | food | `async-storage:lifesort-food-v2`, `supabase-table:food_pantry_items`, `supabase-table:food_shopping_items`, `supabase-table:food_recipes`, `supabase-table:food_saved_plans`, `supabase-table:food_selected_stores` | Pantry, shopping list, recipes, plans and chosen stores. |
 | `food.seed-recipes` | D | food | `async-storage:lifesort-food-v2`, `bundled-source:data/seedRecipes` | Bundled app content. |
@@ -62,9 +64,9 @@ Counts are enforced in tests: **A = 23, B = 6, C = 2, D = 4, total = 35**.
 | `habits.habits` | A | habits | `async-storage:lifesort-habits`, `supabase-table:habits` | Habits and logs. |
 | `tasks.todos` | A | tasks | `async-storage:lifesort-todos`, `supabase-table:todos` | To-do list. |
 | `travel.trips` | A | travel | `async-storage:lifesort-trips`, `supabase-table:trips`, `supabase-table:trip_expenses`, `supabase-table:trip_packing_items`, `supabase-table:trip_participants` | Trip records, budgets, packing and participants. |
-| `travel.attachments` | B | travel | `async-storage:lifesort-trips`, `filesystem:document-directory/attachments` | Trip documents are local-only today. |
+| `travel.attachments` | B | travel | `async-storage:lifesort-trips`, `filesystem:document-directory/attachments`, `filesystem:cache-directory/lifesort-decrypted-attachments`, `secure-store:lifesort-document-cache-key` | Trip documents are local-only today. Local bytes and metadata are encrypted; temporary decrypted copies are cache-only interoperability files. |
 | `warranties.records` | A | warranties | `async-storage:lifesort-warranties`, `supabase-table:warranties` | Warranty/insurance records excluding attached files. |
-| `warranties.attachments` | B | warranties | `async-storage:lifesort-warranties`, `supabase-table:attachments`, `supabase-storage-bucket:attachments`, `filesystem:document-directory/attachments` | Receipt, warranty and insurance files plus metadata. |
+| `warranties.attachments` | B | warranties | `async-storage:lifesort-warranties`, `supabase-table:attachments`, `supabase-storage-bucket:attachments`, `filesystem:document-directory/attachments`, `filesystem:cache-directory/lifesort-decrypted-attachments`, `secure-store:lifesort-document-cache-key` | Receipt, warranty and insurance files plus metadata. Local bytes and metadata are encrypted; temporary decrypted copies are cache-only interoperability files. |
 | `career.applications` | A | career | `async-storage:lifesort-career`, `supabase-table:job_applications` | Ambiguous: application notes may later need Profile B review. |
 | `career.skills` | A | career | `async-storage:lifesort-career`, `async-storage:lifesort-skill-categories`, `supabase-table:skills` | Skills and skill-category labels. |
 | `career.cv` | A | career | `async-storage:lifesort-cv`, `supabase-table:cv_personal_info`, `supabase-table:cv_education`, `supabase-table:cv_experience`, `supabase-table:cv_languages`, `supabase-table:cv_versions` | Ambiguous: document-like career data; review before APP-029. |
@@ -73,7 +75,7 @@ Counts are enforced in tests: **A = 23, B = 6, C = 2, D = 4, total = 35**.
 
 ## Physical Surfaces
 
-The code-level registry is the exhaustive machine-readable mobile list: **84
+The code-level registry is the exhaustive machine-readable mobile list: **86
 physical persistence surfaces**. Its tests prove
 that it covers every current Zustand persist key, every direct AsyncStorage key
 outside Zustand that belongs to this app, every client-referenced Supabase table,
@@ -91,6 +93,14 @@ several logical domains:
 | `async-storage:lifesort-trips` | A, B | encrypted-required | Trip rows are Profile A, but trip documents and expense attachments are Profile B. |
 | `async-storage:lifesort-warranties` | A, B | encrypted-required | Warranty records are Profile A, but attached receipt/document metadata is Profile B. |
 | `async-storage:lifesort-cycle` | B, D | encrypted-required | User cycle data and reviewed health reference content still share one store, so the whole persisted payload is encrypted. |
+
+Document-cache physical surfaces added by APP-029:
+
+| Surface | Profiles | Strongest local-storage protection | Why it matters |
+| --- | --- | --- | --- |
+| `filesystem:document-directory/attachments` | B | encrypted-required | Persistent cached attachment bytes are AES-GCM encrypted `*.lsenc` files. Legacy plaintext files referenced by attachment metadata are encrypted during metadata migration, then removed after the encrypted metadata write succeeds. |
+| `filesystem:cache-directory/lifesort-decrypted-attachments` | B | encrypted-required | Temporary plaintext copies exist only for native image/share/upload interoperability and are deleted on explicit cleanup/logout. This is not the canonical persistent cache. |
+| `secure-store:lifesort-document-cache-key` | B | encrypted-required | Device-local AES-256-GCM key material for document-cache files and attachment metadata; separate from the cycle-health key. |
 
 Unknown physical surfaces fail closed in the API: plaintext local persistence is
 not allowed, Profile B is assumed possible, and the strongest protection result
@@ -118,12 +128,15 @@ storage surfaces for the mobile data-profile registry.
 
 ## Deferred By Design
 
-APP-028 now covers only the `cycle.user-health` local persistence surface and
-its narrow legacy plaintext migration. APP-029 sensitive document cache,
-APP-030 cryptographic UUID changes, APP-031 durable outbox, APP-032
-idempotency, APP-033 revisions/`updated_at`, APP-034 tombstones, APP-035
-conflict handling, APP-036 sync UX, APP-037 connectivity-aware sync and APP-038
-migration harness remain deferred.
+APP-028 covers the `cycle.user-health` local persistence surface and
+its narrow legacy plaintext migration. APP-029 covers encrypted persistent
+document-cache files, encrypted attachment metadata in the mixed
+expense/trip/warranty stores, APP-029-specific legacy plaintext cache
+migration, encrypted retry records for required plaintext cleanup, and
+temporary decrypted cache cleanup. APP-030 cryptographic UUID changes, APP-031
+durable outbox, APP-032 idempotency, APP-033 revisions/`updated_at`, APP-034
+tombstones, APP-035 conflict handling, APP-036 sync UX, APP-037
+connectivity-aware sync and APP-038 migration harness remain deferred.
 
 ## Human Review Notes
 
@@ -132,4 +145,5 @@ migration harness remain deferred.
 - `career.cv` remains Profile A, but CV content is document-like personal data
   and should be reviewed before APP-029.
 - `core.local-backup-archive` is Profile B because backup exports can include
-  attachment metadata even though cycle data is currently excluded.
+  attachment metadata even though cycle data is currently excluded. APP-029 did
+  not redesign backup/export encryption.

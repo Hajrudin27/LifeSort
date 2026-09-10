@@ -1,7 +1,7 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { documentMetadataEncryptedStorage } from "@/core/storage/documentCacheStorage";
 import { supabase } from "@/lib/supabase";
 import { trackSync } from '@/store/useSyncStatusStore';
 import {
@@ -14,6 +14,7 @@ import {
   TripParticipant,
 } from "@/types/trip";
 import { fetchExchangeRate } from "@/utils/trip/currencyConversion";
+import { cleanupAttachments, deleteCachedAttachmentFile } from "@/utils/shared/attachmentStorage";
 import {
   cancelTripPackingReminder,
   scheduleTripPackingReminder,
@@ -215,6 +216,8 @@ export const useTripsStore = create<TripsState>()(
       },
 
       removeTrip: (id) => {
+        const targetTrip = get().trips.find((tr) => tr.id === id);
+        const removedExpenses = get().expenses.filter((e) => e.tripId === id);
         cancelTripPackingReminder(id);
         set((state) => ({
           trips: state.trips.filter((tr) => tr.id !== id),
@@ -222,6 +225,8 @@ export const useTripsStore = create<TripsState>()(
           packingItems: state.packingItems.filter((p) => p.tripId !== id),
           participants: state.participants.filter((p) => p.tripId !== id),
         }));
+        cleanupAttachments(targetTrip?.documents);
+        for (const expense of removedExpenses) cleanupAttachments(expense.attachments);
         syncDeleteTrip(id);
       },
 
@@ -233,7 +238,8 @@ export const useTripsStore = create<TripsState>()(
               : tr,
           ),
         })),
-      removeTripDocument: (tripId, attachmentId) =>
+      removeTripDocument: (tripId, attachmentId) => {
+        const attachment = get().trips.find((tr) => tr.id === tripId)?.documents.find((a) => a.id === attachmentId);
         set((state) => ({
           trips: state.trips.map((tr) =>
             tr.id === tripId
@@ -243,7 +249,9 @@ export const useTripsStore = create<TripsState>()(
                 }
               : tr,
           ),
-        })),
+        }));
+        if (attachment?.uri) deleteCachedAttachmentFile(attachment.uri);
+      },
 
       addTripExpense: async (input) => {
         const { currency, amount, ...rest } = input;
@@ -288,9 +296,11 @@ export const useTripsStore = create<TripsState>()(
         if (target) syncUpsertExpense(target);
       },
       removeTripExpense: (id) => {
+        const target = get().expenses.find((e) => e.id === id);
         set((state) => ({
           expenses: state.expenses.filter((e) => e.id !== id),
         }));
+        cleanupAttachments(target?.attachments);
         syncDeleteExpense(id);
       },
 
@@ -302,7 +312,8 @@ export const useTripsStore = create<TripsState>()(
               : e,
           ),
         })),
-      removeExpenseAttachment: (expenseId, attachmentId) =>
+      removeExpenseAttachment: (expenseId, attachmentId) => {
+        const attachment = get().expenses.find((e) => e.id === expenseId)?.attachments.find((a) => a.id === attachmentId);
         set((state) => ({
           expenses: state.expenses.map((e) =>
             e.id === expenseId
@@ -314,7 +325,9 @@ export const useTripsStore = create<TripsState>()(
                 }
               : e,
           ),
-        })),
+        }));
+        if (attachment?.uri) deleteCachedAttachmentFile(attachment.uri);
+      },
 
       addPackingItem: (tripId, label, category) => {
         const newItem: PackingItem = { id: newId(), tripId, label, checked: false, isDefault: false, category };
@@ -516,7 +529,7 @@ export const useTripsStore = create<TripsState>()(
     }),
     {
       name: "lifesort-trips",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => documentMetadataEncryptedStorage),
     },
   ),
 );

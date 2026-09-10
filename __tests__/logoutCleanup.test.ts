@@ -31,6 +31,13 @@ jest.mock('@/core/storage/cycleHealthEncryptedStorage', () => ({
   withCycleHealthEncryptedStorageCleanup: jest.fn((cleanup: () => Promise<unknown>) => cleanup()),
 }));
 
+jest.mock('@/core/storage/documentCacheStorage', () => ({
+  clearDocumentCacheEncryptionKey: jest.fn(() => Promise.resolve()),
+  clearPersistentAttachmentCache: jest.fn(() => Promise.resolve()),
+  clearTemporaryAttachmentCache: jest.fn(() => Promise.resolve()),
+  withDocumentCacheCleanup: jest.fn((cleanup: () => Promise<unknown>) => cleanup()),
+}));
+
 jest.mock('expo-file-system/legacy', () => ({
   documentDirectory: 'file:///doc/',
   getInfoAsync: jest.fn(() => Promise.resolve({ exists: true })),
@@ -144,9 +151,10 @@ describe('log ud rydder faktisk op', () => {
 
   it('sletter de lokale vedhæftninger', async () => {
     // Kvitteringer og garantibilleder blev tidligere liggende (fund D4).
-    const FileSystem = require('expo-file-system/legacy');
+    const { clearPersistentAttachmentCache, clearTemporaryAttachmentCache } = require('@/core/storage/documentCacheStorage');
     await clearLocalUserData([]);
-    expect(FileSystem.deleteAsync).toHaveBeenCalledWith('file:///doc/attachments/', { idempotent: true });
+    expect(clearPersistentAttachmentCache).toHaveBeenCalled();
+    expect(clearTemporaryAttachmentCache).toHaveBeenCalled();
   });
 
   it('sletter PIN-koden', async () => {
@@ -162,12 +170,22 @@ describe('log ud rydder faktisk op', () => {
     expect(clearCycleHealthEncryptionKey).toHaveBeenCalled();
   });
 
+  it('sletter dokumentcache-lagerets krypteringsnøgle', async () => {
+    const { clearDocumentCacheEncryptionKey } = require('@/core/storage/documentCacheStorage');
+    await clearLocalUserData([]);
+    expect(clearDocumentCacheEncryptionKey).toHaveBeenCalled();
+  });
+
   it('holder cykluslagerets oprydningsvindue rundt om nulstilling, diskfejning og nøglesletning', async () => {
     const events: string[] = [];
     const {
       clearCycleHealthEncryptionKey,
       withCycleHealthEncryptedStorageCleanup,
     } = require('@/core/storage/cycleHealthEncryptedStorage');
+    const {
+      clearDocumentCacheEncryptionKey,
+      withDocumentCacheCleanup,
+    } = require('@/core/storage/documentCacheStorage');
 
     withCycleHealthEncryptedStorageCleanup.mockImplementationOnce(async (cleanup: () => Promise<unknown>) => {
       events.push('begin-cycle-cleanup');
@@ -179,6 +197,17 @@ describe('log ud rydder faktisk op', () => {
     });
     clearCycleHealthEncryptionKey.mockImplementationOnce(async () => {
       events.push('clear-cycle-key');
+    });
+    withDocumentCacheCleanup.mockImplementationOnce(async (cleanup: () => Promise<unknown>) => {
+      events.push('begin-document-cleanup');
+      try {
+        return await cleanup();
+      } finally {
+        events.push('finish-document-cleanup');
+      }
+    });
+    clearDocumentCacheEncryptionKey.mockImplementationOnce(async () => {
+      events.push('clear-document-key');
     });
 
     await AsyncStorage.setItem('lifesort-cycle', '{"state":{"cycles":[]}}');
@@ -199,9 +228,12 @@ describe('log ud rydder faktisk op', () => {
 
     expect(events).toEqual([
       'begin-cycle-cleanup',
+      'begin-document-cleanup',
       'reset-cycle-store',
       'remove-user-storage',
+      'clear-document-key',
       'clear-cycle-key',
+      'finish-document-cleanup',
       'finish-cycle-cleanup',
     ]);
   });

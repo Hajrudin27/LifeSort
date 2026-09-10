@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import { Attachment } from '@/types/attachment';
+import {
+  deleteCachedAttachmentFile,
+  isTemporaryDecryptedAttachmentUri,
+  resolveLocalAttachmentUri,
+} from '@/core/storage/documentCacheStorage';
 
 const BUCKET = 'attachments';
 
@@ -15,6 +20,7 @@ const SIGNED_URL_REFRESH_MARGIN_MS = 5 * 60 * 1000;
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 
 export type AttachmentOwnerType = 'warranty' | 'expense';
+type ResolvableAttachment = Pick<Attachment, 'uri' | 'name' | 'kind'> & { storagePath?: string };
 
 // Stien i Storage er `<userId>/<type>/<ownerId>/<id>.<ext>`, og storage-policyen
 // afgør ejerskab ud fra det FØRSTE segment. Kan et segment indeholde "/" eller
@@ -64,8 +70,18 @@ export async function uploadAttachment(
     const ext = safeExtension(attachment.name, attachment.kind);
     const storagePath = `${userId}/${ownerType}/${ownerId}/${attachment.id}.${ext}`;
 
-    const response = await fetch(attachment.uri);
-    const blob = await response.blob();
+    const uploadUri = await resolveAttachmentUri(attachment);
+    if (!uploadUri) return null;
+
+    let blob: Blob;
+    try {
+      const response = await fetch(uploadUri);
+      blob = await response.blob();
+    } finally {
+      if (isTemporaryDecryptedAttachmentUri(uploadUri)) {
+        await deleteCachedAttachmentFile(uploadUri);
+      }
+    }
 
     const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, blob, {
       upsert: true,
@@ -163,10 +179,10 @@ async function getSignedUrl(storagePath: string): Promise<string | null> {
  * Ligger filen lokalt (den er oprettet på denne enhed), bruges den direkte og der
  * røres ikke netværk. Ellers udstedes en kortlivet signeret URL ud fra stien.
  */
-export async function resolveAttachmentUri(attachment: Attachment): Promise<string | null> {
+export async function resolveAttachmentUri(attachment: ResolvableAttachment): Promise<string | null> {
   const isRemote = attachment.uri.startsWith('http');
 
-  if (attachment.uri && !isRemote) return attachment.uri;
+  if (attachment.uri && !isRemote) return resolveLocalAttachmentUri(attachment.uri, attachment.name);
 
   if (attachment.storagePath) {
     const signed = await getSignedUrl(attachment.storagePath);

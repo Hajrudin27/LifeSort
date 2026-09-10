@@ -211,7 +211,7 @@ describe('APP-027 logical domain contracts', () => {
 
 describe('APP-027 physical persistence surfaces', () => {
   it('has no duplicate physical surface ids and no dangling domain references', () => {
-    expect(PERSISTENCE_SURFACES).toHaveLength(84);
+    expect(PERSISTENCE_SURFACES).toHaveLength(86);
     expect(new Set(registeredSurfaceIds).size).toBe(PERSISTENCE_SURFACES.length);
 
     for (const surface of PERSISTENCE_SURFACES) {
@@ -292,7 +292,8 @@ describe('APP-027 physical persistence surfaces', () => {
   });
 
   it('does not invent local filesystem, SecureStore or bundle surfaces', () => {
-    expect(sourceText('utils/shared/attachmentStorage.ts')).toContain('FileSystem.documentDirectory}attachments/');
+    expect(sourceText('core/storage/documentCacheStorage.ts')).toContain('FileSystem.documentDirectory}attachments/');
+    expect(sourceText('core/storage/documentCacheStorage.ts')).toContain("const KEYCHAIN_KEY = 'lifesort-document-cache-key'");
     expect(sourceText('utils/shared/dataBackup.ts')).toContain('FileSystem.documentDirectory}${fileName}');
     expect(sourceText('utils/auth/pinAuth.ts')).toContain("const PIN_KEY = 'lifesort-app-pin-hash'");
     expect(sourceText('utils/auth/pinLockout.ts')).toContain("const LOCKOUT_KEY = 'lifesort-pin-lockout'");

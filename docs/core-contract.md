@@ -105,7 +105,7 @@ by APP-004.**
 
 | Duplication | Where | Owning story |
 | --- | --- | --- |
-| The identical id generator `` `${Date.now()}-${Math.round(Math.random() * 1e6)}` `` is copied verbatim into 10 stores and `attachmentStorage.ts`. | `store/useCVStore.ts`, `useCareerStore.ts`, `useCycleStore.ts`, `useFoodStore.ts`, `useHabitsStore.ts`, `useHouseholdStore.ts`, `useLifeGoalsStore.ts`, `useSavingsGoalsStore.ts`, `useTodoStore.ts`, `useTripsStore.ts`, `utils/shared/attachmentStorage.ts` | APP-030 |
+| The identical id generator `` `${Date.now()}-${Math.round(Math.random() * 1e6)}` `` is copied verbatim into 10 stores. | `store/useCVStore.ts`, `useCareerStore.ts`, `useCycleStore.ts`, `useFoodStore.ts`, `useHabitsStore.ts`, `useHouseholdStore.ts`, `useLifeGoalsStore.ts`, `useSavingsGoalsStore.ts`, `useTodoStore.ts`, `useTripsStore.ts` | APP-030 |
 | A weaker `Date.now().toString()` variant that can collide inside one millisecond — `AttachmentList` mints three ids in a row this way, `TripAttachmentGrid` two. | `components/AttachmentList.tsx`, `components/TripAttachmentGrid.tsx`, `store/useExpensesStore.ts`, `store/useSavingsGoalsStore.ts`, `store/useWarrantiesStore.ts` | APP-030 |
 
 One `core/ids` module replaces all of it. APP-030 owns that change because it

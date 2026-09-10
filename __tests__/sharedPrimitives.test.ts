@@ -29,7 +29,6 @@ const ID_GENERATOR_TIMESTAMP_RANDOM = [
   'store/useSavingsGoalsStore.ts',
   'store/useTodoStore.ts',
   'store/useTripsStore.ts',
-  'utils/shared/attachmentStorage.ts',
 ];
 
 /** Den svage variant: kolliderer inden for samme millisekund. */

@@ -11,6 +11,10 @@ import { useAccentTints } from '@/hooks/useAccentTints';
 import { useAttachmentUri } from '@/hooks/useAttachmentUri';
 import { Attachment } from '@/types/attachment';
 import { persistFile } from '@/utils/shared/attachmentStorage';
+import {
+  consumeAttachmentViewerSource,
+  registerAttachmentViewerSource,
+} from '@/utils/shared/attachmentViewerSource';
 import { compressImage } from '@/utils/shared/imageCompression';
 
 type ThumbProps = {
@@ -27,18 +31,34 @@ type ThumbProps = {
  */
 function AttachmentThumb({ attachment, borderColor, iconBackground, iconTint, onRemove }: ThumbProps) {
   const { t } = useTranslation();
-  const uri = useAttachmentUri(attachment);
+  const uri = useAttachmentUri(attachment, { enabled: attachment.kind === 'image' });
+
+  const openImage = () => {
+    if (attachment.kind !== 'image') return;
+    const sourceId = registerAttachmentViewerSource({
+      id: attachment.id,
+      uri: attachment.uri,
+      name: attachment.name,
+      kind: 'image',
+      storagePath: attachment.storagePath,
+    });
+    try {
+      router.push({ pathname: '/warranties/view-image', params: { sourceId } });
+    } catch {
+      consumeAttachmentViewerSource(sourceId);
+    }
+  };
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={t('common.a11y.openAttachment')}
       style={[styles.thumb, { borderColor }]}
-      onPress={() => attachment.kind === 'image' && uri && router.push({ pathname: '/warranties/view-image', params: { uri } })}
+      onPress={openImage}
       onLongPress={onRemove}>
       {attachment.kind === 'image' ? (
         uri ? (
-          <Image source={{ uri }} style={styles.thumbImage} cachePolicy="disk" transition={150} />
+          <Image source={{ uri }} style={styles.thumbImage} cachePolicy="memory" transition={150} />
         ) : (
           <View style={[styles.docIconWrap, { backgroundColor: iconBackground }]} />
         )

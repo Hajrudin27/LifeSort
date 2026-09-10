@@ -132,6 +132,11 @@ jest.mock('@/utils/shared/attachmentStorage', () => ({
   clearAttachmentCache: jest.fn(() => Promise.resolve()),
 }));
 
+jest.mock('@/core/storage/documentCacheStorage', () => ({
+  clearDocumentCacheEncryptionKey: jest.fn(() => Promise.resolve()),
+  withDocumentCacheCleanup: jest.fn((cleanup: () => Promise<unknown>) => cleanup()),
+}));
+
 jest.mock('@/utils/shared/attachmentSync', () => ({
   clearSignedUrlCache: jest.fn(),
 }));

@@ -1,21 +1,67 @@
 import * as DocumentPicker from "expo-document-picker";
+import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { SymbolView } from "expo-symbols";
 import { useTranslation } from "react-i18next";
-import { Alert, Image, Pressable, StyleSheet } from "react-native";
+import { Alert, Pressable, StyleSheet } from "react-native";
 
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useSensitiveAction } from "@/components/useSensitiveAction";
+import { useAttachmentUri } from "@/hooks/useAttachmentUri";
 import { TripAttachment } from "@/types/trip";
 import { persistFile } from "@/utils/shared/attachmentStorage";
+import {
+  deleteCachedAttachmentFile,
+  isTemporaryDecryptedAttachmentUri,
+} from "@/core/storage/documentCacheStorage";
+import { resolveAttachmentUri } from "@/utils/shared/attachmentSync";
+import {
+  consumeAttachmentViewerSource,
+  registerAttachmentViewerSource,
+} from "@/utils/shared/attachmentViewerSource";
 
 type Props = {
   attachments: TripAttachment[];
   onAdd: (attachment: TripAttachment) => void;
   onRemove: (attachmentId: string) => void;
 };
+
+type ThumbProps = {
+  attachment: TripAttachment;
+  borderColor: string;
+  onOpen: (attachment: TripAttachment) => void;
+  onRemove: () => void;
+};
+
+function TripAttachmentThumb({ attachment, borderColor, onOpen, onRemove }: ThumbProps) {
+  const { t } = useTranslation();
+  const uri = useAttachmentUri(attachment, { enabled: attachment.kind === "image" });
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('common.a11y.openAttachment')}
+      style={[styles.thumb, { borderColor }]}
+      onPress={() => onOpen(attachment)}
+      onLongPress={onRemove}
+    >
+      {attachment.kind === "image" && uri ? (
+        <Image source={{ uri }} style={styles.thumbImage} cachePolicy="memory" />
+      ) : (
+        <SymbolView
+          name={{
+            ios: "doc.text",
+            android: "description",
+            web: "description",
+          }}
+          size={28}
+        />
+      )}
+    </Pressable>
+  );
+}
 
 export default function TripAttachmentGrid({
   attachments,
@@ -66,17 +112,37 @@ export default function TripAttachmentGrid({
   const openAttachment = async (attachment: TripAttachment) => {
     if (attachment.kind === "image") {
       // At se billedet inde i appen sender ingenting ud af den.
-      router.push({
-        pathname: "/warranties/view-image",
-        params: { uri: attachment.uri },
+      const sourceId = registerAttachmentViewerSource({
+        id: attachment.id,
+        uri: attachment.uri,
+        name: attachment.name,
+        kind: "image",
       });
+      try {
+        router.push({
+          pathname: "/warranties/view-image",
+          params: { sourceId },
+        });
+      } catch {
+        consumeAttachmentViewerSource(sourceId);
+      }
       return;
     }
 
     // Deling sender dokumentet ud af appen — derfor et bevis først (APP-024).
     await runSensitive(async () => {
       const available = await Sharing.isAvailableAsync();
-      if (available) await Sharing.shareAsync(attachment.uri);
+      if (!available) return;
+
+      let uri: string | null = null;
+      try {
+        uri = await resolveAttachmentUri(attachment);
+        if (uri) await Sharing.shareAsync(uri);
+      } finally {
+        if (uri && isTemporaryDecryptedAttachmentUri(uri)) {
+          await deleteCachedAttachmentFile(uri);
+        }
+      }
     });
   };
 
@@ -99,27 +165,13 @@ export default function TripAttachmentGrid({
 
       <View style={styles.grid}>
         {attachments.map((a) => (
-          <Pressable
+          <TripAttachmentThumb
             key={a.id}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.a11y.openAttachment')}
-            style={[styles.thumb, { borderColor }]}
-            onPress={() => openAttachment(a)}
-            onLongPress={() => confirmRemove(a.id)}
-          >
-            {a.kind === "image" ? (
-              <Image source={{ uri: a.uri }} style={styles.thumbImage} />
-            ) : (
-              <SymbolView
-                name={{
-                  ios: "doc.text",
-                  android: "description",
-                  web: "description",
-                }}
-                size={28}
-              />
-            )}
-          </Pressable>
+            attachment={a}
+            borderColor={borderColor}
+            onOpen={openAttachment}
+            onRemove={() => confirmRemove(a.id)}
+          />
         ))}
       </View>
 

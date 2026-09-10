@@ -85,7 +85,7 @@ the rollback path from APP-038.
 
 | Generator | Files |
 | --- | --- |
-| `` `${Date.now()}-${Math.round(Math.random() * 1e6)}` `` | 11 — ten stores, verbatim, plus `utils/shared/attachmentStorage.ts` |
+| `` `${Date.now()}-${Math.round(Math.random() * 1e6)}` `` | 10 — ten stores, verbatim |
 | `Date.now().toString()` | 5 — `useExpensesStore`, `useSavingsGoalsStore`, `useWarrantiesStore`, `AttachmentList`, `TripAttachmentGrid` |
 
 **Consequence:** the second form has millisecond resolution and nothing else, so

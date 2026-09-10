@@ -1,10 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { documentMetadataEncryptedStorage } from '@/core/storage/documentCacheStorage';
 import { supabase } from '@/lib/supabase';
 import { Attachment } from '@/types/attachment';
 import { Expense, ExpenseCategory } from '@/types/expense';
+import { cleanupAttachments, deleteCachedAttachmentFile } from '@/utils/shared/attachmentStorage';
 import { deleteAttachmentRemote, fetchAttachmentsFor, uploadAttachment } from '@/utils/shared/attachmentSync';
 
 interface ExpensesState {
@@ -110,7 +111,7 @@ export const useExpensesStore = create<ExpensesState>()(
         const editedMonth = target.nextPaymentDate.slice(0, 7);
         const updatedExpense = { ...target, ...updates };
 
-        let removedIds: string[] = [];
+        let removedExpenses: Expense[] = [];
 
         set((state) => {
           const updated = state.expenses.map((e) => (e.id === id ? updatedExpense : e));
@@ -121,27 +122,33 @@ export const useExpensesStore = create<ExpensesState>()(
               e.id !== id &&
               e.nextPaymentDate.slice(0, 7) > editedMonth
           );
-          removedIds = removed.map((e) => e.id);
+          removedExpenses = removed;
+          const removedIds = removedExpenses.map((e) => e.id);
 
           const cleaned = updated.filter((e) => !removedIds.includes(e.id));
           return { expenses: cleaned };
         });
 
         syncUpsertExpense(updatedExpense);
+        const removedIds = removedExpenses.map((e) => e.id);
         if (removedIds.length > 0) syncDeleteExpenses(removedIds);
+        for (const expense of removedExpenses) cleanupAttachments(expense.attachments);
       },
 
       removeExpense: (id) => {
+        const target = get().expenses.find((e) => e.id === id);
         set((state) => ({
           expenses: state.expenses.filter((e) => e.id !== id),
         }));
+        cleanupAttachments(target?.attachments);
         syncDeleteExpense(id);
       },
 
       deleteRecurringFromMonth: (seriesId, fromMonthKey) => {
-        const removedIds = get()
-          .expenses.filter((e) => e.seriesId === seriesId && e.nextPaymentDate.slice(0, 7) >= fromMonthKey)
-          .map((e) => e.id);
+        const removedExpenses = get().expenses.filter(
+          (e) => e.seriesId === seriesId && e.nextPaymentDate.slice(0, 7) >= fromMonthKey,
+        );
+        const removedIds = removedExpenses.map((e) => e.id);
 
         set((state) => ({
           expenses: state.expenses.filter(
@@ -151,6 +158,7 @@ export const useExpensesStore = create<ExpensesState>()(
         }));
 
         if (removedIds.length > 0) syncDeleteExpenses(removedIds);
+        for (const expense of removedExpenses) cleanupAttachments(expense.attachments);
       },
 
       rollForwardMonth: (monthKey) => {
@@ -253,6 +261,7 @@ export const useExpensesStore = create<ExpensesState>()(
               : e,
           ),
         }));
+        if (attachment?.uri) deleteCachedAttachmentFile(attachment.uri);
         deleteAttachmentRemote(attachmentId, attachment?.storagePath);
       },
 
@@ -321,7 +330,7 @@ export const useExpensesStore = create<ExpensesState>()(
     }),
     {
       name: 'lifesort-expenses',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => documentMetadataEncryptedStorage),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         const seenIds = new Set<string>();

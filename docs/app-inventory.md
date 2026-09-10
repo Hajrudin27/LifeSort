@@ -247,7 +247,7 @@ the key material in SecureStore.
 | `useHomeLayoutStore` | `store/useHomeLayoutStore.ts` | `core-shell` | `lifesort-home-layout` | AsyncStorage (plain) | – (kun lokalt) | ordinary | Hajrudin Kardasevic |
 | `useReviewStore` | `store/useReviewStore.ts` | `core-shell` | `lifesort-monthly-review` | AsyncStorage (plain) | – (kun lokalt) | ordinary | Hajrudin Kardasevic |
 | `useToastStore` | `store/useToastStore.ts` | `core-shell` | – | memory only | – | ordinary | Hajrudin Kardasevic |
-| `useExpensesStore` | `store/useExpensesStore.ts` | `economy` | `lifesort-expenses` | AsyncStorage (plain) | `expenses`, `expense_category_budgets` | financial, document | Hajrudin Kardasevic |
+| `useExpensesStore` | `store/useExpensesStore.ts` | `economy` | `lifesort-expenses` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `expenses`, `expense_category_budgets` | financial, document | Hajrudin Kardasevic |
 | `useIncomeStore` | `store/useIncomeStore.ts` | `economy` | `lifesort-income-v2` | AsyncStorage (plain) | `income` | financial | Hajrudin Kardasevic |
 | `useSavingsGoalsStore` | `store/useSavingsGoalsStore.ts` | `economy` | `lifesort-savings-goals` | AsyncStorage (plain) | `savings_goals`, `savings_history`, `savings_extra` | financial | Hajrudin Kardasevic |
 | `useCategoriesStore` | `store/useCategoriesStore.ts` | `economy` | `lifesort-categories` | AsyncStorage (plain) | `categories` | ordinary | Hajrudin Kardasevic |
@@ -256,8 +256,8 @@ the key material in SecureStore.
 | `useLifeGoalsStore` | `store/useLifeGoalsStore.ts` | `goals` | `lifesort-life-goals` | AsyncStorage (plain) | `life_goals` | personal | Hajrudin Kardasevic |
 | `useHabitsStore` | `store/useHabitsStore.ts` | `habits` | `lifesort-habits` | AsyncStorage (plain) | `habits` | ordinary | Hajrudin Kardasevic |
 | `useTodoStore` | `store/useTodoStore.ts` | `tasks` | `lifesort-todos` | AsyncStorage (plain) | `todos` | ordinary | Hajrudin Kardasevic |
-| `useTripsStore` | `store/useTripsStore.ts` | `travel` | `lifesort-trips` | AsyncStorage (plain) | `trips`, `trip_expenses`, `trip_packing_items`, `trip_participants` | personal, financial, document | Hajrudin Kardasevic |
-| `useWarrantiesStore` | `store/useWarrantiesStore.ts` | `warranties` | `lifesort-warranties` | AsyncStorage (plain) | `warranties` | document, financial | Hajrudin Kardasevic |
+| `useTripsStore` | `store/useTripsStore.ts` | `travel` | `lifesort-trips` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `trips`, `trip_expenses`, `trip_packing_items`, `trip_participants` | personal, financial, document | Hajrudin Kardasevic |
+| `useWarrantiesStore` | `store/useWarrantiesStore.ts` | `warranties` | `lifesort-warranties` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `warranties` | document, financial | Hajrudin Kardasevic |
 | `useCareerStore` | `store/useCareerStore.ts` | `career` | `lifesort-career` | AsyncStorage (plain) | `job_applications`, `skills` | personal | Hajrudin Kardasevic |
 | `useCVStore` | `store/useCVStore.ts` | `career` | `lifesort-cv` | AsyncStorage (plain) | `cv_personal_info`, `cv_education`, `cv_experience`, `cv_languages`, `cv_versions` | personal, document | Hajrudin Kardasevic |
 | `useSkillCategoriesStore` | `store/useSkillCategoriesStore.ts` | `career` | `lifesort-skill-categories` | AsyncStorage (plain) | – | ordinary | Hajrudin Kardasevic |

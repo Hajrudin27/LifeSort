@@ -5,6 +5,10 @@ import {
   clearCycleHealthEncryptionKey,
   withCycleHealthEncryptedStorageCleanup,
 } from '@/core/storage/cycleHealthEncryptedStorage';
+import {
+  clearDocumentCacheEncryptionKey,
+  withDocumentCacheCleanup,
+} from '@/core/storage/documentCacheStorage';
 import { userDataKeys } from '@/core/storage/localDataScopes';
 import { clearLocalPin } from '@/utils/auth/pinAuth';
 import { clearAttachmentCache } from '@/utils/shared/attachmentStorage';
@@ -44,7 +48,7 @@ export type LocalStoreReset = {
 export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Promise<void> {
   let pendingCleanupError: unknown;
 
-  await withCycleHealthEncryptedStorageCleanup(async () => {
+  await withCycleHealthEncryptedStorageCleanup(async () => withDocumentCacheCleanup(async () => {
     try {
       // 1. Hukommelsen.
       for (const store of resets) {
@@ -84,9 +88,10 @@ export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Pr
     } catch (error) {
       pendingCleanupError = error;
     } finally {
+      await clearDocumentCacheEncryptionKey();
       await clearCycleHealthEncryptionKey();
     }
 
     if (pendingCleanupError) throw pendingCleanupError;
-  });
+  }));
 }

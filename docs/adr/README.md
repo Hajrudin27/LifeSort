@@ -48,6 +48,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0027](./0027-server-mutations-claim-receipts-in-the-domain-transaction.md) | Server mutations claim receipts in the domain transaction | Accepted | 2026-09-11 | APP-032 |
 | [0028](./0028-module-choice-revisions-are-owned-by-the-database.md) | Module choice revisions are owned by the database | Accepted | 2026-09-11 | APP-033 |
 | [0029](./0029-module-choice-deletions-retain-an-immutable-version.md) | Module choice deletions retain an immutable version | Accepted | 2026-09-11 | APP-034 |
+| [0030](./0030-conflict-policies-are-explicit-and-fail-closed.md) | Conflict policies are explicit per domain/family and fail closed | Accepted | 2026-09-11 | APP-035 |
 
 ## When an ADR is required
 

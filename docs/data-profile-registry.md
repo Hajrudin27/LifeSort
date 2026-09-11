@@ -34,6 +34,13 @@ a dispatcher, server mapping or worker.
 
 ## Profiles
 
+APP-035 adds a separate [conflict-policy contract](./adr/0030-conflict-policies-are-explicit-and-fail-closed.md)
+keyed by canonical domain IDs and reviewed entity kinds. It covers language/theme
+preferences, savings contribution history only, todo fields and conservative
+warranty attachment reconciliation. Data profiles do not imply conflict policies;
+unreviewed domain/kind pairs fail closed. No physical surface, profile assignment
+or production CRUD flow changes. Runtime execution remains deferred.
+
 | Profile | Contract |
 | --- | --- |
 | A - Ordinary local-first | Plain local persistence is allowed. The client is authoritative for normal user-owned records. Server sync is expected where the domain is cross-device. |

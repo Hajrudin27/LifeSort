@@ -38,7 +38,7 @@ export function createModuleChoiceSnapshots(accountId: string) {
           return { ok: false, reason: 'authorization' };
         }
         const response = await supabase.from('user_modules')
-          .select('module_id, enabled, revision::text, updated_at')
+          .select('module_id, enabled, revision::text, updated_at, deleted_at')
           .eq('user_id', accountId)
           .setHeader('Authorization', `Bearer ${session.access_token}`)
           .retry(false);

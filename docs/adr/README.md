@@ -47,6 +47,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0026](./0026-outbox-writes-complete-after-local-persistence.md) | Outbox writes complete after local persistence | Accepted | 2026-09-10 | APP-031 |
 | [0027](./0027-server-mutations-claim-receipts-in-the-domain-transaction.md) | Server mutations claim receipts in the domain transaction | Accepted | 2026-09-11 | APP-032 |
 | [0028](./0028-module-choice-revisions-are-owned-by-the-database.md) | Module choice revisions are owned by the database | Accepted | 2026-09-11 | APP-033 |
+| [0029](./0029-module-choice-deletions-retain-an-immutable-version.md) | Module choice deletions retain an immutable version | Accepted | 2026-09-11 | APP-034 |
 
 ## When an ADR is required
 

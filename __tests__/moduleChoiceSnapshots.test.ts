@@ -14,10 +14,10 @@ jest.mock('@/lib/supabase', () => ({ supabase: {
   from: (...args: unknown[]) => mockFrom(...args),
 } }));
 const entity = (revision = '4', enabled = false, entityId = 'goals'): ConfirmedModuleChoice => ({
-  entityId, enabled, revision, updatedAt: `2026-09-11T07:00:00.00000${revision === '4' ? '4' : '5'}+00:00`,
+  entityId, enabled, revision, updatedAt: `2026-09-11T07:00:00.00000${revision === '4' ? '4' : '5'}+00:00`, deletedAt: null,
 });
 const row = (value = entity()) => ({ module_id: value.entityId, enabled: value.enabled,
-  revision: value.revision, updated_at: value.updatedAt });
+  revision: value.revision, updated_at: value.updatedAt, deleted_at: value.deletedAt });
 const merge = (local: readonly ConfirmedModuleChoice[], remote: readonly ConfirmedModuleChoice[]) =>
   reconcileModuleChoiceSnapshots(local, remote, []);
 const session = (accountId = 'account-a') => ({ data: { session: {
@@ -116,7 +116,7 @@ it('does not mutate inputs and retains sub-millisecond timestamp precision', () 
 it('fetches version metadata as text with pinned bearer, account filter and no retry', async () => {
   await createModuleChoiceSnapshots('account-a').fetch([]);
   expect(mockFrom).toHaveBeenCalledWith('user_modules');
-  expect(mockSelect).toHaveBeenCalledWith('module_id, enabled, revision::text, updated_at');
+  expect(mockSelect).toHaveBeenCalledWith('module_id, enabled, revision::text, updated_at, deleted_at');
   expect(mockEq).toHaveBeenCalledWith('user_id', 'account-a');
   expect(mockHeader).toHaveBeenCalledWith('Authorization', 'Bearer test-token');
   expect(mockRetry).toHaveBeenCalledWith(false);
@@ -180,4 +180,85 @@ it('handles keep account state separate and never persist a new local surface', 
   await a.fetch([]);
   expect(createModuleChoiceSnapshots('account-b').getSnapshot()).toEqual({ accountId: 'account-b', entities: [] });
   expect(createModuleChoiceSnapshots('account-a').getSnapshot().entities).toEqual([]);
+});
+
+const tombstone = (revision = '6', entityId = 'goals'): ConfirmedModuleChoice => ({
+  ...entity(revision, true, entityId), deletedAt: '2026-09-11T07:00:00.000006+00:00',
+});
+describe('APP-034 tombstone reconciliation', () => {
+  it('deleted rows are represented by tombstones, not absence', async () => {
+    const handle = createModuleChoiceSnapshots('account-a');
+    await handle.fetch([]);
+    mockRetry.mockResolvedValue({ data: [row(tombstone())] });
+    await handle.fetch([]);
+    expect(handle.getSnapshot().entities).toEqual([tombstone()]);
+    // Absence must preserve deletion history, just as it preserves active rows.
+    mockRetry.mockResolvedValue({ data: [] });
+    await handle.fetch([]);
+    expect(handle.getSnapshot().entities).toEqual([tombstone()]);
+  });
+  it('stale client cannot resurrect: older active remote state preserves the confirmed delete revision', () => {
+    expect(merge([tombstone()], [entity('5', true)])).toEqual([tombstone()]);
+  });
+  it('newer remote tombstone replaces an active confirmed entity', () => {
+    expect(merge([entity('5', true)], [tombstone()])).toEqual([tombstone()]);
+  });
+  it('equal and repeated tombstones are idempotent with exact metadata retained', async () => {
+    mockRetry.mockResolvedValue({ data: [row(tombstone())] });
+    const handle = createModuleChoiceSnapshots('account-a');
+    await handle.fetch([]);
+    const before = handle.getSnapshot();
+    await handle.fetch([]);
+    expect(handle.getSnapshot()).toEqual(before);
+    expect(merge([tombstone()], [tombstone(), tombstone()])).toEqual([tombstone()]);
+  });
+  it.each([
+    { ...tombstone(), deletedAt: null },
+    { ...tombstone(), deletedAt: '2026-09-11T07:00:00.000007+00:00' },
+  ])('equal revision with contradictory deletion metadata fails closed: %j', (remote) => {
+    expect(() => merge([tombstone()], [remote])).toThrow('invariant');
+    expect(() => merge([remote], [tombstone()])).toThrow('invariant');
+  });
+  it('stale tombstones do not regress a newer confirmed version', () => {
+    expect(merge([entity('7')], [tombstone()])).toEqual([entity('7')]);
+  });
+  it('multiple entities and fetch ordering retain tombstones without duplicate IDs', () => {
+    const remote = [tombstone(), entity('5', true), entity('4', false, 'habits'), tombstone()];
+    expect(merge([], remote)).toEqual([tombstone(), entity('4', false, 'habits')]);
+    expect(merge([], [...remote].reverse())).toEqual(merge([], remote));
+  });
+  it('physical absence does not synthesize deletedAt on an active entity', () => {
+    expect(merge([entity()], [])).toEqual([entity()]);
+    expect(merge([entity()], [])[0].deletedAt).toBeNull();
+  });
+  it.each([undefined, '', 'infinity', 'bad-date', 0, {}])('rejects invalid/missing deleted_at %j', (deleted_at) => {
+    expect(() => parseModuleChoiceSnapshots([{ ...row(), deleted_at }])).toThrow('invalid');
+  });
+  it('late active fetch cannot resurrect after a newer tombstone fetch completes', async () => {
+    let resolveOld!: (value: unknown) => void;
+    mockRetry.mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve; }))
+      .mockResolvedValueOnce({ data: [row(tombstone())] });
+    const handle = createModuleChoiceSnapshots('account-a');
+    const old = handle.fetch([]);
+    await Promise.resolve();
+    await handle.fetch([]);
+    resolveOld({ data: [row(entity('5', true))] });
+    await old;
+    expect(handle.getSnapshot().entities).toEqual([tombstone()]);
+  });
+  it('pending local edit vs tombstone is refused without selecting a winner', async () => {
+    expect(() => reconcileModuleChoiceSnapshots([entity('5')], [tombstone()], ['goals'])).toThrow('pending');
+    const handle = createModuleChoiceSnapshots('account-a');
+    mockRetry.mockResolvedValue({ data: [row(tombstone())] });
+    await handle.fetch([]);
+    expect(await handle.fetch(['goals'])).toEqual({ ok: false, reason: 'pending' });
+    expect(handle.getSnapshot().entities).toEqual([tombstone()]);
+  });
+  it('does not publish a tombstone to a switched account', async () => {
+    mockRetry.mockResolvedValue({ data: [row(tombstone())] });
+    mockSession.mockResolvedValueOnce(session()).mockResolvedValueOnce(session('account-b'));
+    const handle = createModuleChoiceSnapshots('account-a');
+    expect(await handle.fetch([])).toEqual({ ok: false, reason: 'authorization' });
+    expect(handle.getSnapshot().entities).toEqual([]);
+  });
 });

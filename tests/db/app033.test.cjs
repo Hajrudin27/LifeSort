@@ -1,4 +1,4 @@
-// APP-033 only. Repeats docs/migration-verification.md's scratch-Postgres workflow.
+// APP-033 regressions after APP-034. Repeats docs/migration-verification.md's scratch-Postgres workflow.
 // No .env, Supabase CLI, remote URL, existing database or migration reset is used.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -86,11 +86,12 @@ before(() => {
   sql(fs.readFileSync(path.join(root, 'supabase/migrations/20260911065428_idempotent_server_mutations.sql'), 'utf8'));
   sql(`insert into public.user_modules values
     (${quote(A)},'existing',false,'2099-01-01'), (${quote(A)},'existing-infinity',true,'infinity');`);
-  oldPolicies = sql("select row_to_json(p) from (select * from pg_policies where tablename='user_modules' order by policyname) p");
-  oldGrants = sql("select relacl from pg_class where oid='public.user_modules'::regclass");
-  oldRpc = sql("select pg_get_functiondef('public.apply_sync_mutation(text,text,text,text,text,jsonb)'::regprocedure)");
+  oldPolicies = sql("select row_to_json(p) from (select * from pg_policies where tablename='user_modules' and cmd <> 'DELETE' order by policyname) p");
+  oldGrants = sql("select row_to_json(g) from (select grantee, privilege_type from information_schema.table_privileges where table_schema='public' and table_name='user_modules' and privilege_type not in ('DELETE', 'TRUNCATE') order by grantee, privilege_type) g");
+  oldRpc = sql("select row_to_json(p) from (select prosecdef, proconfig, proacl from pg_proc where oid='public.apply_sync_mutation(text,text,text,text,text,jsonb)'::regprocedure) p");
   baseline = sql('select clock_timestamp()');
   sql(fs.readFileSync(path.join(root, 'supabase/migrations/20260911075104_user_modules_revisions.sql'), 'utf8'));
+  sql(fs.readFileSync(path.join(root, 'supabase/migrations/20260911081953_user_modules_tombstones.sql'), 'utf8'));
 });
 after(() => {
   if (started) execFileSync(path.join(bin, 'pg_ctl'), ['-D', cluster, '-m', 'fast', '-w', 'stop'], { stdio: 'pipe' });
@@ -202,11 +203,11 @@ test('two users have independent per-entity revisions and cannot alter each othe
   assert.equal(sql(auth(B) + `select count(*) from public.user_modules where user_id=${quote(A)}`), '0');
   assert.deepEqual(snapshot('rpc'), before);
 });
-test('existing policies, table grants, RLS and APP-032 function are unchanged', () => {
-  assert.equal(sql("select row_to_json(p) from (select * from pg_policies where tablename='user_modules' order by policyname) p"), oldPolicies);
-  assert.equal(sql("select relacl from pg_class where oid='public.user_modules'::regclass"), oldGrants);
+test('non-delete policies/grants, RLS and APP-032 RPC security remain unchanged after APP-034', () => {
+  assert.equal(sql("select row_to_json(p) from (select * from pg_policies where tablename='user_modules' and cmd <> 'DELETE' order by policyname) p"), oldPolicies);
+  assert.equal(sql("select row_to_json(g) from (select grantee, privilege_type from information_schema.table_privileges where table_schema='public' and table_name='user_modules' and privilege_type not in ('DELETE', 'TRUNCATE') order by grantee, privilege_type) g"), oldGrants);
   assert.equal(sql("select relrowsecurity from pg_class where oid='public.user_modules'::regclass"), 't');
-  assert.equal(sql("select pg_get_functiondef('public.apply_sync_mutation(text,text,text,text,text,jsonb)'::regprocedure)"), oldRpc);
+  assert.equal(sql("select row_to_json(p) from (select prosecdef, proconfig, proacl from pg_proc where oid='public.apply_sync_mutation(text,text,text,text,text,jsonb)'::regprocedure) p"), oldRpc);
   fails(auth('', 'anon') + 'select * from public.user_modules', '42501');
   fails(auth('', 'anon') + direct('anonymous'), '42501');
 });

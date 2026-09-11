@@ -1,4 +1,4 @@
-/** APP-033: server-confirmed module choices only, never optimistic UI state. */
+/** APP-033/034: server-confirmed module choices, including retained tombstones. */
 export interface ConfirmedModuleChoice {
   readonly entityId: string;
   readonly enabled: boolean;
@@ -6,6 +6,8 @@ export interface ConfirmedModuleChoice {
   readonly revision: string;
   /** Preserve the server's serialized timestamp, including sub-millisecond precision. */
   readonly updatedAt: string;
+  /** Explicit null for active state; never infer deletion from an absent row. */
+  readonly deletedAt: string | null;
 }
 
 export class ModuleChoiceSnapshotError extends Error {
@@ -24,7 +26,9 @@ function validate(entity: ConfirmedModuleChoice): void {
       ['core-shell', 'account'].includes(entity.entityId) || typeof entity.enabled !== 'boolean' ||
       typeof entity.revision !== 'string' || !/^[1-9][0-9]*$/.test(entity.revision) ||
       compareRevision(entity.revision, MAX_REVISION) > 0 ||
-      typeof entity.updatedAt !== 'string' || !Number.isFinite(Date.parse(entity.updatedAt))) {
+      typeof entity.updatedAt !== 'string' || !Number.isFinite(Date.parse(entity.updatedAt)) ||
+      (entity.deletedAt !== null && (typeof entity.deletedAt !== 'string' ||
+        !Number.isFinite(Date.parse(entity.deletedAt))))) {
     throw new ModuleChoiceSnapshotError('invalid');
   }
 }
@@ -36,7 +40,7 @@ export function parseModuleChoiceSnapshots(rows: unknown): readonly ConfirmedMod
     if (!row || typeof row !== 'object') throw new ModuleChoiceSnapshotError('invalid');
     const value = row as Record<string, unknown>;
     const entity = { entityId: value.module_id, enabled: value.enabled,
-      revision: value.revision, updatedAt: value.updated_at } as ConfirmedModuleChoice;
+      revision: value.revision, updatedAt: value.updated_at, deletedAt: value.deleted_at } as ConfirmedModuleChoice;
     validate(entity);
     return Object.freeze(entity);
   });
@@ -62,7 +66,8 @@ export function reconcileModuleChoiceSnapshots(
     // response. Inconsistent duplicates must not be accepted based on row order.
     const seen = versions.get(entity.entityId) ?? new Map<string, ConfirmedModuleChoice>();
     const sameVersion = seen.get(entity.revision);
-    if (sameVersion && (entity.enabled !== sameVersion.enabled || entity.updatedAt !== sameVersion.updatedAt)) {
+    if (sameVersion && (entity.enabled !== sameVersion.enabled || entity.updatedAt !== sameVersion.updatedAt ||
+        entity.deletedAt !== sameVersion.deletedAt)) {
       throw new ModuleChoiceSnapshotError('invariant');
     }
     seen.set(entity.revision, entity);

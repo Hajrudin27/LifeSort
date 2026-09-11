@@ -17,10 +17,12 @@ export async function sendServerMutation(
   // Snapshot before the first await. Do not forward scheduling metadata or allow
   // baseRevision to be silently interpreted as an implemented precondition.
   const payload = mutation.payload;
+  const validPayload = mutation.operation === 'delete'
+    ? payload === undefined || payload === null
+    : mutation.operation === 'upsert' && payload !== null && typeof payload === 'object' &&
+      !Array.isArray(payload) && typeof payload.enabled === 'boolean' && Object.keys(payload).length === 1;
   if (mutation.baseRevision !== undefined || mutation.dataDomain !== 'core.module-choice' ||
-      mutation.entityType !== 'module-choice' || mutation.operation !== 'upsert' ||
-      payload === null || typeof payload !== 'object' || Array.isArray(payload) ||
-      typeof payload.enabled !== 'boolean' || Object.keys(payload).length !== 1) {
+      mutation.entityType !== 'module-choice' || !validPayload) {
     return { ok: false, reason: 'validation' };
   }
   let args;

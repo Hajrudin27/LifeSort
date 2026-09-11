@@ -7,5 +7,13 @@
         "openAttachment": "Open attachment",
         "search": "Search",
         "info": "About the app"
-    }
+    },
+  "syncStatus": {
+    "pending": "Changes are waiting to sync.",
+    "failed": "Some changes could not be synced.",
+    "retry": "Retry",
+    "retrying": "Syncing a change…",
+    "needsAttention": "A change needs attention. It has not been synced.",
+    "authRequired": "Sign in again to continue syncing."
+  }
 }

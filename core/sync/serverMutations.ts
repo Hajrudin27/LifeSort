@@ -1,3 +1,4 @@
+import { supportsServerMutation } from '@/core/sync/mutationSupport';
 import type { OutboxMutation } from '@/core/sync/outbox';
 import { supabase } from '@/lib/supabase';
 
@@ -13,18 +14,12 @@ export type ServerMutationResult =
 export async function sendServerMutation(
   accountId: string,
   mutation: OutboxMutation,
+  isActive: () => boolean = () => true,
 ): Promise<ServerMutationResult> {
   // Snapshot before the first await. Do not forward scheduling metadata or allow
   // baseRevision to be silently interpreted as an implemented precondition.
-  const payload = mutation.payload;
-  const validPayload = mutation.operation === 'delete'
-    ? payload === undefined || payload === null
-    : mutation.operation === 'upsert' && payload !== null && typeof payload === 'object' &&
-      !Array.isArray(payload) && typeof payload.enabled === 'boolean' && Object.keys(payload).length === 1;
-  if (mutation.baseRevision !== undefined || mutation.dataDomain !== 'core.module-choice' ||
-      mutation.entityType !== 'module-choice' || !validPayload) {
-    return { ok: false, reason: 'validation' };
-  }
+  if (!supportsServerMutation(mutation)) return { ok: false, reason: 'validation' };
+  if (!isActive()) return { ok: false, reason: 'authorization' };
   let args;
   try {
     args = {
@@ -42,18 +37,22 @@ export async function sendServerMutation(
   try {
     const { data, error: sessionError } = await supabase.auth.getSession();
     const session = data.session;
-    if (sessionError || !session || session.user.id !== accountId) {
+    if (!isActive() || sessionError || !session || session.user.id !== accountId) {
       return { ok: false, reason: 'authorization' };
     }
     // Pin the request to this account's token: a concurrent account switch must
     // not send the old account's outbox entry using the new account's session.
-    const { data: status, error } = await supabase.rpc('apply_sync_mutation', args)
-      .setHeader('Authorization', `Bearer ${session.access_token}`);
+    const { data: status, error, status: statusCode } = await supabase.rpc('apply_sync_mutation', args)
+      .setHeader('Authorization', `Bearer ${session.access_token}`)
+      .retry(false);
     if (error) {
-      const reason = error.code === 'PT409' ? 'conflict'
+      const reason = error.code === 'PT409' || statusCode === 409 ? 'conflict'
         : ['PT400', 'PT422'].includes(error.code) ? 'validation'
-        : ['PT401', '42501', 'PGRST301', 'PGRST302', 'PGRST303'].includes(error.code) ? 'authorization'
-        : 'unavailable';
+        : ['PT401', '42501', 'PGRST301', 'PGRST302', 'PGRST303'].includes(error.code) ||
+          statusCode === 401 || statusCode === 403 ? 'authorization'
+        : statusCode === 400 || statusCode === 422 ? 'validation'
+        : /^PT5\d\d$/.test(error.code) || (statusCode >= 500 && statusCode <= 599) ||
+          statusCode === 429 || (error.code === '' && !statusCode) ? 'unavailable' : 'validation';
       return { ok: false, reason };
     }
     return status === 'applied' || status === 'replayed'

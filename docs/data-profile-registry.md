@@ -64,7 +64,7 @@ Counts are enforced in tests: **A = 24, B = 6, C = 2, D = 4, total = 36**.
 | `core.module-choice` | A | core-shell | `async-storage:lifesort-enabled-modules`, `supabase-table:user_modules` | User-selected modules; feature state never deletes data. |
 | `core.home-layout` | A | core-shell | `async-storage:lifesort-home-layout` | Pinned, hidden and masked cards. |
 | `core.monthly-review-preference` | A | core-shell | `async-storage:lifesort-monthly-review` | Boolean preference only. |
-| `core.sync-status` | A | core-shell | `async-storage:sync-status` | Local sync failure status without record payloads. |
+| `core.sync-status` | A | core-shell | `async-storage:sync-status` | Ephemeral account-scoped projection; legacy success timestamp key remains registered for cleanup only, with no reads or writes (APP-036). |
 | `core.outbox` | A | core-shell | `async-storage:lifesort-outbox` | Account-bound durable mutation queue. Only syncable Profile A domains without any Profile B surface are accepted; sensitive integration remains deferred. |
 | `core.module-flags` | D | core-shell | `async-storage:lifesort-module-flags`, `supabase-table:module_flags` | Operator kill switches; cached so closed modules stay closed offline. |
 | `core.local-backup-archive` | B | core-shell | `filesystem:document-directory/lifesort-backup-json` | Current backup excludes cycle data but may include attachment metadata. APP-097 owns export policy. |

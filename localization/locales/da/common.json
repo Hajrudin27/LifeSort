@@ -7,5 +7,13 @@
         "openAttachment": "Åbn vedhæftning",
         "search": "Søg",
         "info": "Om appen"
-    }
+    },
+  "syncStatus": {
+    "pending": "Ændringer venter på synkronisering.",
+    "failed": "Nogle ændringer kunne ikke synkroniseres.",
+    "retry": "Prøv igen",
+    "retrying": "Synkroniserer en ændring…",
+    "needsAttention": "En ændring kræver din opmærksomhed. Den er ikke synkroniseret.",
+    "authRequired": "Log ind igen for at fortsætte synkroniseringen."
+  }
 }

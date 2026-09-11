@@ -125,8 +125,8 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
   },
   { key: 'lifesort-monthly-review', reset: () => useReviewStore.setState({ showOnHome: true }) },
 
-  // Fejlbeskederne herfra nævner hvilke moduler den forrige bruger havde.
-  { key: 'sync-status', reset: () => useSyncStatusStore.setState({ failures: {}, lastSuccessAt: null }) },
+  // Clear ephemeral sync presentation; the sweep also removes the legacy disk key.
+  { key: 'sync-status', reset: () => useSyncStatusStore.getState().clearLocal() },
 
   { key: 'lifesort-theme', reset: () => useThemeStore.setState({ mode: 'system' }) },
   { key: 'lifesort-app-lock', reset: () => useAppLockStore.setState({ lockEnabled: false, isLocked: false }) },

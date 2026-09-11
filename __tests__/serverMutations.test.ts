@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const mockSession = jest.fn();
 const mockRpc = jest.fn();
 const mockHeader = jest.fn();
+const mockRetry = jest.fn();
 jest.mock('@/lib/supabase', () => ({
   supabase: { auth: { getSession: (...args: unknown[]) => mockSession(...args) },
     rpc: (...args: unknown[]) => mockRpc(...args) },
@@ -20,8 +21,8 @@ beforeEach(async () => {
   jest.clearAllMocks();
   await AsyncStorage.clear();
   mockSession.mockResolvedValue({ data: { session: { user: { id: accountId }, access_token: 'test-token' } }, error: null });
-  mockRpc.mockReturnValue({ setHeader: mockHeader });
-  mockHeader.mockResolvedValue({ data: 'applied', error: null });
+  mockRpc.mockReturnValue({ setHeader: (...args: unknown[]) => { mockHeader(...args); return { retry: mockRetry }; } });
+  mockRetry.mockResolvedValue({ data: 'applied', error: null });
 });
 it('sends a durable APP-031 ID unchanged across explicit sends, leaving queue ownership to caller', async () => {
   const outbox = createOutbox(accountId);
@@ -29,7 +30,7 @@ it('sends a durable APP-031 ID unchanged across explicit sends, leaving queue ow
     entityId: entry.entityId, operation: entry.operation, payload: entry.payload });
   const [persisted] = await createOutbox(accountId).list();
   expect(await sendServerMutation(accountId, persisted)).toEqual({ ok: true, status: 'applied' });
-  mockHeader.mockResolvedValue({ data: 'replayed', error: null });
+  mockRetry.mockResolvedValue({ data: 'replayed', error: null });
   expect(await sendServerMutation(accountId, persisted)).toEqual({ ok: true, status: 'replayed' });
   expect(mockRpc).toHaveBeenCalledTimes(2);
   expect(mockRpc).toHaveBeenLastCalledWith('apply_sync_mutation', {
@@ -63,7 +64,7 @@ it.each([
   ['42501', 'authorization'], ['PGRST301', 'authorization'], ['PGRST302', 'authorization'],
   ['PGRST303', 'authorization'], ['PT500', 'unavailable'], ['PT503', 'unavailable'],
 ])('maps %s to a safe %s result without server details', async (code, reason) => {
-  mockHeader.mockResolvedValue({ error: { code, message: 'private server detail', details: 'private payload' } });
+  mockRetry.mockResolvedValue({ error: { code, message: 'private server detail', details: 'private payload' } });
   expect(await sendServerMutation(accountId, entry)).toEqual({ ok: false, reason });
   expect(mockRpc).toHaveBeenCalledTimes(1);
 });
@@ -83,12 +84,12 @@ it.each([
   expect(mockRpc).not.toHaveBeenCalled();
 });
 it('maps transport exceptions without retrying or leaking errors', async () => {
-  mockHeader.mockRejectedValue(new Error('private headers'));
+  mockRetry.mockRejectedValue(new Error('private headers'));
   expect(await sendServerMutation(accountId, entry)).toEqual({ ok: false, reason: 'unavailable' });
   expect(mockRpc).toHaveBeenCalledTimes(1);
 });
 it('rejects an unknown success response', async () => {
-  mockHeader.mockResolvedValue({ data: 'unexpected', error: null });
+  mockRetry.mockResolvedValue({ data: 'unexpected', error: null });
   expect(await sendServerMutation(accountId, entry)).toEqual({ ok: false, reason: 'unavailable' });
 });
 
@@ -99,7 +100,7 @@ it('APP-034: sends a persisted payload-free delete with canonical null and repla
   const [persisted] = await createOutbox(accountId).list();
   expect(persisted.payload).toBeUndefined();
   expect(await sendServerMutation(accountId, persisted)).toEqual({ ok: true, status: 'applied' });
-  mockHeader.mockResolvedValue({ data: 'replayed' });
+  mockRetry.mockResolvedValue({ data: 'replayed' });
   expect(await sendServerMutation(accountId, persisted)).toEqual({ ok: true, status: 'replayed' });
   expect(mockRpc).toHaveBeenCalledTimes(2);
   expect(mockRpc).toHaveBeenLastCalledWith('apply_sync_mutation', {
@@ -120,7 +121,7 @@ it.each<JsonValue>([{}, false, { deleted_at: '2099-01-01' }, { enabled: true }])
   expect(mockSession).not.toHaveBeenCalled();
 });
 it('APP-034: a tombstoned entity produces a safe conflict without a retry or queue acknowledgement', async () => {
-  mockHeader.mockResolvedValue({ error: { code: 'PT409', message: 'entity_deleted' } });
+  mockRetry.mockResolvedValue({ error: { code: 'PT409', message: 'entity_deleted' } });
   expect(await sendServerMutation(accountId, entry)).toEqual({ ok: false, reason: 'conflict' });
   expect(mockRpc).toHaveBeenCalledTimes(1);
 });
@@ -128,4 +129,39 @@ it('APP-034: delete does not make baseRevision authoritative', async () => {
   expect(await sendServerMutation(accountId, { ...entry, operation: 'delete', payload: undefined, baseRevision: 5 }))
     .toEqual({ ok: false, reason: 'validation' });
   expect(mockRpc).not.toHaveBeenCalled();
+});
+
+it('APP-036 explicitly disables SDK retries for the one-shot RPC', async () => {
+  await sendServerMutation(accountId, entry);
+  expect(mockRetry).toHaveBeenCalledTimes(1);
+  expect(mockRetry).toHaveBeenCalledWith(false);
+});
+it('APP-036 rechecks the caller generation after async session lookup and before dispatch', async () => {
+  let active = true;
+  mockSession.mockImplementation(async () => {
+    active = false;
+    return { data: { session: { user: { id: accountId }, access_token: 'old-token' } } };
+  });
+  expect(await sendServerMutation(accountId, entry, () => active)).toEqual({ ok: false, reason: 'authorization' });
+  expect(mockRpc).not.toHaveBeenCalled();
+});
+it.each(['23505', '22P02', 'PGRST202'])('APP-036 fails closed for permanent backend code %s', async (code) => {
+  mockRetry.mockResolvedValue({ error: { code, message: 'SQL public.apply_sync_mutation pregnancy complication',
+    details: 'file:///private/divorce-contract.pdf', hint: 'salary 48,000', stack: 'private stack trace' } });
+  expect(await sendServerMutation(accountId, entry)).toEqual({ ok: false, reason: 'validation' });
+});
+it('APP-036 recognizes a transient HTTP server error without using its message', async () => {
+  mockRetry.mockResolvedValue({ status: 503, error: { code: 'unexpected', message: 'private server body' } });
+  expect(await sendServerMutation(accountId, entry)).toEqual({ ok: false, reason: 'unavailable' });
+});
+it.each(['not-a-uuid', ''])('APP-036 rejects an invalid mutation identity (%#)', async (mutationId) => {
+  expect(await sendServerMutation(accountId, { ...entry, mutationId })).toEqual({ ok: false, reason: 'validation' });
+  expect(mockRpc).not.toHaveBeenCalled();
+});
+it.each([
+  [400, 'validation'], [422, 'validation'], [401, 'authorization'], [403, 'authorization'],
+  [409, 'conflict'], [429, 'unavailable'], [0, 'unavailable'],
+])('APP-036 classifies HTTP %s without retrying permanent empty-code errors', async (status, reason) => {
+  mockRetry.mockResolvedValue({ status, error: { code: '', message: 'private gateway response' } });
+  expect(await sendServerMutation(accountId, entry)).toEqual({ ok: false, reason });
 });

@@ -235,7 +235,7 @@ describe('APP-027 physical persistence surfaces', () => {
     const registeredZustandKeys = PERSISTENCE_SURFACES
       .filter((surface) => surface.kind === 'async-storage')
       .map((surface) => surface.id.replace(/^async-storage:/, ''))
-      .filter((key) => !['lifesort-verification-last-sent', 'supabase-session-web-or-legacy', 'lifesort-outbox'].includes(key))
+      .filter((key) => !['lifesort-verification-last-sent', 'supabase-session-web-or-legacy', 'lifesort-outbox', 'sync-status'].includes(key))
       .sort();
 
     expect(registeredZustandKeys).toEqual(persistKeysInStores());
@@ -343,4 +343,11 @@ describe('APP-027 mixed-profile detection', () => {
       }
     }
   });
+});
+
+it('APP-036 keeps only the legacy sync-status cleanup registration; presentation has no persistence', () => {
+  expect(getDataDomain('core.sync-status')).toMatchObject({ profile: 'A', expectsServerSync: false });
+  expect(getPersistenceSurface('async-storage:sync-status')).toBeTruthy();
+  expect(sourceText('core/storage/localDataScopes.ts')).toContain("OWNED_EXTRA_KEYS = ['sync-status']");
+  expect(sourceText('store/useSyncStatusStore.ts')).not.toMatch(/createJSONStorage|AsyncStorage|persist\(/);
 });

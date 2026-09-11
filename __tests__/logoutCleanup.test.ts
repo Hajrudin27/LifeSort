@@ -85,7 +85,8 @@ describe('ingen store bliver glemt', () => {
 
   it('nulstiller ikke noget, der ikke findes', () => {
     // En forældet linje ville se ud som dækning uden at være det.
-    const actual = new Set(stores.map((store) => store.key));
+    // APP-036 retains a real ephemeral store reset under its legacy cleanup key.
+    const actual = new Set([...stores.map((store) => store.key), 'sync-status']);
     const stale = LOCAL_STORE_RESETS.filter((entry) => !actual.has(entry.key));
     expect(stale.map((entry) => entry.key)).toEqual([]);
   });

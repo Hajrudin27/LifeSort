@@ -21,6 +21,8 @@ import LockScreen from "@/components/LockScreen";
 import ModuleGate from "@/components/ModuleGate";
 import PrivacyOverlay from "@/components/PrivacyOverlay";
 import Toast from "@/components/Toast";
+import SyncStatusBanner from "@/components/SyncStatusBanner";
+import { useSyncStatusLifecycle } from "@/hooks/useSyncStatusLifecycle";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import {
@@ -90,6 +92,7 @@ const DarkNavTheme = {
 };
 
 export default function RootLayout() {
+  useSyncStatusLifecycle();
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
@@ -754,6 +757,7 @@ function RootLayoutNav({ language }: { language: string | null }) {
             }}
           />
         </Stack>
+        {session && !isLocked && !isRecoveringPassword && <SyncStatusBanner />}
         <Toast />
         <ModuleGate />
         {isLocked && <LockScreen />}

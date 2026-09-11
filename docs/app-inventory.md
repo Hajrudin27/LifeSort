@@ -128,7 +128,7 @@ to Supabase tables in §3.
 | `/economy` | `app/(tabs)/economy.tsx` | `economy` | `useExpensesStore`<br>`useFoodStore`<br>`useIncomeStore`<br>`useSavingsGoalsStore`<br>`useTripsStore`<br>`useWarrantiesStore` | financial | Hajrudin Kardasevic |
 | `/` | `app/(tabs)/index.tsx` | `core-shell` | `useCycleStore`<br>`useExpensesStore`<br>`useFoodStore`<br>`useHabitsStore`<br>`useHouseholdStore`<br>`useIncomeStore`<br>`useProfileStore`<br>`useSavingsGoalsStore`<br>`useTodoStore`<br>`useTripsStore`<br>`useWarrantiesStore` | personal, financial, health | Hajrudin Kardasevic |
 | `/life` | `app/(tabs)/life.tsx` | `core-shell` | `useCareerStore`<br>`useHabitsStore`<br>`useHouseholdStore`<br>`useLifeGoalsStore`<br>`useTodoStore` | personal | Hajrudin Kardasevic |
-| `/settings` | `app/(tabs)/settings.tsx` | `account` | `useAppLockStore`<br>`useAuthStore`<br>`useProfileStore`<br>`useSettingsStore`<br>`useSyncStatusStore`<br>`useThemeStore` | personal | Hajrudin Kardasevic |
+| `/settings` | `app/(tabs)/settings.tsx` | `account` | `useAppLockStore`<br>`useAuthStore`<br>`useProfileStore`<br>`useSettingsStore`<br>`useThemeStore` | personal | Hajrudin Kardasevic |
 | `/+html` | `app/+html.tsx` | `core-shell` | – | ordinary | Hajrudin Kardasevic |
 | `/+not-found` | `app/+not-found.tsx` | `core-shell` | – | ordinary | Hajrudin Kardasevic |
 | `/_layout` | `app/_layout.tsx` | `core-shell` | `useAppLockStore`<br>`useAuthStore`<br>`useCVStore`<br>`useCareerStore`<br>`useCategoriesStore`<br>`useCycleStore`<br>`useExpensesStore`<br>`useFoodStore`<br>`useHabitsStore`<br>`useHouseholdStore`<br>`useIncomeStore`<br>`useLifeGoalsStore`<br>`useProfileStore`<br>`useSavingsGoalsStore`<br>`useSettingsStore`<br>`useThemeStore`<br>`useTodoStore`<br>`useTripsStore`<br>`useWarrantiesStore` | personal, financial, health | Hajrudin Kardasevic |
@@ -240,7 +240,7 @@ the key material in SecureStore.
 | `useAppLockStore` | `store/useAppLockStore.ts` | `account` | `lifesort-app-lock` | AsyncStorage (plain); PIN hash in SecureStore via `utils/auth/pinAuth.ts` | – | personal | Hajrudin Kardasevic |
 | `useSettingsStore` | `store/useSettingsStore.ts` | `core-shell` | `lifesort-settings` | AsyncStorage (plain) | `settings` | ordinary | Hajrudin Kardasevic |
 | `useThemeStore` | `store/useThemeStore.ts` | `core-shell` | `lifesort-theme` | AsyncStorage (plain) | `settings` | ordinary | Hajrudin Kardasevic |
-| `useSyncStatusStore` | `store/useSyncStatusStore.ts` | `core-shell` | `sync-status` | AsyncStorage (plain) | – | ordinary | Hajrudin Kardasevic |
+| `useSyncStatusStore` | `store/useSyncStatusStore.ts` | `core-shell` | – (legacy `sync-status` is cleanup-only) | Ephemeral outbox projection | – | ordinary | Hajrudin Kardasevic |
 | `useTabBarStore` | `store/useTabBarStore.ts` | `core-shell` | – | memory only | – | ordinary | Hajrudin Kardasevic |
 | `useModuleFlagsStore` | `store/useModuleFlagsStore.ts` | `core-shell` | `lifesort-module-flags` | AsyncStorage (plain) | `module_flags` | ordinary | Hajrudin Kardasevic |
 | `useEnabledModulesStore` | `store/useEnabledModulesStore.ts` | `core-shell` | `lifesort-enabled-modules` | AsyncStorage (plain) | `user_modules` | ordinary | Hajrudin Kardasevic |
@@ -364,6 +364,7 @@ module that owns it.
 | `Themed` | `components/Themed.tsx` | shared | Hajrudin Kardasevic |
 | `Toast` | `components/Toast.tsx` | shared | Hajrudin Kardasevic |
 | `FloatingTabBar` | `components/FloatingTabBar.tsx` | `core-shell` | Hajrudin Kardasevic |
+| `SyncStatusBanner` | `components/SyncStatusBanner.tsx` | `core-shell` | Hajrudin Kardasevic |
 | `ModuleGate` | `components/ModuleGate.tsx` | `core-shell` | Hajrudin Kardasevic |
 | `ModuleChoiceList` | `components/ModuleChoiceList.tsx` | `core-shell` | Hajrudin Kardasevic |
 | `useClientOnlyValue` | `components/useClientOnlyValue.ts` | `core-shell` | Hajrudin Kardasevic |

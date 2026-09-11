@@ -49,6 +49,19 @@ let tail: Promise<unknown> = Promise.resolve();
 let accountEpoch = 0;
 let cleanupDepth = 0;
 
+type OutboxEvent = { kind: 'changed'; accountId: string } | { kind: 'cleanup' };
+const listeners = new Set<(event: OutboxEvent) => void>();
+/** Metadata-only invalidation; subscribers may reread locally, never send work. */
+export function subscribeOutbox(listener: (event: OutboxEvent) => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+function notify(event: OutboxEvent) {
+  for (const listener of listeners) {
+    try { listener(event); } catch { /* Presentation cannot fail a durable write. */ }
+  }
+}
+
 function serialize<T>(operation: () => Promise<T>): Promise<T> {
   const result = tail.then(operation);
   tail = result.catch(() => undefined);
@@ -149,6 +162,7 @@ export function createOutbox(accountId: string) {
       if (write) {
         await storage.setItem(OUTBOX_STORAGE_KEY, { state, version: 1 });
         assertActive();
+        notify({ kind: 'changed', accountId });
       }
       return result;
     });
@@ -212,6 +226,7 @@ export function createOutbox(accountId: string) {
 export async function withOutboxCleanup<T>(cleanup: () => Promise<T>): Promise<T> {
   accountEpoch += 1;
   cleanupDepth += 1;
+  notify({ kind: 'cleanup' });
   try {
     let removalFailed = false;
     try {

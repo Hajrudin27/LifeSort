@@ -1,4 +1,4 @@
-// APP-032 only. Repeats docs/migration-verification.md's scratch-Postgres workflow.
+// APP-032 regressions after APP-033, using the established scratch-Postgres workflow.
 // No .env, Supabase CLI, remote URL, existing database or migration reset is used.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -71,6 +71,8 @@ before(() => {
     alter default privileges in schema public grant all on functions to anon, authenticated, service_role;`);
   sql(fs.readFileSync(path.join(root, 'supabase/migrations/20260908233100_user_modules.sql'), 'utf8'));
   sql(fs.readFileSync(path.join(root, 'supabase/migrations/20260911065428_idempotent_server_mutations.sql'), 'utf8'));
+  // Run the original idempotency/security/concurrency regressions after APP-033 too.
+  sql(fs.readFileSync(path.join(root, 'supabase/migrations/20260911075104_user_modules_revisions.sql'), 'utf8'));
   // Test-only trigger counts actual writes, including no-op UPSERT updates. Merely
   // counting user_modules rows would not prove that duplicate writes were skipped.
   sql(`create table public.app032_effects(user_id uuid, module_id text);

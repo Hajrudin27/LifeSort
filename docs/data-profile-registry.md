@@ -129,6 +129,7 @@ them:
 | `public.activity_log` | Server-side audit trail, not mobile persistence. |
 | `public.timeline_events` | Backend event history not referenced by the mobile source tree. |
 | `public.rate_limits` | Server throttling state, not client-owned data. |
+| `public.mutation_receipts` | APP-032 server-owned replay evidence; no direct mobile access, cached payloads or response bodies. |
 | `public.support_tickets` | Operational support records, not part of mobile storage/sync. |
 | `public.waitlist_signups` | Public/backend waitlist state, not current mobile client data. |
 

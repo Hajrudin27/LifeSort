@@ -45,6 +45,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0024](./0024-document-cache-is-encrypted-with-temporary-plaintext-interop.md) | Document cache is encrypted with temporary plaintext interop | Accepted | 2026-09-10 | APP-029 |
 | [0025](./0025-new-client-entity-ids-are-cryptographic-uuids.md) | New client entity IDs are cryptographic UUIDs | Accepted | 2026-09-10 | APP-030 |
 | [0026](./0026-outbox-writes-complete-after-local-persistence.md) | Outbox writes complete after local persistence | Accepted | 2026-09-10 | APP-031 |
+| [0027](./0027-server-mutations-claim-receipts-in-the-domain-transaction.md) | Server mutations claim receipts in the domain transaction | Accepted | 2026-09-11 | APP-032 |
 
 ## When an ADR is required
 

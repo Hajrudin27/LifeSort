@@ -27,6 +27,7 @@ const BACKEND_ONLY_TABLES = [
   'activity_log',
   'admin_users',
   'rate_limits',
+  'mutation_receipts',
   'support_tickets',
   'timeline_events',
   'waitlist_signups',

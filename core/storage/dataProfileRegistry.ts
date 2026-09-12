@@ -225,7 +225,13 @@ export const DATA_DOMAINS = [
     module: 'core-shell',
     description: 'User-selected module enablement. Turning a module off never deletes data.',
     storageSurfaces: ['async-storage:lifesort-enabled-modules', 'supabase-table:user_modules'],
-    evidence: ['store/useEnabledModulesStore.ts', 'supabase/migrations/20260908233100_user_modules.sql'],
+    // The server row is now reached through the durable outbox and its automatic
+    // sender rather than a direct write (ADR-0032). The local surface is unchanged.
+    evidence: [
+      'store/useEnabledModulesStore.ts',
+      'core/sync/syncCoordinator.ts',
+      'supabase/migrations/20260908233100_user_modules.sql',
+    ],
     ...profileA({ expectsServerSync: true }),
   },
   {
@@ -629,7 +635,7 @@ export const PERSISTENCE_SURFACES = [
   surface('supabase-table:profiles', 'supabase-table', 'public.profiles', 'supabase', ['account.profile', 'account.onboarding'], ['store/useProfileStore.ts']),
   surface('supabase-table:settings', 'supabase-table', 'public.settings', 'supabase', ['core.preferences'], ['store/useSettingsStore.ts', 'store/useThemeStore.ts']),
   surface('supabase-table:module_flags', 'supabase-table', 'public.module_flags', 'supabase', ['core.module-flags'], ['store/useModuleFlagsStore.ts']),
-  surface('supabase-table:user_modules', 'supabase-table', 'public.user_modules', 'supabase', ['core.module-choice'], ['store/useEnabledModulesStore.ts']),
+  surface('supabase-table:user_modules', 'supabase-table', 'public.user_modules', 'supabase', ['core.module-choice'], ['store/useEnabledModulesStore.ts', 'core/sync/syncCoordinator.ts']),
   surface('supabase-table:expenses', 'supabase-table', 'public.expenses', 'supabase', ['economy.expenses'], ['store/useExpensesStore.ts']),
   surface('supabase-table:expense_category_budgets', 'supabase-table', 'public.expense_category_budgets', 'supabase', ['economy.expenses'], ['store/useExpensesStore.ts']),
   surface('supabase-table:income', 'supabase-table', 'public.income', 'supabase', ['economy.income'], ['store/useIncomeStore.ts']),

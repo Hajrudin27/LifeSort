@@ -170,3 +170,35 @@ jest.mock('expo-notifications', () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
   SchedulableTriggerInputTypes: { DATE: 'date' },
 }));
+
+/**
+ * NetInfo er et native-modul. Mocken herunder er en styrbar kilde: testene
+ * sætter tilstanden og udsender den selv, så forbindelsesskift bliver
+ * deterministiske frem for at afhænge af en rigtig radio.
+ */
+jest.mock('@react-native-community/netinfo', () => {
+  const listeners = new Set();
+  const initial = { type: 'wifi', isConnected: true, isInternetReachable: null, details: {} };
+  let state = { ...initial };
+
+  const netInfo = {
+    configure: jest.fn(),
+    fetch: jest.fn(() => Promise.resolve(state)),
+    refresh: jest.fn(() => Promise.resolve(state)),
+    addEventListener: jest.fn((listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    }),
+    __listenerCount: () => listeners.size,
+    __emit: (next) => {
+      state = { ...state, ...next };
+      for (const listener of [...listeners]) listener(state);
+    },
+    __reset: () => {
+      listeners.clear();
+      state = { ...initial };
+    },
+  };
+
+  return { __esModule: true, default: netInfo, ...netInfo };
+});

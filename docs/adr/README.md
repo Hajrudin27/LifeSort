@@ -50,6 +50,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0029](./0029-module-choice-deletions-retain-an-immutable-version.md) | Module choice deletions retain an immutable version | Accepted | 2026-09-11 | APP-034 |
 | [0030](./0030-conflict-policies-are-explicit-and-fail-closed.md) | Conflict policies are explicit per domain/family and fail closed | Accepted | 2026-09-11 | APP-035 |
 | [0031](./0031-sync-status-is-a-privacy-safe-projection.md) | Sync status is a privacy-safe projection of durable sync state | Accepted | 2026-09-11 | APP-036 |
+| [0032](./0032-automatic-sync-is-foreground-only-event-driven-and-bounded.md) | Automatic sync is foreground-only, event-driven and bounded | Accepted | 2026-09-11 | APP-037 |
 
 ## When an ADR is required
 

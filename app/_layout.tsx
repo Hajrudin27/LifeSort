@@ -22,6 +22,7 @@ import ModuleGate from "@/components/ModuleGate";
 import PrivacyOverlay from "@/components/PrivacyOverlay";
 import Toast from "@/components/Toast";
 import SyncStatusBanner from "@/components/SyncStatusBanner";
+import { useSyncCoordinatorLifecycle } from "@/hooks/useSyncCoordinatorLifecycle";
 import { useSyncStatusLifecycle } from "@/hooks/useSyncStatusLifecycle";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
@@ -93,6 +94,8 @@ const DarkNavTheme = {
 
 export default function RootLayout() {
   useSyncStatusLifecycle();
+  // Sender køen af sig selv, når appen er fremme og online (APP-037).
+  useSyncCoordinatorLifecycle();
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });

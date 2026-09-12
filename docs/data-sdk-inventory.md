@@ -140,7 +140,10 @@ bundle. `devDependencies` are excluded because they do not reach a user's
 device.
 
 "Data touched" is what the SDK can see at runtime, not what it transmits.
-Only `@supabase/supabase-js` transmits anything off the device.
+Only `@supabase/supabase-js` transmits anything off the device. NetInfo would be
+the exception if left at its defaults — it polls a Google endpoint to test
+reachability — so `core/sync/connectivity.ts` disables that probe and reads only
+the link state the OS pushes (ADR-0032).
 
 <!-- inventory:sdk:start -->
 
@@ -185,6 +188,7 @@ Only `@supabase/supabase-js` transmits anything off the device.
 | `react-native-reanimated` | 4.5.1 | Software Mansion | Animations | None | No | None |
 | `react-native-worklets` | 0.10.1 | Software Mansion | Worklet runtime for Reanimated | None | No | None |
 | `react-native-svg` | 15.15.4 | Software Mansion | Charts and progress rings | Values rendered in charts | No | None |
+| `@react-native-community/netinfo` | 12.0.1 | React Native Community | Reports the OS network link state so the sync coordinator only sends while the device is actually connected (APP-037) | Connection state and type; the library can also read the Wi-Fi SSID, which LifeSort never requests | No — the library's own reachability probe is disabled, so it contacts nothing | Android `ACCESS_NETWORK_STATE` is added by the library's manifest; no data category is collected |
 | `@react-native-picker/picker` | 2.11.4 | React Native Community | Date picker wheels | Selected dates | No | None |
 | `react-native-url-polyfill` | ^4.0.0 | Charpeni (open source) | URL polyfill required by the Supabase client | None | No | None |
 | `zustand` | ^5.0.14 | Poimandres (open source) | Client state management | All in-memory state | No | None |
@@ -203,6 +207,7 @@ Only `@supabase/supabase-js` transmits anything off the device.
 | Calendar (write-only) | `expo-calendar` | When the user chooses to add a to-do to the calendar | `app.json` plugin, Danish purpose string | Yes |
 | Notifications | `expo-notifications` | On first use of a reminder feature | Runtime request | Yes |
 | Biometrics | `expo-local-authentication` | When unlocking the app lock | Face ID usage string — see §6-D8 | Yes |
+| Network state (Android) | `@react-native-community/netinfo` | Continuously while signed in, to know whether sync may run | `ACCESS_NETWORK_STATE` in the library's manifest; normal permission, no prompt | Yes |
 | Microphone | – | Never | `NSMicrophoneUsageDescription` (generated) | **No — see §6-D8** |
 
 Permissions are requested at the point of use rather than at startup, which

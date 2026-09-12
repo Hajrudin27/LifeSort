@@ -16,9 +16,10 @@ it('empty current-account outbox is clear', () => {
 it('pending is immediate, with an explicitly supported one-shot action', () => {
   expect(project([entry])).toMatchObject({ status: 'pending', count: 1, retryMutationId: entry.mutationId });
 });
-it('multiple pending entries aggregate deterministically regardless of input order or timestamps', () => {
+it('pending action follows durable order rather than timestamps or lexical UUID order', () => {
   const second = { ...entry, mutationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', createdAt: '2000-01-01' };
-  expect(project([second, entry])).toEqual(project([entry, second]));
+  expect(project([second, entry])).toMatchObject({ status: 'pending', retryMutationId: second.mutationId });
+  expect(project([entry, second]).retryMutationId).toBe(entry.mutationId);
   expect(project([entry, second]).count).toBe(2);
 });
 it('known retryable failed mutation is failed', () => {
@@ -42,7 +43,8 @@ it('needs-attention > failed > retrying > pending, independent of array order', 
   expect(project([entry, failed], errors, entry.mutationId)).toMatchObject({ status: 'failed', retrying: true });
   const result = project([entry, failed, attention], errors, entry.mutationId);
   expect(result).toMatchObject({ status: 'needs-attention', count: 3, retryMutationId: null });
-  expect(result).toEqual(project([attention, failed, entry], errors, entry.mutationId));
+  expect(project([attention, failed, entry], errors, entry.mutationId))
+    .toMatchObject({ status: 'needs-attention', count: 3, retryMutationId: null });
 });
 it.each([null, 'b'])('ignores another account when active account is %s', (account) => {
   expect(projectSyncStatus(account, snapshot([entry]))).toMatchObject({ status: 'clear', count: 0, accountId: null });
@@ -66,6 +68,28 @@ it.each([
   expect(syncSafeError(result)).toBe(expected);
 });
 it('the Retry action selects a failed candidate before a pending candidate', () => {
-  const failed = { ...entry, mutationId: 'ffffffff-ffff-4fff-8fff-ffffffffffff', status: 'failed' as const };
+  const failed = { ...entry, entityId: 'food', mutationId: 'ffffffff-ffff-4fff-8fff-ffffffffffff', status: 'failed' as const };
   expect(project([entry, failed], new Map([[failed.mutationId, 'unavailable']])).retryMutationId).toBe(failed.mutationId);
+});
+
+it('a transient head remains the action even with a future retry and a newer pending follower', () => {
+  const head = { ...entry, mutationId: 'ffffffff-ffff-4fff-8fff-ffffffffffff', status: 'failed' as const,
+    nextRetryAt: '2099-01-01T00:00:00Z' };
+  expect(project([head, entry])).toMatchObject({ status: 'failed', retryMutationId: head.mutationId });
+});
+
+it.each(['pending', 'failed'] as const)('a permanent head suppresses global Retry even with an unrelated %s head', (status) => {
+  const head = { ...entry, mutationId: 'ffffffff-ffff-4fff-8fff-ffffffffffff', status: 'failed' as const };
+  expect(project([head, entry])).toMatchObject({ status: 'needs-attention', retryMutationId: null });
+  const other = { ...entry, entityId: 'food', mutationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', status,
+    ...(status === 'failed' ? { nextRetryAt: '2099-01-01T00:00:00Z' } : {}) };
+  expect(project([other])).toMatchObject({ status, retryMutationId: other.mutationId });
+  expect(project([head, entry, other])).toMatchObject({ status: 'needs-attention', retryMutationId: null });
+  expect(project([other, head, entry])).toMatchObject({ status: 'needs-attention', retryMutationId: null });
+});
+
+it('selects pending entity heads in durable order even when the later UUID sorts first', () => {
+  const older = { ...entry, entityId: 'food', mutationId: 'ffffffff-ffff-4fff-8fff-ffffffffffff' };
+  expect(project([older, entry])).toMatchObject({ status: 'pending', retryMutationId: older.mutationId });
+  expect(project([entry, older])).toMatchObject({ status: 'pending', retryMutationId: entry.mutationId });
 });

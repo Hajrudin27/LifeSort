@@ -53,6 +53,31 @@ export function enabledModuleIds(enablement: ModuleEnablement): ModuleId[] {
  * en række vi ikke forstår, efterlader modulet slået TIL. Et ødelagt svar må
  * ikke kunne skjule brugerens data.
  */
+/**
+ * Et valg der stadig ligger i den holdbare kø, er nyere end enhver række
+ * serveren kan svare med — den har jo ikke fået det at vide endnu. En hentning
+ * må derfor ikke rulle det tilbage foran brugeren. Se ADR-0032.
+ */
+export function mergeQueuedModuleEnablement(
+  remote: ModuleEnablement,
+  local: ModuleEnablement,
+  queuedModuleIds: readonly string[],
+): ModuleEnablement {
+  const merged: ModuleEnablement = { ...remote };
+
+  for (const moduleId of queuedModuleIds) {
+    if (!KNOWN_MODULE_IDS.has(moduleId)) continue;
+    if (!canToggleModule(moduleId as ModuleId)) continue;
+
+    const choice = local[moduleId as ModuleId];
+    // Intet lokalt svar betyder standardværdien, ikke serverens gamle række.
+    if (choice === undefined) delete merged[moduleId as ModuleId];
+    else merged[moduleId as ModuleId] = choice;
+  }
+
+  return merged;
+}
+
 export function parseModuleEnablementRows(rows: unknown): ModuleEnablement {
   if (!Array.isArray(rows)) return {};
 

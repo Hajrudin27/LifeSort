@@ -1,3 +1,4 @@
+import { economyTotalsForMonth } from "@/features/economy/monthlyTotals";
 import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
@@ -43,13 +44,14 @@ export default function ExpensesScreen() {
   const allExpenses = useExpensesStore((s) => s.expenses);
   const categoryBudgets = useExpensesStore((s) => s.categoryBudgets);
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
-  const netIncome = incomeByMonth[monthKey] ?? null;
+  const totals = economyTotalsForMonth(allExpenses, incomeByMonth, monthKey);
+  const netIncome = totals.hasIncome ? totals.settledIncome : null;
 
   const monthExpenses = allExpenses.filter(
     (e) => e.nextPaymentDate.slice(0, 7) === monthKey,
   );
-  const total = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const remaining = netIncome !== null ? netIncome - total : null;
+  const total = totals.settledSpending;
+  const remaining = totals.hasIncome ? totals.balance : null;
 
   const formatCurrency = (amount: number) =>
     `${Math.round(amount).toLocaleString(locale)} kr.`;
@@ -63,9 +65,7 @@ export default function ExpensesScreen() {
   );
   const categoryTotals = usedCategories.map((category) => ({
     id: category,
-    amount: monthExpenses
-      .filter((e) => e.category === category)
-      .reduce((sum, e) => sum + e.amount, 0),
+    amount: categoryTotalForMonth(allExpenses, monthKey, category),
   }));
 
   const prevMonthKey = getMonthKey(addMonths(selectedMonth, -1));
@@ -266,7 +266,7 @@ export default function ExpensesScreen() {
         }
         renderItem={({ item: category }) => {
           const inCategory = monthExpenses.filter((e) => e.category === category);
-          const subtotal = inCategory.reduce((sum, e) => sum + e.amount, 0);
+          const subtotal = categoryTotalForMonth(allExpenses, monthKey, category);
           const prevCategoryTotal = categoryTotalForMonth(allExpenses, prevMonthKey, category);
           const isSpike = prevCategoryTotal > 0 && subtotal > prevCategoryTotal * SPIKE_THRESHOLD;
 

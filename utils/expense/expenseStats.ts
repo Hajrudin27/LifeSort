@@ -1,9 +1,8 @@
 import { Expense } from "@/types/expense";
+import { economyTotalsForMonth } from "@/features/economy/monthlyTotals";
 
 export function totalForMonth(expenses: Expense[], monthKey: string): number {
-  return expenses
-    .filter((e) => e.nextPaymentDate.slice(0, 7) === monthKey)
-    .reduce((sum, e) => sum + e.amount, 0);
+  return economyTotalsForMonth(expenses, {}, monthKey).settledSpending;
 }
 
 export function categoryTotalForMonth(
@@ -11,10 +10,5 @@ export function categoryTotalForMonth(
   monthKey: string,
   category: string,
 ): number {
-  return expenses
-    .filter(
-      (e) =>
-        e.nextPaymentDate.slice(0, 7) === monthKey && e.category === category,
-    )
-    .reduce((sum, e) => sum + e.amount, 0);
+  return totalForMonth(expenses.filter((e) => e.category === category), monthKey);
 }

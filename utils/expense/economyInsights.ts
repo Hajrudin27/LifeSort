@@ -1,3 +1,4 @@
+import { economyTotalsForMonth } from '@/features/economy/monthlyTotals';
 import { Expense } from '@/types/expense';
 import { SavingsContribution } from '@/types/savingsGoal';
 import { addMonths, getMonthKey } from '@/utils/shared/monthKey';
@@ -18,7 +19,7 @@ export function getExpenseTrend(expenses: Expense[], monthsBack: number, locale:
   for (let i = monthsBack - 1; i >= 0; i--) {
     const d = addMonths(now, -i);
     const key = getMonthKey(d);
-    const total = expenses.filter((e) => e.nextPaymentDate.slice(0, 7) === key).reduce((sum, e) => sum + e.amount, 0);
+    const total = economyTotalsForMonth(expenses, {}, key).settledSpending;
     points.push({ monthKey: key, label: shortMonthLabel(d, locale), value: total });
   }
   return points;
@@ -30,7 +31,8 @@ export function getIncomeTrend(incomeByMonth: Record<string, number>, monthsBack
   for (let i = monthsBack - 1; i >= 0; i--) {
     const d = addMonths(now, -i);
     const key = getMonthKey(d);
-    points.push({ monthKey: key, label: shortMonthLabel(d, locale), value: incomeByMonth[key] ?? 0 });
+    const total = economyTotalsForMonth([], incomeByMonth, key).settledIncome;
+    points.push({ monthKey: key, label: shortMonthLabel(d, locale), value: total });
   }
   return points;
 }

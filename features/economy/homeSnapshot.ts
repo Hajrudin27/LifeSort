@@ -1,3 +1,4 @@
+import { economyTotalsForMonth } from './monthlyTotals';
 import type { HomeSnapshot } from '@/core/modules/moduleRegistry';
 import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useExpensesStore } from '@/store/useExpensesStore';
@@ -18,17 +19,17 @@ export async function economyHomeSnapshot(): Promise<HomeSnapshot | null> {
 
   const monthKey = getMonthKey(new Date());
 
-  const netIncome = useIncomeStore.getState().incomeByMonth[monthKey] ?? 0;
-  const monthExpensesTotal = useExpensesStore
-    .getState()
-    .expenses.filter((expense) => expense.nextPaymentDate.startsWith(monthKey))
-    .reduce((sum, expense) => sum + expense.amount, 0);
+  const totals = economyTotalsForMonth(
+    useExpensesStore.getState().expenses,
+    useIncomeStore.getState().incomeByMonth,
+    monthKey,
+  );
 
   const goals = useSavingsGoalsStore.getState().goals;
   const totalSaved = goals.reduce((sum, goal) => sum + goal.savedAmount, 0);
   const totalTarget = goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
 
-  const moneyAvailable = netIncome - monthExpensesTotal;
+  const moneyAvailable = totals.balance;
 
   return {
     moduleId: 'economy',

@@ -1,3 +1,4 @@
+import { economyTotalsForMonth } from './monthlyTotals';
 import { isInMonth, type MonthlyFact } from '@/core/modules/monthlyReview';
 import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useExpensesStore } from '@/store/useExpensesStore';
@@ -8,8 +9,12 @@ import { useSavingsGoalsStore } from '@/store/useSavingsGoalsStore';
 export async function economyMonthlyReview(monthKey: string): Promise<MonthlyFact[]> {
   await whenStoresHydrated([useExpensesStore, useIncomeStore, useSavingsGoalsStore]);
 
-  const expenses = useExpensesStore.getState().expenses.filter((e) => isInMonth(e.nextPaymentDate, monthKey));
-  const income = useIncomeStore.getState().incomeByMonth[monthKey] ?? 0;
+  const totals = economyTotalsForMonth(
+    useExpensesStore.getState().expenses,
+    useIncomeStore.getState().incomeByMonth,
+    monthKey,
+  );
+  const income = totals.settledIncome;
   const savedThisMonth = useSavingsGoalsStore
     .getState()
     .history.filter((entry) => isInMonth(entry.date, monthKey))
@@ -19,13 +24,13 @@ export async function economyMonthlyReview(monthKey: string): Promise<MonthlyFac
 
   // Intet at fortælle er ikke det samme som nul. Er der ingen poster, siger
   // modulet ingenting frem for at pynte siden med et nul.
-  if (expenses.length > 0) {
+  if (totals.expenseCount > 0) {
     facts.push({
       moduleId: 'economy',
       labelKey: 'review.economySpent',
       params: {
-        amount: expenses.reduce((sum, e) => sum + e.amount, 0).toFixed(0),
-        count: expenses.length,
+        amount: totals.settledSpending.toFixed(0),
+        count: totals.expenseCount,
       },
       sensitivity: 'financial',
     });

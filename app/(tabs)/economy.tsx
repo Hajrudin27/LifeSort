@@ -1,3 +1,4 @@
+import { economyTotalsForMonth } from "@/features/economy/monthlyTotals";
 import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useState } from "react";
@@ -26,6 +27,7 @@ import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
 import { useTripsStore } from "@/store/useTripsStore";
 import { useWarrantiesStore } from "@/store/useWarrantiesStore";
 import { getISOWeekKey, getWeeksInMonth } from "@/utils/food/foodWeek";
+import { categoryTotalForMonth } from "@/utils/expense/expenseStats";
 import { daysUntil } from "@/utils/shared/dateDays";
 import { getMonthKey } from "@/utils/shared/monthKey";
 
@@ -41,10 +43,11 @@ export default function EconomyScreen() {
 
   const allExpenses = useExpensesStore((s) => s.expenses);
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
-  const netIncome = incomeByMonth[getMonthKey(new Date())] ?? null;
   const [chartSize, setChartSize] = useState(0);
 
   const currentMonthKey = getMonthKey(new Date());
+  const totals = economyTotalsForMonth(allExpenses, incomeByMonth, currentMonthKey);
+  const netIncome = totals.hasIncome ? totals.settledIncome : null;
   const monthExpenses = allExpenses.filter(
     (e) => e.nextPaymentDate.slice(0, 7) === currentMonthKey,
   );
@@ -54,12 +57,10 @@ export default function EconomyScreen() {
   );
   const categoryTotals = usedCategories.map((category) => ({
     id: category,
-    amount: monthExpenses
-      .filter((e) => e.category === category)
-      .reduce((sum, e) => sum + e.amount, 0),
+    amount: categoryTotalForMonth(allExpenses, currentMonthKey, category),
   }));
-  const monthTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const monthBalance = netIncome !== null ? netIncome - monthTotal : null;
+  const monthTotal = totals.settledSpending;
+  const monthBalance = totals.hasIncome ? totals.balance : null;
 
   const warranties = useWarrantiesStore((s) => s.warranties);
   const expiringSoon = warranties.filter((w) => {

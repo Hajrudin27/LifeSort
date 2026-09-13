@@ -1,3 +1,4 @@
+import { economyTotalsForMonth } from "@/features/economy/monthlyTotals";
 import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useState } from "react";
@@ -23,7 +24,6 @@ export default function AllocateSavingsScreen() {
 
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
   const currentMonthKey = getMonthKey(new Date());
-  const netIncome = incomeByMonth[currentMonthKey] ?? 0;
   const expenses = useExpensesStore((s) => s.expenses);
   const goals = useSavingsGoalsStore((s) => s.goals);
   const extraSavings = useSavingsGoalsStore((s) => s.extraSavings);
@@ -31,11 +31,9 @@ export default function AllocateSavingsScreen() {
     (s) => s.distributeContributions,
   );
 
-  const totalExpenses = expenses
-    .filter((e) => e.nextPaymentDate.slice(0, 7) === currentMonthKey)
-    .reduce((sum, e) => sum + e.amount, 0);
+  const totals = economyTotalsForMonth(expenses, incomeByMonth, currentMonthKey);
   const totalSaved = goals.reduce((sum, g) => sum + g.savedAmount, 0);
-  const available = netIncome - totalExpenses - totalSaved + extraSavings;
+  const available = totals.balance - totalSaved + extraSavings;
 
   const [amounts, setAmounts] = useState<Record<string, string>>({});
 

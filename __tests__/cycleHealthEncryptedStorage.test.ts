@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createJSONStorage } from 'zustand/middleware';
 
@@ -537,4 +538,78 @@ describe('APP-028 cycle health encrypted storage', () => {
 
     expect(mockSecureStore.has('lifesort-cycle-health-key')).toBe(false);
   });
+});
+
+describe('APP-038 retained health migration fixture', () => {
+  const raw = require('fs').readFileSync(require('path').join(__dirname, 'fixtures/local-migrations/cycle/94f39eb-plaintext-v0.json'), 'utf8');
+  beforeEach(async () => {
+    mockFailSecureStoreWrite = false; mockFailAsyncStorageWrite = false;
+    mockSecureStoreSetBlocker = null; mockAsyncStorageSetBlocker = null;
+    mockSecureStoreSetStarted = null; mockAsyncStorageSetStarted = null;
+    await clearCycleHealthEncryptionKey(); await AsyncStorage.clear();
+    (AsyncStorage.setItem as jest.Mock).mockImplementation(async (key: string, value: string) => {
+      if (mockFailAsyncStorageWrite) throw new Error('test disk failure');
+      await AsyncStorage.multiSet([[key, value]]);
+    });
+  });
+  it('upgrades synthetic raw plaintext only to ciphertext and rereads without rewriting', async () => {
+    await AsyncStorage.setItem(storageKey, raw);
+    (AsyncStorage.setItem as jest.Mock).mockClear();
+    expect(await migrationGatedStorage(cycleHealthEncryptedStorage).getItem(storageKey)).toBe(raw);
+    expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
+    const encrypted = await AsyncStorage.getItem(storageKey);
+    expect(encrypted).not.toContain('avgCycleLength');
+    for (const [key, value] of (AsyncStorage.setItem as jest.Mock).mock.calls) {
+      expect(key).toBe(storageKey); expect(value).toContain('__lifesort_encrypted_cycle_store__');
+    }
+    (AsyncStorage.setItem as jest.Mock).mockClear();
+    expect(await migrationGatedStorage(cycleHealthEncryptedStorage).getItem(storageKey)).toBe(raw);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem(storageKey)).toBe(encrypted);
+  });
+  it('keeps raw historical bytes on failed commit and can retry', async () => {
+    await AsyncStorage.setItem(storageKey, raw); mockFailAsyncStorageWrite = true;
+    await expect(cycleHealthEncryptedStorage.getItem(storageKey)).rejects.toMatchObject({ code: 'migration-failed' });
+    expect(await AsyncStorage.getItem(storageKey)).toBe(raw);
+    mockFailAsyncStorageWrite = false;
+    expect(await cycleHealthEncryptedStorage.getItem(storageKey)).toBe(raw);
+  });
+  it.each([false, true])('refuses a future inner schema, encrypted=%s', async (encrypted) => {
+    const future = JSON.stringify({ ...JSON.parse(raw), version: 99 });
+    const stored = encrypted ? await encryptCycleStorePayload(future) : future;
+    await AsyncStorage.setItem(storageKey, stored);
+    (AsyncStorage.setItem as jest.Mock).mockClear();
+    await expect(cycleHealthEncryptedStorage.getItem(storageKey)).rejects.toMatchObject({ code: 'legacy-plaintext-malformed' });
+    expect(await AsyncStorage.getItem(storageKey)).toBe(stored);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
+  it.each([false, true])('rejects versionless cycle through the production wrapper without writes, encrypted=%s', async (encrypted) => {
+    const { version: _version, ...versionless } = JSON.parse(raw);
+    const plaintext = JSON.stringify(versionless);
+    const stored = encrypted ? await encryptCycleStorePayload(plaintext) : plaintext;
+    await AsyncStorage.setItem(storageKey, stored);
+    jest.clearAllMocks();
+    const generatedKeys = mockGeneratedKeyCount;
+    const adapter = migrationGatedStorage(cycleHealthEncryptedStorage);
+    await expect(adapter.getItem(storageKey)).rejects.toMatchObject({ code: 'read-failed' });
+    expect(await AsyncStorage.getItem(storageKey)).toBe(stored);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+    expect(require('expo-crypto').aesEncryptAsync).not.toHaveBeenCalled();
+    expect(mockGeneratedKeyCount).toBe(generatedKeys);
+  });
+  it.each([false, true])('preserves future cycle bytes through the production wrapper, encrypted=%s', async (encrypted) => {
+    const plaintext = JSON.stringify({ ...JSON.parse(raw), version: 99 });
+    const stored = encrypted ? await encryptCycleStorePayload(plaintext) : plaintext;
+    await AsyncStorage.setItem(storageKey, stored);
+    jest.clearAllMocks();
+    await expect(migrationGatedStorage(cycleHealthEncryptedStorage).getItem(storageKey)).rejects.toMatchObject({ code: 'read-failed' });
+    expect(await AsyncStorage.getItem(storageKey)).toBe(stored);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+    expect(require('expo-crypto').aesEncryptAsync).not.toHaveBeenCalled();
+  });
+
 });

@@ -3,10 +3,13 @@ import { createJSONStorage } from 'zustand/middleware';
 
 import { newEntityId } from '@/core/ids';
 import {
-  getDataDomain,
-  persistenceSurfaceContainsProfileB,
   type DataDomainId,
 } from '@/core/storage/dataProfileRegistry';
+
+import { validateInput, validateMutation } from './outboxValidation';
+import { migrateLocalStore } from '@/core/storage/migrations/harness';
+import { ensureLocalMigrations } from '@/core/storage/migrations/runtime';
+import { outboxMigration } from '@/core/storage/migrations/outbox';
 
 export const OUTBOX_STORAGE_KEY = 'lifesort-outbox';
 
@@ -68,73 +71,11 @@ function serialize<T>(operation: () => Promise<T>): Promise<T> {
   return result;
 }
 
-function invalid(): never {
-  // Do not attach payloads or raw storage/JSON errors to diagnostics.
-  throw new Error('Invalid or unsupported outbox data.');
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function timestamp(value: unknown): value is string {
-  return typeof value === 'string' && Number.isFinite(Date.parse(value));
-}
-
-function counter(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) >= 0;
-}
-
-function jsonValue(value: unknown, ancestors = new Set<object>()): boolean {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
-  if (typeof value === 'number') return Number.isFinite(value);
-  if (typeof value !== 'object' || ancestors.has(value)) return false;
-  if (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype) return false;
-  ancestors.add(value);
-  const values = Array.isArray(value) ? Array.from(value) : Object.values(value);
-  const valid = values.every((item) => jsonValue(item, ancestors));
-  ancestors.delete(value);
-  return valid;
-}
-
-function validateInput(value: Record<string, unknown>): void {
-  const domain = typeof value.dataDomain === 'string' ? getDataDomain(value.dataDomain) : null;
-  // Conservative first integration boundary: even a Profile A logical domain
-  // sharing a sensitive surface is blocked until a reviewed encrypted path exists.
-  if (!domain || domain.profile !== 'A' || !domain.expectsServerSync ||
-      domain.storageSurfaces.some(persistenceSurfaceContainsProfileB)) invalid();
-  if (typeof value.entityType !== 'string' || !value.entityType.trim()) invalid();
-  if (typeof value.entityId !== 'string' || !value.entityId.trim()) invalid();
-  if (value.operation !== 'upsert' && value.operation !== 'delete') invalid();
-  if (value.operation === 'upsert' && value.payload === undefined) invalid();
-  if (value.payload !== undefined && !jsonValue(value.payload)) invalid();
-  if (value.baseRevision !== undefined && !counter(value.baseRevision)) invalid();
-}
-
-function validateMutation(value: unknown): asserts value is OutboxMutation {
-  if (!record(value)) invalid();
-  validateInput(value);
-  if (typeof value.mutationId !== 'string' || !value.mutationId) invalid();
-  if (!timestamp(value.createdAt) || !counter(value.attempts)) invalid();
-  if (value.status !== 'pending' && value.status !== 'failed') invalid();
-  if (value.nextRetryAt !== undefined && !timestamp(value.nextRetryAt)) invalid();
-}
-
 async function read(): Promise<OutboxState | null> {
-  let stored;
-  try {
-    stored = await storage.getItem(OUTBOX_STORAGE_KEY);
-  } catch {
-    // JSON parse errors can include fragments of the stored payload.
-    throw new Error('Outbox storage could not be read.');
-  }
-  if (stored === null) return null;
-  if (!record(stored) || stored.version !== 1 || !record(stored.state)) invalid();
-  const state = stored.state;
-  if (typeof state.accountId !== 'string' || !state.accountId.trim() || !Array.isArray(state.mutations)) invalid();
-  state.mutations.forEach(validateMutation);
-  if (new Set(state.mutations.map((entry) => entry.mutationId)).size !== state.mutations.length) invalid();
-  return state as OutboxState;
+  // Every read remains inside the outbox serialization lane. Validation uses
+  // the same schema as enqueue/update; current v1 bytes are never rewritten.
+  const { raw } = await migrateLocalStore(outboxMigration, AsyncStorage);
+  return raw === null ? null : JSON.parse(raw).state as OutboxState;
 }
 
 /**
@@ -151,6 +92,8 @@ export function createOutbox(accountId: string) {
 
   function run<T>(operation: (state: OutboxState) => T, write: boolean): Promise<T> {
     return serialize(async () => {
+      assertActive();
+      await ensureLocalMigrations();
       assertActive();
       const stored = await read();
       assertActive();
@@ -186,7 +129,7 @@ export function createOutbox(accountId: string) {
         attempts: 0,
       };
       return run((state) => {
-        if (state.mutations.some((entry) => entry.mutationId === mutation.mutationId)) invalid();
+        if (state.mutations.some((entry) => entry.mutationId === mutation.mutationId)) throw new Error('Invalid or unsupported outbox data.');
         state.mutations.push(mutation);
         return mutation;
       }, true);

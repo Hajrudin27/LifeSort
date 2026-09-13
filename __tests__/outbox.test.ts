@@ -205,7 +205,7 @@ it.each(['invalid json', '{"version":2,"state":{}}', '{"version":1,"state":{"acc
 
 it('does not hide a read failure as an empty queue', async () => {
   jest.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('unavailable'));
-  await expect(createOutbox('account-a').list()).rejects.toThrow('Outbox storage could not be read.');
+  await expect(createOutbox('account-a').list()).rejects.toMatchObject({ code: 'read-failed' });
 });
 
 it('isolates accounts and revokes old handles across cleanup', async () => {

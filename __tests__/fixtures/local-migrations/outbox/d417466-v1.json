@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "state": {
+    "accountId": "synthetic-account-a",
+    "mutations": [
+      {
+        "mutationId": "00000000-0000-4000-8000-000000000001",
+        "dataDomain": "core.module-choice",
+        "entityType": "module-choice",
+        "entityId": "tasks",
+        "operation": "upsert",
+        "createdAt": "2026-09-01T10:00:00.000Z",
+        "status": "pending",
+        "attempts": 0,
+        "payload": {
+          "enabled": true
+        }
+      },
+      {
+        "mutationId": "00000000-0000-4000-8000-000000000002",
+        "dataDomain": "core.module-choice",
+        "entityType": "module-choice",
+        "entityId": "tasks",
+        "operation": "upsert",
+        "baseRevision": 1,
+        "createdAt": "2026-09-01T10:00:01.000Z",
+        "status": "failed",
+        "attempts": 3,
+        "payload": {
+          "enabled": false
+        },
+        "nextRetryAt": "2026-09-12T18:00:00.000Z"
+      },
+      {
+        "mutationId": "00000000-0000-4000-8000-000000000003",
+        "dataDomain": "core.module-choice",
+        "entityType": "module-choice",
+        "entityId": "tasks",
+        "operation": "delete",
+        "baseRevision": 2,
+        "createdAt": "2026-09-01T10:00:02.000Z",
+        "status": "failed",
+        "attempts": 6
+      }
+    ]
+  }
+}

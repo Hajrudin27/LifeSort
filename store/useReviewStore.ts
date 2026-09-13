@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -27,9 +28,10 @@ export const useReviewStore = create<ReviewState>()(
     }),
     {
       name: 'lifesort-monthly-review',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
       partialize: (state) => ({ showOnHome: state.showOnHome }),
-      onRehydrateStorage: () => () => {
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) return;
         useReviewStore.setState({ hasHydrated: true });
       },
     },

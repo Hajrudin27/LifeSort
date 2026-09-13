@@ -1,0 +1,13 @@
+{
+  "state": {
+    "cycles": [],
+    "symptomLogs": [],
+    "avgCycleLength": 28,
+    "lutealPhaseLength": 14,
+    "reminderEnabled": false,
+    "reminderDaysBefore": 1,
+    "healthConditions": [],
+    "symptomGlossary": []
+  },
+  "version": 0
+}

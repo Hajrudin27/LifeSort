@@ -15,5 +15,6 @@
     "retrying": "Synkroniserer en ændring…",
     "needsAttention": "En ændring kræver din opmærksomhed. Den er ikke synkroniseret.",
     "authRequired": "Log ind igen for at fortsætte synkroniseringen."
-  }
+  },
+  "localDataUnavailable": "Dine gemte data kunne ikke åbnes sikkert. De er ikke blevet nulstillet. Genstart appen for at prøve igen, eller installer en nyere appversion."
 }

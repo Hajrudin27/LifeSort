@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -526,7 +527,7 @@ export const useTripsStore = create<TripsState>()(
     }),
     {
       name: "lifesort-trips",
-      storage: createJSONStorage(() => documentMetadataEncryptedStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage)),
     },
   ),
 );

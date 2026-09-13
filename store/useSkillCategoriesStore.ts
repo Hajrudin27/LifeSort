@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -35,7 +36,7 @@ export const useSkillCategoriesStore = create<SkillCategoriesState>()(
     }),
     {
       name: 'lifesort-skill-categories',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
     }
   )
 );

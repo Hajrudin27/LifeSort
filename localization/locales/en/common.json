@@ -15,5 +15,6 @@
     "retrying": "Syncing a change…",
     "needsAttention": "A change needs attention. It has not been synced.",
     "authRequired": "Sign in again to continue syncing."
-  }
+  },
+  "localDataUnavailable": "Your saved data could not be opened safely. It has not been reset. Restart the app to try again, or install a newer app version."
 }

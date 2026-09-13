@@ -113,6 +113,9 @@ function isSymptomLogLike(value: unknown): boolean {
 }
 
 function looksLikeLegacyCycleZustandPayload(parsed: Record<string, unknown>): boolean {
+  // Historical writers always used Zustand's explicit default version 0.
+  // Reject before encryption, key creation, or attachment migration.
+  if (parsed.version !== 0) return false;
   if (!isRecord(parsed.state)) return false;
   const state = parsed.state;
   return (
@@ -381,6 +384,9 @@ async function readCycleStorePayload(name: string): Promise<string | null> {
   if (parsed.marker === ENVELOPE_MARKER) {
     try {
       const plaintext = await decryptCycleStorePayload(stored, epoch);
+      if (!looksLikeLegacyCycleZustandPayload(parseStoredJson(plaintext))) {
+        throw new CycleHealthProtectedDataError('legacy-plaintext-malformed', 'Unsupported cycle payload schema.');
+      }
       blockedStorageNames.delete(name);
       return plaintext;
     } catch (error) {

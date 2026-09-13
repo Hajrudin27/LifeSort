@@ -707,6 +707,9 @@ function visitAttachmentLists(payload: Record<string, unknown>, visit: (attachme
 }
 
 function looksLikeKnownDocumentMetadataPayload(storageName: string, parsed: Record<string, unknown>): boolean {
+  // Historical writers always used Zustand's explicit default version 0.
+  // Reject before encryption, key creation, or attachment migration.
+  if (parsed.version !== 0) return false;
   if (!isRecord(parsed.state)) return false;
   const state = parsed.state;
   if (storageName === 'lifesort-expenses') {
@@ -868,6 +871,9 @@ async function readDocumentMetadataPayload(name: string): Promise<string | null>
   if (parsed.marker === METADATA_ENVELOPE_MARKER) {
     try {
       const { plaintext, pendingCleanupRecords } = await decryptDocumentMetadataEnvelope(name, stored, epoch);
+      if (!looksLikeKnownDocumentMetadataPayload(name, parseStoredJson(plaintext))) {
+        throw new DocumentCacheProtectedDataError('legacy-plaintext-malformed', 'Unsupported document metadata schema.');
+      }
       await trackWrite(retryPendingLegacyPlaintextCleanup(name, plaintext, pendingCleanupRecords, stored, epoch));
       blockedStorageNames.delete(name);
       return plaintext;

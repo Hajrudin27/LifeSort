@@ -575,6 +575,14 @@ export type PersistenceSurfaceKind =
   | 'filesystem'
   | 'bundled-source';
 
+export type LocalMigrationPolicy = {
+  kind: 'versioned' | 'external' | 'cleanup-only' | 'immutable/no-schema';
+  owner: string;
+  /** Known payload version. Only versioned policies run generic transforms. */
+  currentVersion?: number;
+  reason: string;
+};
+
 export interface PersistenceSurface {
   id: string;
   kind: PersistenceSurfaceKind;
@@ -582,6 +590,7 @@ export interface PersistenceSurface {
   location: 'device' | 'supabase' | 'bundle';
   containsDomains: readonly DataDomainId[];
   evidence: readonly string[];
+  migration?: LocalMigrationPolicy;
 }
 
 function surface(
@@ -591,46 +600,47 @@ function surface(
   location: PersistenceSurface['location'],
   containsDomains: readonly DataDomainId[],
   evidence: readonly string[],
+  migration?: LocalMigrationPolicy,
 ): PersistenceSurface {
-  return { id, kind, label, location, containsDomains, evidence };
+  return { id, kind, label, location, containsDomains, evidence, migration };
 }
 
 export const PERSISTENCE_SURFACES = [
-  surface('async-storage:lifesort-outbox', 'async-storage', 'Durable outbox JSON via Zustand storage adapter', 'device', ['core.outbox'], ['core/sync/outbox.ts']),
-  surface('async-storage:lifesort-profile', 'async-storage', 'Zustand key lifesort-profile', 'device', ['account.profile', 'account.onboarding'], ['store/useProfileStore.ts']),
-  surface('async-storage:lifesort-verification-last-sent', 'async-storage', 'AsyncStorage key lifesort-verification-last-sent', 'device', ['account.password-recovery-throttle'], ['core/auth/emailVerification.ts']),
-  surface('async-storage:lifesort-app-lock', 'async-storage', 'Zustand key lifesort-app-lock', 'device', ['account.app-lock'], ['store/useAppLockStore.ts']),
-  surface('async-storage:lifesort-settings', 'async-storage', 'Zustand key lifesort-settings', 'device', ['core.preferences'], ['store/useSettingsStore.ts']),
-  surface('async-storage:lifesort-theme', 'async-storage', 'Zustand key lifesort-theme', 'device', ['core.preferences'], ['store/useThemeStore.ts']),
-  surface('async-storage:sync-status', 'async-storage', 'Legacy sync-status timestamp key; cleanup only', 'device', ['core.sync-status'], ['store/useSyncStatusStore.ts']),
-  surface('async-storage:lifesort-module-flags', 'async-storage', 'Zustand key lifesort-module-flags', 'device', ['core.module-flags'], ['store/useModuleFlagsStore.ts']),
-  surface('async-storage:lifesort-enabled-modules', 'async-storage', 'Zustand key lifesort-enabled-modules', 'device', ['core.module-choice'], ['store/useEnabledModulesStore.ts']),
-  surface('async-storage:lifesort-home-layout', 'async-storage', 'Zustand key lifesort-home-layout', 'device', ['core.home-layout'], ['store/useHomeLayoutStore.ts']),
-  surface('async-storage:lifesort-monthly-review', 'async-storage', 'Zustand key lifesort-monthly-review', 'device', ['core.monthly-review-preference'], ['store/useReviewStore.ts']),
-  surface('async-storage:lifesort-expenses', 'async-storage', 'Encrypted Zustand key lifesort-expenses', 'device', ['economy.expenses', 'economy.attachments'], ['store/useExpensesStore.ts', 'core/storage/documentCacheStorage.ts']),
-  surface('async-storage:lifesort-income-v2', 'async-storage', 'Zustand key lifesort-income-v2', 'device', ['economy.income'], ['store/useIncomeStore.ts']),
-  surface('async-storage:lifesort-savings-goals', 'async-storage', 'Zustand key lifesort-savings-goals', 'device', ['economy.savings'], ['store/useSavingsGoalsStore.ts']),
-  surface('async-storage:lifesort-categories', 'async-storage', 'Zustand key lifesort-categories', 'device', ['economy.categories'], ['store/useCategoriesStore.ts']),
-  surface('async-storage:lifesort-food-v2', 'async-storage', 'Zustand key lifesort-food-v2', 'device', ['food.user-grocery-finance', 'food.user-planning', 'food.seed-recipes', 'food.global-catalogue'], ['store/useFoodStore.ts']),
-  surface('async-storage:lifesort-household', 'async-storage', 'Zustand key lifesort-household', 'device', ['home.household'], ['store/useHouseholdStore.ts']),
-  surface('async-storage:lifesort-life-goals', 'async-storage', 'Zustand key lifesort-life-goals', 'device', ['goals.life-goals'], ['store/useLifeGoalsStore.ts']),
-  surface('async-storage:lifesort-habits', 'async-storage', 'Zustand key lifesort-habits', 'device', ['habits.habits'], ['store/useHabitsStore.ts']),
-  surface('async-storage:lifesort-todos', 'async-storage', 'Zustand key lifesort-todos', 'device', ['tasks.todos'], ['store/useTodoStore.ts']),
-  surface('async-storage:lifesort-trips', 'async-storage', 'Encrypted Zustand key lifesort-trips', 'device', ['travel.trips', 'travel.attachments'], ['store/useTripsStore.ts', 'core/storage/documentCacheStorage.ts']),
-  surface('async-storage:lifesort-warranties', 'async-storage', 'Encrypted Zustand key lifesort-warranties', 'device', ['warranties.records', 'warranties.attachments'], ['store/useWarrantiesStore.ts', 'core/storage/documentCacheStorage.ts']),
-  surface('async-storage:lifesort-career', 'async-storage', 'Zustand key lifesort-career', 'device', ['career.applications', 'career.skills'], ['store/useCareerStore.ts']),
-  surface('async-storage:lifesort-cv', 'async-storage', 'Zustand key lifesort-cv', 'device', ['career.cv'], ['store/useCVStore.ts']),
-  surface('async-storage:lifesort-skill-categories', 'async-storage', 'Zustand key lifesort-skill-categories', 'device', ['career.skills'], ['store/useSkillCategoriesStore.ts']),
-  surface('async-storage:lifesort-cycle', 'async-storage', 'Encrypted Zustand key lifesort-cycle', 'device', ['cycle.user-health', 'cycle.reference-content'], ['store/useCycleStore.ts', 'core/storage/cycleHealthEncryptedStorage.ts']),
-  surface('async-storage:supabase-session-web-or-legacy', 'async-storage', 'Supabase session web fallback and legacy migration source', 'device', ['account.auth-session'], ['utils/auth/secureSessionStorage.ts']),
-  surface('secure-store:supabase-session', 'secure-store', 'Supabase auth session in SecureStore', 'device', ['account.auth-session'], ['utils/auth/secureSessionStorage.ts']),
-  surface('secure-store:lifesort-app-pin-hash', 'secure-store', 'App-lock PIN hash', 'device', ['account.app-lock'], ['utils/auth/pinAuth.ts']),
-  surface('secure-store:lifesort-pin-lockout', 'secure-store', 'App-lock failed-attempt lockout counter', 'device', ['account.app-lock'], ['utils/auth/pinLockout.ts']),
-  surface('secure-store:lifesort-cycle-health-key', 'secure-store', 'AES-GCM key for encrypted cycle health persistence', 'device', ['cycle.user-health'], ['core/storage/cycleHealthEncryptedStorage.ts']),
-  surface('secure-store:lifesort-document-cache-key', 'secure-store', 'AES-GCM key for encrypted document cache files and metadata', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['core/storage/documentCacheStorage.ts']),
-  surface('filesystem:document-directory/attachments', 'filesystem', 'Encrypted local attachment directory', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['utils/shared/attachmentStorage.ts', 'core/storage/documentCacheStorage.ts']),
-  surface('filesystem:cache-directory/lifesort-decrypted-attachments', 'filesystem', 'Temporary decrypted attachment interoperability cache', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['core/storage/documentCacheStorage.ts']),
-  surface('filesystem:document-directory/lifesort-backup-json', 'filesystem', 'Local backup export JSON', 'device', ['core.local-backup-archive'], ['utils/shared/dataBackup.ts']),
+  surface('async-storage:lifesort-outbox', 'async-storage', 'Durable outbox JSON via Zustand storage adapter', 'device', ['core.outbox'], ['core/sync/outbox.ts'], { kind: 'versioned', owner: 'core/storage/migrations/outbox.ts', currentVersion: 1, reason: 'Validate existing v1 unchanged; no historical v0 exists.' }),
+  surface('async-storage:lifesort-profile', 'async-storage', 'Zustand key lifesort-profile', 'device', ['account.profile', 'account.onboarding'], ['store/useProfileStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useProfileStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-verification-last-sent', 'async-storage', 'AsyncStorage key lifesort-verification-last-sent', 'device', ['account.password-recovery-throttle'], ['core/auth/emailVerification.ts'], { kind: 'immutable/no-schema', owner: 'core/auth/emailVerification.ts', reason: 'Scalar decimal timestamp, no structured schema upgrade.' }),
+  surface('async-storage:lifesort-app-lock', 'async-storage', 'Zustand key lifesort-app-lock', 'device', ['account.app-lock'], ['store/useAppLockStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useAppLockStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-settings', 'async-storage', 'Zustand key lifesort-settings', 'device', ['core.preferences'], ['store/useSettingsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useSettingsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-theme', 'async-storage', 'Zustand key lifesort-theme', 'device', ['core.preferences'], ['store/useThemeStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useThemeStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:sync-status', 'async-storage', 'Legacy sync-status timestamp key; cleanup only', 'device', ['core.sync-status'], ['store/useSyncStatusStore.ts'], { kind: 'cleanup-only', owner: 'store/useSyncStatusStore.ts', reason: 'APP-036 has no reads or writes; APP-021 logout sweep removes the legacy key.' }),
+  surface('async-storage:lifesort-module-flags', 'async-storage', 'Zustand key lifesort-module-flags', 'device', ['core.module-flags'], ['store/useModuleFlagsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useModuleFlagsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-enabled-modules', 'async-storage', 'Zustand key lifesort-enabled-modules', 'device', ['core.module-choice'], ['store/useEnabledModulesStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useEnabledModulesStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-home-layout', 'async-storage', 'Zustand key lifesort-home-layout', 'device', ['core.home-layout'], ['store/useHomeLayoutStore.ts'], { kind: 'versioned', owner: 'core/storage/migrations/homeLayout.ts', currentVersion: 1, reason: 'Historical Zustand v0 layouts upgrade to v1 before hydration.' }),
+  surface('async-storage:lifesort-monthly-review', 'async-storage', 'Zustand key lifesort-monthly-review', 'device', ['core.monthly-review-preference'], ['store/useReviewStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useReviewStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-expenses', 'async-storage', 'Encrypted Zustand key lifesort-expenses', 'device', ['economy.expenses', 'economy.attachments'], ['store/useExpensesStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
+  surface('async-storage:lifesort-income-v2', 'async-storage', 'Zustand key lifesort-income-v2', 'device', ['economy.income'], ['store/useIncomeStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useIncomeStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-savings-goals', 'async-storage', 'Zustand key lifesort-savings-goals', 'device', ['economy.savings'], ['store/useSavingsGoalsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useSavingsGoalsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-categories', 'async-storage', 'Zustand key lifesort-categories', 'device', ['economy.categories'], ['store/useCategoriesStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useCategoriesStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-food-v2', 'async-storage', 'Zustand key lifesort-food-v2', 'device', ['food.user-grocery-finance', 'food.user-planning', 'food.seed-recipes', 'food.global-catalogue'], ['store/useFoodStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useFoodStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-household', 'async-storage', 'Zustand key lifesort-household', 'device', ['home.household'], ['store/useHouseholdStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useHouseholdStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-life-goals', 'async-storage', 'Zustand key lifesort-life-goals', 'device', ['goals.life-goals'], ['store/useLifeGoalsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useLifeGoalsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-habits', 'async-storage', 'Zustand key lifesort-habits', 'device', ['habits.habits'], ['store/useHabitsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useHabitsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-todos', 'async-storage', 'Zustand key lifesort-todos', 'device', ['tasks.todos'], ['store/useTodoStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useTodoStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-trips', 'async-storage', 'Encrypted Zustand key lifesort-trips', 'device', ['travel.trips', 'travel.attachments'], ['store/useTripsStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
+  surface('async-storage:lifesort-warranties', 'async-storage', 'Encrypted Zustand key lifesort-warranties', 'device', ['warranties.records', 'warranties.attachments'], ['store/useWarrantiesStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
+  surface('async-storage:lifesort-career', 'async-storage', 'Zustand key lifesort-career', 'device', ['career.applications', 'career.skills'], ['store/useCareerStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useCareerStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-cv', 'async-storage', 'Zustand key lifesort-cv', 'device', ['career.cv'], ['store/useCVStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useCVStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-skill-categories', 'async-storage', 'Zustand key lifesort-skill-categories', 'device', ['career.skills'], ['store/useSkillCategoriesStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useSkillCategoriesStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-cycle', 'async-storage', 'Encrypted Zustand key lifesort-cycle', 'device', ['cycle.user-health', 'cycle.reference-content'], ['store/useCycleStore.ts', 'core/storage/cycleHealthEncryptedStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/cycleHealthEncryptedStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
+  surface('async-storage:supabase-session-web-or-legacy', 'async-storage', 'Supabase session web fallback and legacy migration source', 'device', ['account.auth-session'], ['utils/auth/secureSessionStorage.ts'], { kind: 'external', owner: 'utils/auth/secureSessionStorage.ts', reason: 'Supabase-owned session JSON and specialized secure chunking/legacy move; no generic auth transforms.' }),
+  surface('secure-store:supabase-session', 'secure-store', 'Supabase auth session in SecureStore', 'device', ['account.auth-session'], ['utils/auth/secureSessionStorage.ts'], { kind: 'external', owner: 'utils/auth/secureSessionStorage.ts', reason: 'Supabase-owned session JSON and specialized secure chunking/legacy move; no generic auth transforms.' }),
+  surface('secure-store:lifesort-app-pin-hash', 'secure-store', 'App-lock PIN hash', 'device', ['account.app-lock'], ['utils/auth/pinAuth.ts'], { kind: 'external', owner: 'utils/auth/pinAuth.ts', reason: 'PIN verification upgrades legacy SHA-256 to PBKDF2 v2 using the supplied PIN; cannot run deterministically at startup.' }),
+  surface('secure-store:lifesort-pin-lockout', 'secure-store', 'App-lock failed-attempt lockout counter', 'device', ['account.app-lock'], ['utils/auth/pinLockout.ts'], { kind: 'external', owner: 'utils/auth/pinLockout.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('secure-store:lifesort-cycle-health-key', 'secure-store', 'AES-GCM key for encrypted cycle health persistence', 'device', ['cycle.user-health'], ['core/storage/cycleHealthEncryptedStorage.ts'], { kind: 'immutable/no-schema', owner: 'core/storage/cycleHealthEncryptedStorage.ts', reason: 'Opaque crypto material; adapter owns creation and deletion, never generic transforms.' }),
+  surface('secure-store:lifesort-document-cache-key', 'secure-store', 'AES-GCM key for encrypted document cache files and metadata', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['core/storage/documentCacheStorage.ts'], { kind: 'immutable/no-schema', owner: 'core/storage/documentCacheStorage.ts', reason: 'Opaque crypto material; adapter owns creation and deletion, never generic transforms.' }),
+  surface('filesystem:document-directory/attachments', 'filesystem', 'Encrypted local attachment directory', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['utils/shared/attachmentStorage.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
+  surface('filesystem:cache-directory/lifesort-decrypted-attachments', 'filesystem', 'Temporary decrypted attachment interoperability cache', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['core/storage/documentCacheStorage.ts'], { kind: 'cleanup-only', owner: 'core/storage/documentCacheStorage.ts', reason: 'Ephemeral viewer/share files; adapter cleanup, never a migration backup.' }),
+  surface('filesystem:document-directory/lifesort-backup-json', 'filesystem', 'Local backup export JSON', 'device', ['core.local-backup-archive'], ['utils/shared/dataBackup.ts'], { kind: 'external', owner: 'utils/shared/dataBackup.ts', reason: 'User export/import format owned by backupValidation; APP-097 policy is separate from app hydration.' }),
   surface('supabase-auth:auth.users', 'supabase-auth', 'Supabase Auth users', 'supabase', ['account.auth-identity'], ['store/useAuthStore.ts']),
   surface('supabase-table:profiles', 'supabase-table', 'public.profiles', 'supabase', ['account.profile', 'account.onboarding'], ['store/useProfileStore.ts']),
   surface('supabase-table:settings', 'supabase-table', 'public.settings', 'supabase', ['core.preferences'], ['store/useSettingsStore.ts', 'store/useThemeStore.ts']),

@@ -1,7 +1,7 @@
 # LifeSort - Data Profile Registry
 
 **Story:** APP-027 (E3 - Storage & sync platform, P0)
-**Status:** Declarative registry, updated through APP-031 for encrypted health/document storage and the ordinary durable outbox. Remote sync behavior and generic migrations remain deferred.
+**Status:** Updated through APP-038. Device surfaces declare migration ownership; representative local upgrades and startup gates are implemented. See the [APP-038 audit](./local-migrations.md).
 **Owner of this document:** Hajrudin Kardasevic
 **Code source:** [`core/storage/dataProfileRegistry.ts`](../core/storage/dataProfileRegistry.ts)
 **Verified by:** [`__tests__/dataProfileRegistry.test.ts`](../__tests__/dataProfileRegistry.test.ts)
@@ -155,7 +155,7 @@ migration, encrypted retry records for required plaintext cleanup, and
 temporary decrypted cache cleanup. APP-030 cryptographic UUID changes, APP-031
 durable outbox, APP-032 idempotency, APP-033 revisions/`updated_at`, APP-034
 tombstones, APP-035 conflict handling, APP-036 sync UX, APP-037
-connectivity-aware sync and APP-038 migration harness remain deferred.
+connectivity-aware sync and APP-038 migration harness are implemented. APP-038 migrates Home layout and validates outbox compatibility; feature-schema expansion remains deferred.
 
 ## Human Review Notes
 
@@ -166,3 +166,19 @@ connectivity-aware sync and APP-038 migration harness remain deferred.
 - `core.local-backup-archive` is Profile B because backup exports can include
   attachment metadata even though cycle data is currently excluded. APP-029 did
   not redesign backup/export encryption.
+
+## Local migration ownership (APP-038)
+
+`PersistenceSurface.migration` declares `kind`, `owner`, `reason`, and the known
+payload `currentVersion` when applicable. Every device surface must supply a
+policy. Versioned definitions are resolved from these registered surfaces;
+there is no second persistence inventory. External Zustand owners retain v0
+and receive an envelope/version guard at the adapter boundary. Specialized
+health and document adapters retain encryption ownership. Remote surfaces and
+bundled immutable content do not participate in the local startup runner.
+
+See [ADR-0033](./adr/0033-local-persisted-data-migrations-are-versioned-deterministic-and-fail-closed.md)
+for rollback limits, startup ordering, fixture retention and external-owner
+limitations. The [fixture manifest](../__tests__/fixtures/local-migrations/manifest.json)
+and `localMigrationFixtures.test.ts` enforce registered ownership, actual source
+commits and representative fixture coverage alongside the existing inventory gates.

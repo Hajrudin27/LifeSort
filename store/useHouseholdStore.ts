@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
@@ -248,7 +249,7 @@ export const useHouseholdStore = create<HouseholdState>()(
     }),
     {
       name: 'lifesort-household',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (state.movingItems.length === 0) {

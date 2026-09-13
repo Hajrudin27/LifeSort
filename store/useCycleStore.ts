@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -241,7 +242,7 @@ export const useCycleStore = create<CycleState>()(
     }),
     {
       name: 'lifesort-cycle',
-      storage: createJSONStorage(() => cycleHealthEncryptedStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(cycleHealthEncryptedStorage)),
     }
   )
 );

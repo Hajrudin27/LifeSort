@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import i18n from '@/localization/i18n';
 import { scheduleIncomeReminder } from '@/utils/expense/incomeReminder';
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -66,7 +67,7 @@ export const useIncomeStore = create<IncomeState>()(
     }),
     {
       name: "lifesort-income-v2",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
     },
   ),
 );  

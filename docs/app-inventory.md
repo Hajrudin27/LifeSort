@@ -365,6 +365,7 @@ module that owns it.
 | `Toast` | `components/Toast.tsx` | shared | Hajrudin Kardasevic |
 | `FloatingTabBar` | `components/FloatingTabBar.tsx` | `core-shell` | Hajrudin Kardasevic |
 | `SyncStatusBanner` | `components/SyncStatusBanner.tsx` | `core-shell` | Hajrudin Kardasevic |
+| `StorageStartupFailure` | `components/StorageStartupFailure.tsx` | `core-shell` | Hajrudin Kardasevic |
 | `ModuleGate` | `components/ModuleGate.tsx` | `core-shell` | Hajrudin Kardasevic |
 | `ModuleChoiceList` | `components/ModuleChoiceList.tsx` | `core-shell` | Hajrudin Kardasevic |
 | `useClientOnlyValue` | `components/useClientOnlyValue.ts` | `core-shell` | Hajrudin Kardasevic |

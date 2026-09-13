@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -43,7 +44,7 @@ export const useModuleFlagsStore = create<ModuleFlagsState>()(
     }),
     {
       name: 'lifesort-module-flags',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
     },
   ),
 );

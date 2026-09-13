@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -53,8 +54,9 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'lifesort-settings',
-      storage: createJSONStorage(() => AsyncStorage),
-      onRehydrateStorage: () => (state) => {
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) return;
         state?.setLanguage;
         useSettingsStore.setState({ hasHydrated: true });
       },

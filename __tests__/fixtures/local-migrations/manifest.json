@@ -1,0 +1,46 @@
+[
+  {
+    "file": "home-layout/c4715e6-v0.json",
+    "storeId": "async-storage:lifesort-home-layout",
+    "storageKey": "lifesort-home-layout",
+    "sourceCommit": "c4715e6",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A"
+  },
+  {
+    "file": "home-layout/d417466-v0.json",
+    "storeId": "async-storage:lifesort-home-layout",
+    "storageKey": "lifesort-home-layout",
+    "sourceCommit": "d417466",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A"
+  },
+  {
+    "file": "outbox/d417466-v1.json",
+    "storeId": "async-storage:lifesort-outbox",
+    "storageKey": "lifesort-outbox",
+    "sourceCommit": "d417466",
+    "sourceVersion": 1,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A"
+  },
+  {
+    "file": "cycle/94f39eb-plaintext-v0.json",
+    "storeId": "async-storage:lifesort-cycle",
+    "storageKey": "lifesort-cycle",
+    "sourceCommit": "94f39eb",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "B/D; synthetic defaults, no health records"
+  }
+]

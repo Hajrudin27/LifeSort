@@ -1,3 +1,4 @@
+import { withMigrationStorageCleanup } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
@@ -52,7 +53,7 @@ export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Pr
   clearAttachmentViewerSources();
   let pendingCleanupError: unknown;
 
-  await withCycleHealthEncryptedStorageCleanup(async () => withDocumentCacheCleanup(async () => withOutboxCleanup(async () => {
+  await withMigrationStorageCleanup(async () => withCycleHealthEncryptedStorageCleanup(async () => withDocumentCacheCleanup(async () => withOutboxCleanup(async () => {
     try {
       // 1. Hukommelsen.
       for (const store of resets) {
@@ -97,5 +98,5 @@ export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Pr
     }
 
     if (pendingCleanupError) throw pendingCleanupError;
-  })));
+  }))));
 }

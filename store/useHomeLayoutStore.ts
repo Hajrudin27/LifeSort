@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -66,14 +67,16 @@ export const useHomeLayoutStore = create<HomeLayoutState>()(
     }),
     {
       name: 'lifesort-home-layout',
-      storage: createJSONStorage(() => AsyncStorage),
+      version: 1,
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
       partialize: (state) => ({
         pinned: state.pinned,
         hidden: state.hidden,
         detail: state.detail,
         lastOpenedAt: state.lastOpenedAt,
       }),
-      onRehydrateStorage: () => () => {
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) return;
         useHomeLayoutStore.setState({ hasHydrated: true });
       },
     },

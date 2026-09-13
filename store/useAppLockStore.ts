@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -23,7 +24,7 @@ export const useAppLockStore = create<AppLockState>()(
     }),
     {
       name: 'lifesort-app-lock',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
       partialize: (state) => ({ lockEnabled: state.lockEnabled }), // isLocked skal ALDRIG persisteres
       onRehydrateStorage: () => (state) => {
         useAppLockStore.setState({ hasHydrated: true });

@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -328,7 +329,7 @@ export const useExpensesStore = create<ExpensesState>()(
     }),
     {
       name: 'lifesort-expenses',
-      storage: createJSONStorage(() => documentMetadataEncryptedStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage)),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         const seenIds = new Set<string>();

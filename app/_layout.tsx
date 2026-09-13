@@ -17,6 +17,11 @@ import { AppState, AppStateStatus } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
+import { whenStoreHydrated } from '@/core/storage/storeHydration';
+import { useHomeLayoutStore } from '@/store/useHomeLayoutStore';
+import { finalizeStartupStorage } from '@/core/storage/migrations/runtime';
+
+import StorageStartupFailure from '@/components/StorageStartupFailure';
 import LockScreen from "@/components/LockScreen";
 import ModuleGate from "@/components/ModuleGate";
 import PrivacyOverlay from "@/components/PrivacyOverlay";
@@ -93,6 +98,26 @@ const DarkNavTheme = {
 };
 
 export default function RootLayout() {
+  const [storageState, setStorageState] = useState<'pending' | 'ready' | 'failed'>('pending');
+  useEffect(() => {
+    let active = true;
+    void finalizeStartupStorage().then(() => whenStoreHydrated(useHomeLayoutStore)).then(
+      () => { if (active) setStorageState('ready'); },
+      () => {
+        if (active) setStorageState('failed');
+        void SplashScreen.hideAsync();
+      },
+    );
+    return () => { active = false; };
+  }, []);
+  if (storageState === 'failed') {
+    return <StorageStartupFailure />;
+  }
+  if (storageState !== 'ready') return null;
+  return <ReadyRootLayout />;
+}
+
+function ReadyRootLayout() {
   useSyncStatusLifecycle();
   // Sender køen af sig selv, når appen er fremme og online (APP-037).
   useSyncCoordinatorLifecycle();

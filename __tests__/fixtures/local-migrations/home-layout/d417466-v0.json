@@ -1,0 +1,19 @@
+{
+  "state": {
+    "pinned": [
+      "tasks",
+      "economy"
+    ],
+    "hidden": [
+      "career"
+    ],
+    "lastOpenedAt": {
+      "tasks": "2026-09-01T10:00:00.000Z"
+    },
+    "detail": {
+      "economy": "masked",
+      "cycle": "masked"
+    }
+  },
+  "version": 0
+}

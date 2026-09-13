@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createJSONStorage } from 'zustand/middleware';
 
@@ -496,4 +497,54 @@ describe('APP-029 document cache storage', () => {
 
     await expect(resolveLocalAttachmentUri(encryptedUri, 'receipt.jpg')).resolves.toContain(DECRYPTED_ATTACHMENTS_DIR);
   });
+  it.each([false, true])('APP-038 preserves unsupported document inner versions, encrypted=%s', async (encrypted) => {
+    const future = JSON.stringify({ ...JSON.parse(legacyExpensesPayload('')), version: 99 });
+    const raw = encrypted ? await encryptDocumentMetadataPayload('lifesort-expenses', future) : future;
+    await AsyncStorage.setItem('lifesort-expenses', raw);
+    (AsyncStorage.setItem as jest.Mock).mockClear();
+    await expect(documentMetadataEncryptedStorage.getItem('lifesort-expenses')).rejects.toBeDefined();
+    expect(await AsyncStorage.getItem('lifesort-expenses')).toBe(raw);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
+
+  const documentKeys = ['lifesort-expenses', 'lifesort-trips', 'lifesort-warranties'];
+  function metadataFor(key: string) {
+    const expense = JSON.parse(legacyExpensesPayload()).state.expenses[0];
+    const state = key === 'lifesort-expenses' ? JSON.parse(legacyExpensesPayload()).state
+      : key === 'lifesort-warranties' ? { warranties: [{ id: 'synthetic-warranty', attachments: expense.attachments }] }
+      : { trips: [{ id: 'synthetic-trip', documents: expense.attachments }], expenses: [], packingItems: [], participants: [], myUserId: null };
+    return { state, version: 0 };
+  }
+  it.each(documentKeys.flatMap((key) => [false, true].flatMap((encrypted) => [undefined, 99].map((version) => ({ key, encrypted, version })))))
+  ('preserves unsupported metadata through the wrapper: $key encrypted=$encrypted version=$version', async ({ key, encrypted, version }) => {
+    const plaintext = JSON.stringify({ ...metadataFor(key), version });
+    mockFiles.set(`${ATTACHMENTS_DIR}receipt.jpg`, mockTextBytes('synthetic document'));
+    const raw = encrypted ? await encryptDocumentMetadataPayload(key, plaintext) : plaintext;
+    await AsyncStorage.setItem(key, raw);
+    const originalFiles = [...mockFiles.entries()]; const originalDirectories = [...mockDirectories];
+    const wroteFile = jest.fn(); mockWriteStarted = wroteFile;
+    jest.clearAllMocks();
+    await expect(migrationGatedStorage(documentMetadataEncryptedStorage).getItem(key)).rejects.toMatchObject({ code: 'read-failed' });
+    expect(await AsyncStorage.getItem(key)).toBe(raw);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled(); expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalled(); expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+    expect(require('expo-crypto').aesEncryptAsync).not.toHaveBeenCalled();
+    expect(require('expo-file-system/legacy').deleteAsync).not.toHaveBeenCalled();
+    expect(wroteFile).not.toHaveBeenCalled();
+    expect([...mockFiles.entries()]).toEqual(originalFiles); expect([...mockDirectories]).toEqual(originalDirectories);
+  });
+  it.each(documentKeys)('still migrates and parses real v0 metadata through the wrapper: %s', async (key) => {
+    mockFiles.set(`${ATTACHMENTS_DIR}receipt.jpg`, mockTextBytes('synthetic document'));
+    await AsyncStorage.setItem(key, JSON.stringify(metadataFor(key)));
+    const jsonStorage = createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage))!;
+    const hydrated = await jsonStorage.getItem(key);
+    expect(hydrated!.version).toBe(0);
+    expect(hydrated!.state).toBeDefined();
+    const encrypted = await AsyncStorage.getItem(key);
+    expect(encrypted).toContain('__lifesort_encrypted_document_metadata__');
+    (AsyncStorage.setItem as jest.Mock).mockClear();
+    expect(await jsonStorage.getItem(key)).toEqual(hydrated);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
+
 });

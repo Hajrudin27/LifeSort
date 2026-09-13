@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -245,9 +246,10 @@ export const useEnabledModulesStore = create<EnabledModulesState>()(
     },
     {
       name: 'lifesort-enabled-modules',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
       partialize: (state) => ({ enablement: state.enablement }),
-      onRehydrateStorage: () => () => {
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) return;
         useEnabledModulesStore.setState({ hasHydrated: true });
       },
     },

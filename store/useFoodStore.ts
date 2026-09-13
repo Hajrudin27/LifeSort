@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
@@ -456,7 +457,7 @@ export const useFoodStore = create<FoodState>()(
     }),
     {
       name: 'lifesort-food-v2',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (state.recipes.length === 0) {

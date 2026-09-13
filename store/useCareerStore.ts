@@ -1,3 +1,4 @@
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
@@ -177,7 +178,7 @@ export const useCareerStore = create<CareerState>()(
     }),
     {
       name: "lifesort-career",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
     },
   ),
 );

@@ -72,7 +72,8 @@ to forget, and it is removed by APP-071.
 
 ## Known limits of this gate
 
-- It runs in CI and on `npm test`, not in the editor. There is no red squiggle
+- It runs on `npm test`, not in the editor. No GitHub Actions workflow is
+  committed yet, so CI execution is not currently established. There is no red squiggle
   while you type; you find out when you run the tests.
 - It matches static `from '@/store/…'` imports. A dynamic `await import()` of a
   store, or a re-export through a barrel file, would not be seen. Neither

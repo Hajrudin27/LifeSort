@@ -1,5 +1,7 @@
 # LifeSort
 
+[![CI](https://github.com/Hajrudin27/LifeSort/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Hajrudin27/LifeSort/actions/workflows/ci.yml)
+
 A modular personal-organisation app for everyday records and planning: finances, tasks, habits, food, travel and other life domains.
 
 **TypeScript · React Native · Expo SDK 57 · Supabase / PostgreSQL · Zustand · Jest**
@@ -106,7 +108,7 @@ node --test tests/db/*.test.cjs
 
 They create disposable clusters with stand-ins for the Supabase auth surface and test mutation receipts, revisions, deletion records, RLS and concurrency. They do not contact a hosted database or verify the complete Supabase migration chain.
 
-Use a full Git clone: local-migration fixture checks reference historical commits. **No GitHub Actions workflow is committed yet**, so the gates above must currently be run locally.
+Use a full Git clone: local-migration fixture checks reference historical commits. [GitHub Actions](.github/workflows/ci.yml) runs TypeScript, Jest/architecture checks and isolated PostgreSQL regression tests on pull requests and pushes to `main`. Pull requests also run the ADR change gate against their base commit. CI needs no production credentials and does not run native builds or verify a hosted backend.
 
 ## Reading the project
 

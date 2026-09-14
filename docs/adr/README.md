@@ -73,9 +73,9 @@ npm run check:adr            # compare against main
 npm run check:adr -- <ref>   # compare against another ref
 ```
 
-**No CI runs this yet** — the repository has no CI at all. Until APP-139 and
-APP-141 set that up, it is a command you run, or hang off a pre-push hook. The
-test suite still checks that the register itself is well-formed.
+[GitHub Actions](../../.github/workflows/ci.yml) runs the change gate on pull
+requests against the PR base commit. The Jest suite checks the register itself
+on pull requests and pushes to `main`. Both commands can also be run locally.
 
 Other changes are welcome to have an ADR, but only these require one. An ADR for
 every decision is how a register becomes noise nobody reads.

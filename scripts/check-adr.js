@@ -8,8 +8,8 @@
  *   npm run check:adr            # sammenlign med main
  *   npm run check:adr -- <ref>   # sammenlign med en anden ref
  *
- * Ingen CI kører den endnu (APP-139/APP-141 sætter det op). Indtil da er den
- * noget man kalder selv eller hænger på en pre-push hook. Reglen står i
+ * GitHub Actions kører den på pull requests mod deres base-commit. Den kan
+ * også køres lokalt eller fra en pre-push hook. Reglen står i
  * docs/adr/README.md, og listen herunder er det ene sted den findes — testen
  * importerer den herfra frem for at gentage den.
  */

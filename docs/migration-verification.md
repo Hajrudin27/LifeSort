@@ -4,6 +4,11 @@
 **Scope:** the four migrations in `supabase/migrations/`, and the deployment tasks left open by E2.
 **Status:** migrations **verified but not applied**. See "What remains" below.
 
+> Historical verification record from 2026-09-08. The repository now contains
+> additional migrations and `tests/db/` regression harnesses. The environment,
+> filenames and deployment notes below describe that earlier audit, not current
+> hosted state or instructions to apply the entire migration directory.
+
 ## Environment available
 
 | | |

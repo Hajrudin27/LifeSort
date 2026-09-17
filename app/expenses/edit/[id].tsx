@@ -10,11 +10,14 @@ import CategoryPicker from "@/components/CategoryPicker";
 import DatePickerField from "@/components/DatePickerField";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { minorUnitsToInputText } from "@/core/money/decimal";
+import { parseSupportedMoneyInput } from "@/core/money/supportedMoney";
+import { decimalSeparatorFor, moneyLocaleFor } from "@/core/money/format";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { ExpenseCategory } from "@/types/expense";
 
 export default function EditExpenseScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const borderColor = useThemeColor({}, "border");
   const surface = useThemeColor({}, "surface");
@@ -29,7 +32,9 @@ export default function EditExpenseScreen() {
   const removeAttachment = useExpensesStore((s) => s.removeAttachment);
 
   const [name, setName] = useState(expense?.name ?? "");
-  const [amount, setAmount] = useState(expense?.amount.toString() ?? "");
+  const [amount, setAmount] = useState(
+    expense ? minorUnitsToInputText(expense.amount, decimalSeparatorFor(moneyLocaleFor(i18n.language))) : "",
+  );
   const [category, setCategory] = useState<ExpenseCategory>(expense?.category ?? "subscription");
   const [nextPaymentDate, setNextPaymentDate] = useState(expense?.nextPaymentDate ?? "");
   const [isRecurring, setIsRecurring] = useState(expense?.isRecurring ?? false);
@@ -42,10 +47,13 @@ export default function EditExpenseScreen() {
     );
   }
 
-  const canSave = name.trim().length > 0 && !isNaN(parseFloat(amount));
+  // Eksisterende regel: ethvert gyldigt beløb må gemmes her, også nul og negativt.
+  const parsedAmount = parseSupportedMoneyInput(amount);
+  const canSave = name.trim().length > 0 && parsedAmount.ok;
 
   const save = () => {
-    updateExpense(expense.id, { name: name.trim(), amount: parseFloat(amount), category, nextPaymentDate, isRecurring });
+    if (!parsedAmount.ok) return;
+    updateExpense(expense.id, { name: name.trim(), amount: parsedAmount.value, category, nextPaymentDate, isRecurring });
     router.back();
   };
 

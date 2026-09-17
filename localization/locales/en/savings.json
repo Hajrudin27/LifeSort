@@ -58,7 +58,7 @@
   "paceTitle": "Pace",
   "paceEstimate": "At your current pace, you'll reach this goal in about {{months}} months.",
   "paceReached": "Goal already reached!",
-  "paceRequired": "To meet your deadline, you need to save {{amount}} kr. per month.",
+  "paceRequired": "To meet your deadline, you need to save {{amount}} per month.",
   "setDeadlineToggle": "Set a deadline",
   "deadlineLabel": "Deadline",
   "distributeEqually": "Distribute equally",

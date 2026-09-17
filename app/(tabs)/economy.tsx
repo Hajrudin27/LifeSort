@@ -20,6 +20,8 @@ import SectionHeader from "@/components/SectionHeader";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useBrandTints } from "@/hooks/useBrandTints";
 import { useModuleTints } from "@/hooks/useModuleTints";
+import { formatDkk, moneyLocaleFor } from "@/core/money/format";
+import { sumMinorUnits, type MinorUnits } from "@/core/money/minorUnits";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { useFoodStore } from "@/store/useFoodStore";
 import { useIncomeStore } from "@/store/useIncomeStore";
@@ -71,8 +73,8 @@ export default function EconomyScreen() {
   const [showExpiringModal, setShowExpiringModal] = useState(false);
 
   const goals = useSavingsGoalsStore((s) => s.goals);
-  const totalSaved = goals.reduce((sum, g) => sum + g.savedAmount, 0);
-  const totalTarget = goals.reduce((sum, g) => sum + g.targetAmount, 0);
+  const totalSaved = sumMinorUnits(goals.map((g) => g.savedAmount));
+  const totalTarget = sumMinorUnits(goals.map((g) => g.targetAmount));
   const savingsProgress = totalTarget > 0 ? totalSaved / totalTarget : 0;
   const [showSavingsModal, setShowSavingsModal] = useState(false);
 
@@ -111,8 +113,12 @@ export default function EconomyScreen() {
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     )[0];
   const daysToTrip = upcomingTrip ? daysUntil(upcomingTrip.startDate) : null;
-  const locale = i18n.language === "da" ? "da-DK" : "en-US";
-  const currency = new Intl.NumberFormat(locale, {
+  const locale = moneyLocaleFor(i18n.language);
+  // Economy amounts are DKK MinorUnits and use the shared formatter (APP-040).
+  const formatEconomy = (amount: MinorUnits) => formatDkk(amount, locale);
+  // Food is NOT migrated: its purchases and budgets are still major-unit numbers,
+  // so they keep their existing display and must never reach formatDkk.
+  const foodCurrency = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "DKK",
     maximumFractionDigits: 0,
@@ -127,7 +133,7 @@ export default function EconomyScreen() {
       key: "expenses",
       title: t("economy.expenses"),
       subtitle: t("economy.expensesSubtitle", {
-        amount: currency.format(monthTotal),
+        amount: formatEconomy(monthTotal),
       }),
       icon: { ios: "creditcard.fill", android: "credit_card", web: "credit_card" },
       route: "/expenses" as const,
@@ -166,8 +172,8 @@ export default function EconomyScreen() {
       subtitle:
         foodWeeklyBudget !== null
           ? t("economy.foodSubtitle", {
-              amount: currency.format(foodSpentThisWeek),
-              budget: currency.format(foodWeeklyBudget),
+              amount: foodCurrency.format(foodSpentThisWeek),
+              budget: foodCurrency.format(foodWeeklyBudget),
             })
           : t("economy.foodMissingBudget"),
       icon: { ios: "fork.knife", android: "restaurant", web: "restaurant" },
@@ -221,13 +227,13 @@ export default function EconomyScreen() {
           <View style={styles.heroStats}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{t("economy.monthSpendLabel")}</Text>
-              <Text style={styles.heroStatValue}>{currency.format(monthTotal)}</Text>
+              <Text style={styles.heroStatValue}>{formatEconomy(monthTotal)}</Text>
             </View>
             <View style={styles.heroDivider} />
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{t("economy.balanceLabel")}</Text>
               <Text style={styles.heroStatValue}>
-                {monthBalance !== null ? currency.format(monthBalance) : t("economy.noIncome")}
+                {monthBalance !== null ? formatEconomy(monthBalance) : t("economy.noIncome")}
               </Text>
             </View>
           </View>
@@ -237,7 +243,7 @@ export default function EconomyScreen() {
           <MetricCard
             icon={{ ios: "banknote.fill", android: "payments", web: "payments" }}
             label={t("economy.incomeLabel")}
-            value={netIncome !== null ? currency.format(netIncome) : t("economy.noIncome")}
+            value={netIncome !== null ? formatEconomy(netIncome) : t("economy.noIncome")}
             helper={t("economy.incomeHelper")}
             tone="#16A34A"
             onPress={() => router.push("/expenses/income")}
@@ -421,8 +427,8 @@ export default function EconomyScreen() {
                     <View style={styles.goalRowText}>
                       <Text style={styles.modalRowName}>{item.name}</Text>
                       <Text style={styles.modalRowDays}>
-                        {item.savedAmount.toFixed(2)} {t("savings.of")}{" "}
-                        {item.targetAmount.toFixed(2)} kr.
+                        {formatEconomy(item.savedAmount)} {t("savings.of")}{" "}
+                        {formatEconomy(item.targetAmount)}
                       </Text>
                     </View>
                   </Pressable>

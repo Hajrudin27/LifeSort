@@ -7,6 +7,8 @@ import { Text, useThemeColor, View } from '@/components/Themed';
 import Hero, { HeroPill, HeroPillText } from '@/components/Hero';
 import Kicker from '@/components/Kicker';
 import { useAccentTints } from '@/hooks/useAccentTints';
+import { formatDkk, moneyLocaleFor } from '@/core/money/format';
+import { sumMinorUnits } from '@/core/money/minorUnits';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { getCategoryIconName } from '@/utils/expense/expenseCategoryIcon';
 import { getCategoryLabel } from '@/utils/expense/expenseCategoryLabel';
@@ -15,7 +17,8 @@ import { daysUntil } from '@/utils/shared/dateDays';
 const WINDOW_DAYS = 7;
 
 export default function UpcomingExpensesScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = moneyLocaleFor(i18n.language);
   const accentTints = useAccentTints();
   const textMuted = useThemeColor({}, 'textMuted');
   const danger = useThemeColor({}, 'danger');
@@ -29,7 +32,8 @@ export default function UpcomingExpensesScreen() {
     .filter((e) => e.days >= 0 && e.days <= WINDOW_DAYS)
     .sort((a, b) => a.days - b.days);
 
-  const totalUpcoming = upcoming.reduce((sum, e) => sum + e.amount, 0);
+  // Sum over the displayed 7-day window only, in øre.
+  const totalUpcoming = sumMinorUnits(upcoming.map((e) => e.amount));
 
   const today = upcoming.filter((e) => e.days === 0);
   const tomorrow = upcoming.filter((e) => e.days === 1);
@@ -52,7 +56,7 @@ export default function UpcomingExpensesScreen() {
       <Hero
         icon={{ ios: 'calendar.badge.clock', android: 'event', web: 'event' }}
         kicker={t('expenses.upcomingHeroKicker', { days: WINDOW_DAYS })}
-        value={`${totalUpcoming.toFixed(0)} kr.`}
+        value={formatDkk(totalUpcoming, locale)}
       >
         <HeroPill style={styles.heroPillSpacing}>
           <HeroPillText>{t('expenses.upcomingHeroCount', { count: upcoming.length })}</HeroPillText>
@@ -97,7 +101,7 @@ export default function UpcomingExpensesScreen() {
                   <Text style={{ color: textMuted, fontSize: 12 }}>{getCategoryLabel(item.category, t)}</Text>
                 </View>
                 <View style={styles.rowRight}>
-                  <Text style={styles.rowAmount}>{item.amount.toFixed(0)} kr.</Text>
+                  <Text style={styles.rowAmount}>{formatDkk(item.amount, locale)}</Text>
                   <View style={[styles.daysBadge, { backgroundColor: color + '22' }]}>
                     <Text style={[styles.daysBadgeText, { color }]}>
                       {item.days === 0 ? t('expenses.dueToday') : item.days === 1 ? t('expenses.dueTomorrow') : t('expenses.dueIn', { days: item.days })}

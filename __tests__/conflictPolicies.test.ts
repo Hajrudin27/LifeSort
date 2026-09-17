@@ -7,13 +7,14 @@ import {
 } from '@/core/sync/conflictPolicies';
 import { DATA_DOMAINS, getDataDomain } from '@/core/storage/dataProfileRegistry';
 import type { TodoItem } from '@/types/life';
+import { minorUnits } from '@/core/money/minorUnits';
 import type { SavingsContribution } from '@/types/savingsGoal';
 
 const time = '2026-09-11T00:00:00.123456Z';
 const prefs: Preferences = { language: null, mode: 'system' };
 const todo: TodoItem = { id: 'task-1', title: 'Buy milk', completed: false,
   dueDate: '2026-09-11', importance: 'medium', createdAt: time };
-const contribution: SavingsContribution = { id: 'log-1', goalId: 'goal-1', amount: 10, date: time };
+const contribution: SavingsContribution = { id: 'log-1', goalId: 'goal-1', amount: minorUnits(10), date: time };
 const document: DocumentIdentity = { id: 'doc-1', name: 'Synthetic receipt', kind: 'document', contentIdentity: 'version-a' };
 const confirmed = <T>(value: T, rev = '5', entityId = 'entity-1'): ConfirmedConflictEntity<T> => ({
   value, revision: rev, entityId, updatedAt: time, deletedAt: null,
@@ -122,7 +123,7 @@ describe('APP-035 settings', () => {
 
 describe('APP-035 logs/history', () => {
   it('unions independent event IDs without overwriting either record', () => {
-    const other = { ...contribution, id: 'log-2', amount: -2 };
+    const other = { ...contribution, id: 'log-2', amount: minorUnits(-2) };
     const result = resolveSavingsHistory({ base: [],
       local: [{ entityId: contribution.id, operation: 'upsert', value: contribution }],
       remote: [confirmed(other, '1', other.id)] });
@@ -142,7 +143,7 @@ describe('APP-035 logs/history', () => {
   it('fails same-ID divergent content regardless of timestamps', () => {
     const input = log();
     for (const updatedAt of ['1900-01-01T00:00:00Z', '2099-01-01T00:00:00Z']) {
-      expect(resolveConflict({ ...input, remote: { ...input.remote!, updatedAt, value: { ...contribution, amount: 20 } } })).toEqual({ kind: 'invariant-error', reason: 'append-content-conflict' });
+      expect(resolveConflict({ ...input, remote: { ...input.remote!, updatedAt, value: { ...contribution, amount: minorUnits(20) } } })).toEqual({ kind: 'invariant-error', reason: 'append-content-conflict' });
     }
   });
   it('rejects a confirmed append record edit even without a pending local intent', () => {
@@ -151,7 +152,7 @@ describe('APP-035 logs/history', () => {
   });
   it('rejects a newer tombstone that changes immutable append content', () => {
     const input = log();
-    const remote = { ...input.remote!, deletedAt: time, value: { ...contribution, amount: 99 } };
+    const remote = { ...input.remote!, deletedAt: time, value: { ...contribution, amount: minorUnits(99) } };
     expect(resolveConflict({ ...input, remote })).toEqual({ kind: 'invariant-error', reason: 'append-content-conflict' });
   });
   it('accepts a newer tombstone with unchanged append content over stale active intent', () => {
@@ -161,7 +162,7 @@ describe('APP-035 logs/history', () => {
   });
   it('history union rejects a newer tombstone that changes immutable append content', () => {
     const input = log();
-    const remote = { ...input.remote!, deletedAt: time, value: { ...contribution, amount: 99 } };
+    const remote = { ...input.remote!, deletedAt: time, value: { ...contribution, amount: minorUnits(99) } };
     expect(resolveSavingsHistory({ base: [input.base!],
       local: [{ ...input.local!, entityId: input.entityId }], remote: [remote] })).toEqual({
       kind: 'invariant-error', reason: 'append-content-conflict',
@@ -177,7 +178,14 @@ describe('APP-035 logs/history', () => {
   });
   it('rejects editing an existing local append record', () => {
     const input = log();
-    expect(resolveConflict({ ...input, local: { operation: 'upsert', baseRevision: 5, value: { ...contribution, amount: 30 } } })).toMatchObject({ kind: 'invariant-error', reason: 'append-content-conflict' });
+    expect(resolveConflict({ ...input, local: { operation: 'upsert', baseRevision: 5, value: { ...contribution, amount: minorUnits(30) } } })).toMatchObject({ kind: 'invariant-error', reason: 'append-content-conflict' });
+  });
+  it('APP-040 rejects a contribution amount that is not supported persisted money', () => {
+    for (const amount of [12.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1, Number.MAX_SAFE_INTEGER, 2 ** 33 * 100 + 1, 2_000_000_000_000_000]) {
+      const value = { ...contribution, amount } as unknown as SavingsContribution;
+      expect(resolveSavingsHistory({ base: [], local: [{ entityId: contribution.id, operation: 'upsert', value }], remote: [] }))
+        .toEqual({ kind: 'unresolved', reason: 'invalid-input' });
+    }
   });
   it('never infers a history deletion from an omitted remote row', () => {
     expect(resolveConflict({ ...log(), remote: null })).toEqual({ kind: 'unresolved', reason: 'missing-remote' });
@@ -191,7 +199,7 @@ describe('APP-035 logs/history', () => {
     ] });
   });
   it('rejects ambiguous duplicate snapshots rather than selecting by input order', () => {
-    expect(resolveSavingsHistory({ base: [], local: [], remote: [confirmed(contribution, '1', contribution.id), confirmed({ ...contribution, amount: 99 }, '1', contribution.id)] })).toEqual({ kind: 'unresolved', reason: 'invalid-input' });
+    expect(resolveSavingsHistory({ base: [], local: [], remote: [confirmed(contribution, '1', contribution.id), confirmed({ ...contribution, amount: minorUnits(99) }, '1', contribution.id)] })).toEqual({ kind: 'unresolved', reason: 'invalid-input' });
   });
   it('deduplicates repeated identical snapshots and append intents within each input side', () => {
     const remote = confirmed(contribution, '1', contribution.id);

@@ -6,11 +6,14 @@ import { FlatList, Pressable, TextInput } from "react-native";
 import Card from "@/components/Card";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { formatDkk, moneyLocaleFor } from "@/core/money/format";
+import { sumMinorUnits } from "@/core/money/minorUnits";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { getCategoryLabel } from "@/utils/expense/expenseCategoryLabel";
 
 export default function SearchExpensesScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = moneyLocaleFor(i18n.language);
   const borderColor = useThemeColor({}, "border");
   const surface = useThemeColor({}, "surface");
   const textMuted = useThemeColor({}, "textMuted");
@@ -26,7 +29,8 @@ export default function SearchExpensesScreen() {
           .filter((e) => e.name.toLowerCase().includes(trimmedQuery))
           .sort((a, b) => b.nextPaymentDate.localeCompare(a.nextPaymentDate));
 
-  const total = results.reduce((sum, e) => sum + e.amount, 0);
+  // Sum over the displayed search results only, in øre.
+  const total = sumMinorUnits(results.map((e) => e.amount));
 
   return (
     <View style={sharedStyles.formContainerScroll}>
@@ -41,7 +45,7 @@ export default function SearchExpensesScreen() {
 
       {results.length > 0 && (
         <Text style={[styles.total, { color: textMuted }]}>
-          {t("expenses.searchTotal", { amount: total.toFixed(2) })}
+          {t("expenses.searchTotal", { amount: formatDkk(total, locale) })}
         </Text>
       )}
 
@@ -68,7 +72,7 @@ export default function SearchExpensesScreen() {
                   {item.nextPaymentDate} · {getCategoryLabel(item.category, t)}
                 </Text>
               </View>
-              <Text style={styles.amount}>{item.amount.toFixed(2)} {t("expenses.currency")}</Text>
+              <Text style={styles.amount}>{formatDkk(item.amount, locale)}</Text>
             </Card>
           </Pressable>
         )}

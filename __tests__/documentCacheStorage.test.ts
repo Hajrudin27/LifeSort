@@ -240,13 +240,14 @@ describe('APP-029 document cache storage', () => {
 
   it('encrypts document metadata stores and keeps ordinary Profile A fields usable', async () => {
     const jsonStorage = createJSONStorage(() => documentMetadataEncryptedStorage)!;
+    // The current (APP-040 v1) shape the expenses store writes: money in øre.
     const payload = {
       state: {
-        expenses: [{ id: 'expense-1', name: 'Rent', attachments: [{ id: 'a1', uri: 'file:///x', name: 'receipt.jpg', kind: 'image' }] }],
+        expenses: [{ id: 'expense-1', name: 'Rent', amount: 100000, attachments: [{ id: 'a1', uri: 'file:///x', name: 'receipt.jpg', kind: 'image' }] }],
         seriesStoppedAt: {},
-        categoryBudgets: { food: 1000 },
+        categoryBudgets: { food: 100000 },
       },
-      version: 0,
+      version: 1,
     };
 
     await jsonStorage.setItem('lifesort-expenses', payload);
@@ -256,7 +257,7 @@ describe('APP-029 document cache storage', () => {
     expect(raw).not.toContain('receipt.jpg');
     expect(raw).not.toContain('file:///x');
     await expect(jsonStorage.getItem('lifesort-expenses')).resolves.toMatchObject({
-      state: { categoryBudgets: { food: 1000 } },
+      state: { categoryBudgets: { food: 100000 } },
     });
   });
 
@@ -538,8 +539,11 @@ describe('APP-029 document cache storage', () => {
     await AsyncStorage.setItem(key, JSON.stringify(metadataFor(key)));
     const jsonStorage = createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage))!;
     const hydrated = await jsonStorage.getItem(key);
-    expect(hydrated!.version).toBe(0);
+    // APP-040: expenses' inner schema upgrades to v1 (100 kr -> 10000 øre) in the
+    // same encrypted commit; trips and warranties stay at their v0 schema.
+    expect(hydrated!.version).toBe(key === 'lifesort-expenses' ? 1 : 0);
     expect(hydrated!.state).toBeDefined();
+    if (key === 'lifesort-expenses') expect((hydrated!.state as { expenses: { amount: number }[] }).expenses[0].amount).toBe(10000);
     const encrypted = await AsyncStorage.getItem(key);
     expect(encrypted).toContain('__lifesort_encrypted_document_metadata__');
     (AsyncStorage.setItem as jest.Mock).mockClear();

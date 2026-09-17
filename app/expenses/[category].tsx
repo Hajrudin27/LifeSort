@@ -8,6 +8,8 @@ import ProgressBar from "@/components/ProgressBar";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useBrandTints } from "@/hooks/useBrandTints";
 import { useAccentTints } from "@/hooks/useAccentTints";
+import { formatDkk, moneyLocaleFor } from "@/core/money/format";
+import { absMinorUnits, subtractMinorUnits, sumMinorUnits, ZERO_MINOR_UNITS, type MinorUnits } from "@/core/money/minorUnits";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { Expense, ExpenseCategory } from "@/types/expense";
 import { getCategoryIconName } from "@/utils/expense/expenseCategoryIcon";
@@ -24,7 +26,7 @@ export default function CategoryExpensesScreen() {
   const border = useThemeColor({}, "border");
   const textMuted = useThemeColor({}, "textMuted");
   const danger = useThemeColor({}, "danger");
-  const locale = i18n.language === "da" ? "da-DK" : "en-US";
+  const locale = moneyLocaleFor(i18n.language);
 
   const categoryKey = category ?? "other";
   const categoryLabel = getCategoryLabel(categoryKey, t);
@@ -35,14 +37,14 @@ export default function CategoryExpensesScreen() {
   const expenses = allExpenses
     .filter((e) => e.category === categoryKey && (!month || e.nextPaymentDate.slice(0, 7) === month))
     .sort((a, b) => a.nextPaymentDate.localeCompare(b.nextPaymentDate));
-  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  // Listens egen sum over de viste poster (ikke APP-039's månedstotal), i øre.
+  const total = sumMinorUnits(expenses.map((e) => e.amount));
   const recurringCount = expenses.filter((e) => e.isRecurring).length;
   const budgetProgress = budget ? total / budget : null;
   const isOverBudget = budget !== undefined && total > budget;
-  const remainingBudget = budget !== undefined ? budget - total : null;
+  const remainingBudget = budget !== undefined ? subtractMinorUnits(budget, total) : null;
 
-  const formatCurrency = (amount: number) =>
-    `${Math.round(amount).toLocaleString(locale)} ${t("expenses.currency")}`;
+  const formatCurrency = (amount: MinorUnits) => formatDkk(amount, locale);
 
   const formatDate = (date: string) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(
@@ -118,8 +120,8 @@ export default function CategoryExpensesScreen() {
               <Text style={styles.heroSubtitle} numberOfLines={2}>
                 {budget !== undefined
                   ? isOverBudget
-                    ? t("expenses.categoryDetailOverBudget", { amount: formatCurrency(Math.abs(remainingBudget ?? 0)) })
-                    : t("expenses.categoryDetailRemaining", { amount: formatCurrency(remainingBudget ?? 0) })
+                    ? t("expenses.categoryDetailOverBudget", { amount: formatCurrency(absMinorUnits(remainingBudget ?? ZERO_MINOR_UNITS)) })
+                    : t("expenses.categoryDetailRemaining", { amount: formatCurrency(remainingBudget ?? ZERO_MINOR_UNITS) })
                   : t("expenses.categoryDetailNoBudget")}
               </Text>
               {budgetProgress !== null && <ProgressBar progress={budgetProgress} />}

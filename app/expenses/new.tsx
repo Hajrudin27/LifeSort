@@ -13,6 +13,7 @@ import Hero, { HeroBadge, HeroBadgeText } from "@/components/Hero";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useBrandTints } from "@/hooks/useBrandTints";
 import { useExpensesStore } from "@/store/useExpensesStore";
+import { parseSupportedMoneyInput } from "@/core/money/supportedMoney";
 import { useToastStore } from "@/store/useToastStore";
 import { ExpenseCategory } from "@/types/expense";
 
@@ -33,11 +34,6 @@ function addMonths(months: number) {
   const date = new Date();
   date.setMonth(date.getMonth() + months);
   return toISODate(date);
-}
-
-function parseAmount(value: string) {
-  const normalized = value.replace(",", ".").replace(/\s/g, "");
-  return Number.parseFloat(normalized);
 }
 
 export default function NewExpenseScreen() {
@@ -65,8 +61,9 @@ export default function NewExpenseScreen() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
-  const amountNumber = parseAmount(amount);
-  const canSave = name.trim().length > 0 && Number.isFinite(amountNumber) && amountNumber > 0;
+  // APP-040: text → DKK MinorUnits directly, and only amounts the store accepts.
+  const parsedAmount = parseSupportedMoneyInput(amount);
+  const canSave = name.trim().length > 0 && parsedAmount.ok && parsedAmount.value > 0;
   const createdExpense = allExpenses.find((e) => e.id === createdId);
   const paymentShortcuts = [
     { key: "today", label: t("expenses.paymentToday"), value: addDays(0) },
@@ -86,10 +83,10 @@ export default function NewExpenseScreen() {
   };
 
   const save = () => {
-    if (!canSave) return;
+    if (!canSave || !parsedAmount.ok) return;
     const id = addExpense({
       name: name.trim(),
-      amount: amountNumber,
+      amount: parsedAmount.value,
       category,
       nextPaymentDate,
       isRecurring,

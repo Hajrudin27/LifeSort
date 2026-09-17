@@ -1,3 +1,11 @@
+import {
+  addMinorUnits,
+  isMinorUnits,
+  subtractMinorUnits,
+  ZERO_MINOR_UNITS,
+  type MinorUnits,
+} from '@/core/money/minorUnits';
+
 /** APP-039: derived, account-scoped inputs only. Never persist these entries. */
 export type FinancialSource =
   | { readonly kind: 'manual'; readonly representation: 'transaction'; readonly id: string }
@@ -9,8 +17,8 @@ export type FinancialSemantic = 'expense' | 'income' | 'transfer' | 'refund';
 export type FinancialTransaction = {
   readonly source: Extract<FinancialSource, { representation: 'transaction' }>;
   readonly semantic: FinancialSemantic;
-  /** Current major-unit JS numbers. Expenses retain existing manual sign semantics. */
-  readonly amount: number;
+  /** DKK MinorUnits (APP-040). Expenses retain existing manual sign semantics. */
+  readonly amount: MinorUnits;
   readonly currency: 'DKK';
   readonly date: string;
   readonly status: 'pending' | 'booked';
@@ -21,7 +29,8 @@ export type FinancialTransaction = {
 export type ManualMonthlyIncome = {
   readonly source: Extract<FinancialSource, { representation: 'monthly-aggregate' }>;
   readonly semantic: 'income';
-  readonly amount: number;
+  /** DKK MinorUnits (APP-040). */
+  readonly amount: MinorUnits;
   readonly currency: 'DKK';
   // A monthly aggregate cannot identify an individual bank credit.
   readonly correlationId?: never;
@@ -29,10 +38,11 @@ export type ManualMonthlyIncome = {
 
 export type FinancialEntry = FinancialTransaction | ManualMonthlyIncome;
 
+/** All money fields are DKK MinorUnits, summed with checked integer arithmetic. */
 export type FinancialMonthlyTotals = {
-  readonly settledIncome: number;
-  readonly settledSpending: number;
-  readonly balance: number;
+  readonly settledIncome: MinorUnits;
+  readonly settledSpending: MinorUnits;
+  readonly balance: MinorUnits;
   readonly hasIncome: boolean;
   readonly expenseCount: number;
 };
@@ -75,7 +85,7 @@ function reconcile(entries: readonly FinancialEntry[]): FinancialEntry[] {
   const identities = new Map<string, FinancialEntry[]>();
   for (const entry of entries) {
     if (entry.currency !== 'DKK') throw new Error('financial_currency_unsupported');
-    if (!Number.isFinite(entry.amount)) throw new Error('financial_amount_invalid');
+    if (!isMinorUnits(entry.amount)) throw new Error('financial_amount_invalid');
     if (entry.semantic === 'refund' && entry.amount < 0) throw new Error('financial_amount_invalid');
     if (entry.correlationId !== undefined && entry.correlationId.trim().length === 0) {
       throw new Error('financial_correlation_invalid');
@@ -116,8 +126,8 @@ export function financialTotalsForMonth(
   entries: readonly FinancialEntry[],
   monthKey: string,
 ): FinancialMonthlyTotals {
-  let settledIncome = 0;
-  let settledSpending = 0;
+  let settledIncome = ZERO_MINOR_UNITS;
+  let settledSpending = ZERO_MINOR_UNITS;
   let hasIncome = false;
   let expenseCount = 0;
 
@@ -128,19 +138,25 @@ export function financialTotalsForMonth(
 
     switch (entry.semantic) {
       case 'income':
-        settledIncome += entry.amount;
+        settledIncome = addMinorUnits(settledIncome, entry.amount);
         hasIncome = true;
         break;
       case 'expense':
-        settledSpending += entry.amount;
+        settledSpending = addMinorUnits(settledSpending, entry.amount);
         expenseCount += 1;
         break;
       case 'refund':
-        settledSpending -= entry.amount;
+        settledSpending = subtractMinorUnits(settledSpending, entry.amount);
         break;
       case 'transfer':
         break;
     }
   }
-  return { settledIncome, settledSpending, balance: settledIncome - settledSpending, hasIncome, expenseCount };
+  return {
+    settledIncome,
+    settledSpending,
+    balance: subtractMinorUnits(settledIncome, settledSpending),
+    hasIncome,
+    expenseCount,
+  };
 }

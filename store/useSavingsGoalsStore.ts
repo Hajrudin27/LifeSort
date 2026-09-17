@@ -1,5 +1,14 @@
 import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
+import {
+  addMinorUnits,
+  negateMinorUnits,
+  subtractMinorUnits,
+  ZERO_MINOR_UNITS,
+  type MinorUnits,
+} from '@/core/money/minorUnits';
+import { minorUnitsToServerNumeric, serverNumericToMinorUnits } from '@/core/money/serverNumeric';
+import { supportedMoney } from '@/core/money/supportedMoney';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -19,21 +28,21 @@ type GoalEditableFields = Pick<
 interface SavingsGoalsState {
   goals: SavingsGoal[];
   history: SavingsContribution[];
-  extraSavings: number;
+  extraSavings: MinorUnits;
   addGoal: (input: {
     name: string;
-    targetAmount: number;
+    targetAmount: MinorUnits;
     icon: SavingsGoalIcon;
     deadline?: string;
   }) => string;
   updateGoal: (id: string, updates: Partial<GoalEditableFields>) => void;
-  addContribution: (id: string, amount: number) => void;
+  addContribution: (id: string, amount: MinorUnits) => void;
   distributeContributions: (
-    allocations: { id: string; amount: number }[],
+    allocations: { id: string; amount: MinorUnits }[],
   ) => void;
-  transferBetweenGoals: (fromId: string, toId: string, amount: number) => void;
+  transferBetweenGoals: (fromId: string, toId: string, amount: MinorUnits) => void;
   removeGoal: (id: string) => void;
-  addExtraSavings: (amount: number) => void;
+  addExtraSavings: (amount: MinorUnits) => void;
   archiveGoal: (id: string) => void;
   unarchiveGoal: (id: string) => void;
   fetchFromSupabase: () => Promise<void>;
@@ -50,8 +59,9 @@ function goalToRow(userId: string, g: SavingsGoal) {
     user_id: userId,
     name: g.name,
     icon: g.icon,
-    target_amount: g.targetAmount,
-    saved_amount: g.savedAmount,
+    // APP-040: exact decimal DKK for numeric columns.
+    target_amount: minorUnitsToServerNumeric(g.targetAmount),
+    saved_amount: minorUnitsToServerNumeric(g.savedAmount),
     deadline: g.deadline ?? null,
     archived: g.archived ?? false,
     created_at: g.createdAt,
@@ -63,7 +73,7 @@ function contributionToRow(userId: string, c: SavingsContribution) {
     id: c.id,
     user_id: userId,
     goal_id: c.goalId,
-    amount: c.amount,
+    amount: minorUnitsToServerNumeric(c.amount),
     date: c.date,
   };
 }
@@ -105,26 +115,41 @@ async function syncDeleteGoal(id: string) {
     .eq("goal_id", id);
 }
 
-async function syncExtraSavings(amount: number) {
+async function syncExtraSavings(amount: MinorUnits) {
   const userId = await getUserId();
   if (!userId) return;
-  await supabase.from("savings_extra").upsert({ user_id: userId, amount });
+  await supabase
+    .from("savings_extra")
+    .upsert({ user_id: userId, amount: minorUnitsToServerNumeric(amount) });
 }
+
+/** Saldo på et mål falder aldrig under nul ved ind- eller udbetaling (eksisterende regel). */
+function nonNegative(amount: MinorUnits): MinorUnits {
+  return amount < 0 ? ZERO_MINOR_UNITS : amount;
+}
+
+/*
+ * APP-040: every amount an action persists — input, contribution, resulting
+ * balance and resulting extra savings — passes `supportedMoney` BEFORE set().
+ * Actions compute the complete next state from get() first, so a rejected
+ * amount leaves the store (and the server) untouched.
+ */
 
 export const useSavingsGoalsStore = create<SavingsGoalsState>()(
   persist(
     (set, get) => ({
       goals: [],
       history: [],
-      extraSavings: 0,
+      extraSavings: ZERO_MINOR_UNITS,
 
       addGoal: (input) => {
         const id = newEntityId();
         const newGoal: SavingsGoal = {
           id,
           createdAt: new Date().toISOString(),
-          savedAmount: 0,
+          savedAmount: ZERO_MINOR_UNITS,
           ...input,
+          targetAmount: supportedMoney(input.targetAmount),
         };
         set((state) => ({ goals: [...state.goals, newGoal] }));
         syncUpsertGoal(newGoal);
@@ -132,9 +157,14 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
       },
 
       updateGoal: (id, updates) => {
+        // Et målbeløb kan ikke fjernes; er feltet med, skal det være understøttede øre.
+        const checked =
+          'targetAmount' in updates
+            ? { ...updates, targetAmount: supportedMoney(updates.targetAmount) }
+            : updates;
         set((state) => ({
           goals: state.goals.map((g) =>
-            g.id === id ? { ...g, ...updates } : g,
+            g.id === id ? { ...g, ...checked } : g,
           ),
         }));
         const updated = get().goals.find((g) => g.id === id);
@@ -145,18 +175,17 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
         const contribution: SavingsContribution = {
           id: newEntityId(),
           goalId: id,
-          amount,
+          amount: supportedMoney(amount),
           date: new Date().toISOString(),
         };
+        const { goals, history } = get();
+        const nextGoals = goals.map((g) =>
+          g.id === id
+            ? { ...g, savedAmount: supportedMoney(nonNegative(addMinorUnits(g.savedAmount, contribution.amount))) }
+            : g,
+        );
 
-        set((state) => ({
-          goals: state.goals.map((g) =>
-            g.id === id
-              ? { ...g, savedAmount: Math.max(0, g.savedAmount + amount) }
-              : g,
-          ),
-          history: [...state.history, contribution],
-        }));
+        set({ goals: nextGoals, history: [...history, contribution] });
 
         const updatedGoal = get().goals.find((g) => g.id === id);
         if (updatedGoal) syncUpsertGoal(updatedGoal);
@@ -168,20 +197,19 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
           (a) => ({
             id: newEntityId(),
             goalId: a.id,
-            amount: a.amount,
+            amount: supportedMoney(a.amount),
             date: new Date().toISOString(),
           }),
         );
+        const { goals, history } = get();
+        const nextGoals = goals.map((g) => {
+          const allocation = newContributions.find((c) => c.goalId === g.id);
+          return allocation
+            ? { ...g, savedAmount: supportedMoney(addMinorUnits(g.savedAmount, allocation.amount)) }
+            : g;
+        });
 
-        set((state) => ({
-          goals: state.goals.map((g) => {
-            const allocation = allocations.find((a) => a.id === g.id);
-            return allocation
-              ? { ...g, savedAmount: g.savedAmount + allocation.amount }
-              : g;
-          }),
-          history: [...state.history, ...newContributions],
-        }));
+        set({ goals: nextGoals, history: [...history, ...newContributions] });
 
         const touchedIds = new Set(allocations.map((a) => a.id));
         const touchedGoals = get().goals.filter((g) => touchedIds.has(g.id));
@@ -190,29 +218,30 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
       },
 
       transferBetweenGoals: (fromId, toId, amount) => {
+        const transferred = supportedMoney(amount);
         const fromContribution: SavingsContribution = {
           id: newEntityId(),
           goalId: fromId,
-          amount: -amount,
+          amount: negateMinorUnits(transferred),
           date: new Date().toISOString(),
         };
         const toContribution: SavingsContribution = {
           id: newEntityId(),
           goalId: toId,
-          amount,
+          amount: transferred,
           date: new Date().toISOString(),
         };
 
-        set((state) => ({
-          goals: state.goals.map((g) => {
-            if (g.id === fromId)
-              return { ...g, savedAmount: Math.max(0, g.savedAmount - amount) };
-            if (g.id === toId)
-              return { ...g, savedAmount: g.savedAmount + amount };
-            return g;
-          }),
-          history: [...state.history, fromContribution, toContribution],
-        }));
+        const { goals, history } = get();
+        const nextGoals = goals.map((g) => {
+          if (g.id === fromId)
+            return { ...g, savedAmount: supportedMoney(nonNegative(subtractMinorUnits(g.savedAmount, transferred))) };
+          if (g.id === toId)
+            return { ...g, savedAmount: supportedMoney(addMinorUnits(g.savedAmount, transferred)) };
+          return g;
+        });
+
+        set({ goals: nextGoals, history: [...history, fromContribution, toContribution] });
 
         const touchedGoals = get().goals.filter(
           (g) => g.id === fromId || g.id === toId,
@@ -230,8 +259,8 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
       },
 
       addExtraSavings: (amount) => {
-        set((state) => ({ extraSavings: state.extraSavings + amount }));
-        const updated = get().extraSavings;
+        const updated = supportedMoney(addMinorUnits(get().extraSavings, supportedMoney(amount)));
+        set({ extraSavings: updated });
         syncExtraSavings(updated);
       },
 
@@ -279,36 +308,45 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
 
         if (goalsResult.error || historyResult.error) return;
 
+        // APP-040: convert and validate the complete remote savings snapshot
+        // BEFORE any state change; one invalid amount rejects all of it.
+        let remoteGoals: SavingsGoal[];
+        let remoteHistory: SavingsContribution[];
+        let remoteExtra: MinorUnits | null = null;
+        try {
+          remoteGoals = (goalsResult.data ?? []).map((row) => ({
+            id: row.id,
+            name: row.name,
+            icon: row.icon as SavingsGoalIcon,
+            targetAmount: serverNumericToMinorUnits(row.target_amount),
+            savedAmount: serverNumericToMinorUnits(row.saved_amount),
+            deadline: row.deadline ?? undefined,
+            archived: row.archived ?? false,
+            createdAt: row.created_at,
+          }));
+          remoteHistory = (historyResult.data ?? []).map((row) => ({
+            id: row.id,
+            goalId: row.goal_id,
+            amount: serverNumericToMinorUnits(row.amount),
+            date: row.date,
+          }));
+          if (!extraResult.error && extraResult.data) {
+            remoteExtra = serverNumericToMinorUnits(extraResult.data.amount);
+          }
+        } catch {
+          return; // rejected: MoneyError carries only a fixed code, and nothing is logged
+        }
+
         set((state) => {
           const existingGoalIds = new Set(state.goals.map((g) => g.id));
-          const fetchedGoals: SavingsGoal[] = (goalsResult.data ?? [])
-            .filter((row) => !existingGoalIds.has(row.id))
-            .map((row) => ({
-              id: row.id,
-              name: row.name,
-              icon: row.icon as SavingsGoalIcon,
-              targetAmount: Number(row.target_amount),
-              savedAmount: Number(row.saved_amount),
-              deadline: row.deadline ?? undefined,
-              archived: row.archived ?? false,
-              createdAt: row.created_at,
-            }));
+          const fetchedGoals = remoteGoals.filter((goal) => !existingGoalIds.has(goal.id));
 
           const existingHistoryIds = new Set(state.history.map((h) => h.id));
-          const fetchedHistory: SavingsContribution[] = (
-            historyResult.data ?? []
-          )
-            .filter((row) => !existingHistoryIds.has(row.id))
-            .map((row) => ({
-              id: row.id,
-              goalId: row.goal_id,
-              amount: Number(row.amount),
-              date: row.date,
-            }));
+          const fetchedHistory = remoteHistory.filter((entry) => !existingHistoryIds.has(entry.id));
 
           const extraSavings =
-            state.extraSavings === 0 && !extraResult.error && extraResult.data
-              ? Number(extraResult.data.amount)
+            state.extraSavings === 0 && remoteExtra !== null
+              ? remoteExtra
               : state.extraSavings;
 
           return {
@@ -321,6 +359,8 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
     }),
     {
       name: "lifesort-savings-goals",
+      // APP-040 v1: goals, history and extra savings in DKK MinorUnits.
+      version: 1,
       storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
     },
   ),

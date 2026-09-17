@@ -22,7 +22,7 @@ them.
 | Primitive | Canonical today | Copies | Consequence of the drift | Migration owned by |
 | --- | --- | --- | --- | --- |
 | `LocalDate` | ✅ `utils/shared/localDate.ts` | 1 partial | One week calculation bypasses the DST-safe helpers | APP-045 |
-| `Money` | ❌ none | 3 renderings, 17 files | The same amount renders in two formats; Danish decimals are wrong | **APP-040** |
+| `Money` | ✅ `core/money` (APP-040, Economy) | Food and Travel still format and persist major units | Economy is fixed; Food/Travel keep their own renderings until their stories | APP-040 (Economy) |
 | `EntityId` | ❌ none | 2 generators, 16 files | The weaker one can collide inside a single millisecond | **APP-030** |
 | `Reminder` | ❌ none | 4 modules | One reminder type only works by accident | **APP-080** |
 | `AttachmentRef` | ⚠️ `types/attachment.ts` | 1 divergent copy | Trip attachments never reach the server at all | **APP-058** |
@@ -45,7 +45,14 @@ APP-045 requires Home, Economy and Food to agree on period boundaries.
 **Plan:** when APP-045 unifies budget periods, move week and month boundaries
 into `core/dates/` beside `localDate`, and let Food consume them.
 
-## 2. `Money` — no canonical implementation
+## 2. `Money` — canonical for Economy since APP-040
+
+> **APP-040 update.** `core/money` is now canonical: `MinorUnits` (integer
+> øre), a text parser, a strict legacy converter, the server boundary and
+> `formatDkk`. Economy persistence, aggregation and display use it, and the
+> Economy files were removed from the `toFixed` freeze list. Food and Travel are
+> not migrated and remain frozen below. The rest of this section is the original
+> APP-008 audit. See [app-040-money.md](./app-040-money.md).
 
 **State:** amounts are plain JavaScript `number` everywhere — `Expense.amount`,
 `TripExpense.amount`, `SavingsGoal.targetAmount`, grocery purchases, income.

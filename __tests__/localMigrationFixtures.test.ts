@@ -12,7 +12,9 @@ const root = path.join(__dirname, 'fixtures/local-migrations');
 const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
 
 describe('APP-038 fixture upgrades', () => {
-  for (const fixture of manifest.filter((f) => !f.file.startsWith('cycle/'))) {
+  // Specialized encrypted adapters (cycle, expenses) own their fixtures' upgrade tests.
+  const versioned = (storeId: string) => PERSISTENCE_SURFACES.find((s) => s.id === storeId)?.migration?.kind === 'versioned';
+  for (const fixture of manifest.filter((f) => versioned(f.storeId))) {
     it(`${fixture.file}: upgrades then reruns without a write`, async () => {
       let raw = read(fixture.file);
       const storage = { getItem: async () => raw, setItem: jest.fn(async (_key, value) => { raw = value; }) };

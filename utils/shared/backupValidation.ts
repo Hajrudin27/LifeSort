@@ -9,7 +9,18 @@
  * ændre prototypen på state-objektet.
  */
 
-export const BACKUP_VERSION = 1;
+import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
+import type { MinorUnits } from '@/core/money/minorUnits';
+import { supportedMoney } from '@/core/money/supportedMoney';
+
+/**
+ * Backup-formatets version.
+ *  1 — før APP-040: Økonomiens beløb er JS-tal i hele kroner.
+ *  2 — APP-040: Økonomiens beløb er DKK MinorUnits (øre), og kun understøttede
+ *      beløb (`isSupportedMoney`): dem appen kan gemme, synkronisere og vise præcist.
+ * Nye eksporter skriver altid 2. Øvrige moduler er semantisk uændrede.
+ */
+export const BACKUP_VERSION = 2;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString';
 
@@ -69,11 +80,74 @@ export const BACKUP_FIELD_SCHEMA = {
 
 export type BackupStoreKey = keyof typeof BACKUP_FIELD_SCHEMA;
 
-export type BackupParseError = 'parse_failed' | 'invalid_format' | 'unsupported_version';
+export type BackupParseError = 'parse_failed' | 'invalid_format' | 'unsupported_version' | 'invalid_money';
 
 export type BackupParseResult =
   | { ok: true; version: number; data: Partial<Record<BackupStoreKey, Record<string, unknown>>> }
   | { ok: false; error: BackupParseError };
+
+/**
+ * APP-040: hvor Økonomiens beløb ligger i en backup. `lists` er arrays af
+ * poster med beløbsfelter, `maps` er nøgle→beløb og `amounts` er enkeltbeløb.
+ */
+const ECONOMY_MONEY_FIELDS: Partial<Record<BackupStoreKey, {
+  readonly lists?: Readonly<Record<string, readonly string[]>>;
+  readonly maps?: readonly string[];
+  readonly amounts?: readonly string[];
+}>> = {
+  expenses: { lists: { expenses: ['amount'] }, maps: ['categoryBudgets'] },
+  income: { maps: ['incomeByMonth'] },
+  savingsGoals: { lists: { goals: ['targetAmount', 'savedAmount'], history: ['amount'] }, amounts: ['extraSavings'] },
+};
+
+/**
+ * Format 1 konverteres præcis én gang; format 2 skaleres aldrig igen. Begge skal
+ * derefter opfylde samme invariant som formularer, stores og lokale v1-data.
+ */
+function canonicalAmount(value: unknown, version: number): MinorUnits {
+  return supportedMoney(version === 1 ? legacyMajorUnitsToMinorUnits(value) : value);
+}
+
+/**
+ * Returnerer en ny partial med kanoniske beløb, eller en fejl. Kører for hele
+ * filen, før importBackup rører en eneste store, så et ugyldigt beløb aldrig
+ * efterlader en halvt gendannet Økonomi. Afrunder aldrig; fejlkoden er fast.
+ */
+function canonicalEconomyMoney(
+  storeKey: BackupStoreKey,
+  partial: Record<string, unknown>,
+  version: number,
+): { ok: true; value: Record<string, unknown> } | { ok: false; error: BackupParseError } {
+  const fields = ECONOMY_MONEY_FIELDS[storeKey];
+  if (!fields) return { ok: true, value: partial };
+  const next = { ...partial };
+  for (const list of Object.keys(fields.lists ?? {})) {
+    const items = next[list];
+    if (items !== undefined && !(items as unknown[]).every(isPlainObject)) return { ok: false, error: 'invalid_format' };
+  }
+  try {
+    for (const [list, moneyKeys] of Object.entries(fields.lists ?? {})) {
+      if (next[list] === undefined) continue;
+      next[list] = (next[list] as Record<string, unknown>[]).map((item) => {
+        const copy = { ...item };
+        for (const key of moneyKeys) copy[key] = canonicalAmount(item[key], version);
+        return copy;
+      });
+    }
+    for (const map of fields.maps ?? []) {
+      if (next[map] === undefined) continue;
+      next[map] = Object.fromEntries(
+        Object.entries(next[map] as Record<string, unknown>).map(([key, value]) => [key, canonicalAmount(value, version)]),
+      );
+    }
+    for (const amount of fields.amounts ?? []) {
+      if (next[amount] !== undefined) next[amount] = canonicalAmount(next[amount], version);
+    }
+  } catch {
+    return { ok: false, error: 'invalid_money' };
+  }
+  return { ok: true, value: next };
+}
 
 // `__proto__` er den nøgle der kan ændre et objekts prototype gennem Object.assign.
 // De to øvrige kan ikke det, men har ingen plads i data og fjernes for en sikkerheds skyld.
@@ -122,7 +196,10 @@ export function parseBackupFile(content: string): BackupParseResult {
       partial[field] = value;
     }
 
-    if (Object.keys(partial).length > 0) data[storeKey] = partial;
+    if (Object.keys(partial).length === 0) continue;
+    const canonical = canonicalEconomyMoney(storeKey, partial, version);
+    if (!canonical.ok) return canonical;
+    data[storeKey] = canonical.value;
   }
 
   return { ok: true, version, data };

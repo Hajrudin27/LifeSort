@@ -38,9 +38,9 @@ on logout. APP-038 adds delayed-write invalidation around this existing cleanup.
 | `lifesort-enabled-modules` | A | AsyncStorage / Z0 | enablement map | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useEnabledModulesStore.ts` | external; store/useEnabledModulesStore.ts | User sweep |
 | `lifesort-home-layout` | A | AsyncStorage / Z1 | pinned[]; hidden[]; detail map; lastOpenedAt map | c4715e6: v0 without detail; 5898ce5 and d417466: v0 with detail | `store/useHomeLayoutStore.ts` | versioned; core/storage/migrations/homeLayout.ts | User sweep |
 | `lifesort-monthly-review` | A | AsyncStorage / Z0 | showOnHome only | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useReviewStore.ts` | external; store/useReviewStore.ts | User sweep |
-| `lifesort-expenses` | A,B | AsyncStorage + secure AES-GCM / E1/Z0 | expenses[] including attachments; seriesStoppedAt map; categoryBudgets map | f00dd0d attachments; c1c1c29/pre-0746c50 plaintext Zustand; 0746c50 encrypted metadata/files | `store/useExpensesStore.ts` | external; core/storage/documentCacheStorage.ts | User sweep |
-| `lifesort-income-v2` | A | AsyncStorage / Z0 | incomeByMonth map; floats unchanged | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useIncomeStore.ts` | external; store/useIncomeStore.ts | User sweep |
-| `lifesort-savings-goals` | A | AsyncStorage / Z0 | goals[]; history[]; extraSavings | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useSavingsGoalsStore.ts` | external; store/useSavingsGoalsStore.ts | User sweep |
+| `lifesort-expenses` | A,B | AsyncStorage + secure AES-GCM / E1/Z1 (APP-040; was E1/Z0) | expenses[] including attachments; seriesStoppedAt map; categoryBudgets map; money in DKK MinorUnits | f00dd0d attachments; c1c1c29/pre-0746c50 plaintext Zustand; 0746c50 encrypted metadata/files; APP-040 inner v0→v1 money | `store/useExpensesStore.ts` | external; core/storage/documentCacheStorage.ts (inner v1 via core/storage/migrations/economyMoney.ts) | User sweep |
+| `lifesort-income-v2` | A | AsyncStorage / Z1 (APP-040; was Z0) | incomeByMonth map in DKK MinorUnits | 49c4355 through c73bf68 Z0 major-unit floats; APP-040 v0→v1 | `store/useIncomeStore.ts` | versioned; core/storage/migrations/economyMoney.ts | User sweep |
+| `lifesort-savings-goals` | A | AsyncStorage / Z1 (APP-040; was Z0) | goals[]; history[]; extraSavings; money in DKK MinorUnits | 49c4355 through c73bf68 Z0 major-unit floats; APP-040 v0→v1 | `store/useSavingsGoalsStore.ts` | versioned; core/storage/migrations/economyMoney.ts | User sweep |
 | `lifesort-categories` | A | AsyncStorage / Z0 | categories[] including built-ins | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useCategoriesStore.ts` | external; store/useCategoriesStore.ts | User sweep |
 | `lifesort-food-v2` | A,D | AsyncStorage / Z0 | monthlyBudgetByMonth, purchases[], pantryItems[], shoppingItems[], offers[], recipes[], standardPrices[], globalStandardPrices[], globalOffers[], savedPlans, selectedStores[] | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useFoodStore.ts` | external; store/useFoodStore.ts | User sweep |
 | `lifesort-household` | A | AsyncStorage / Z0 | tasks[]; shoppingItems[]; movingItems[] | 49c4355 pre-rotation tasks; f00dd0d adds assignedTo/rotates with existing hydration defaults | `store/useHouseholdStore.ts` | external; store/useHouseholdStore.ts | User sweep |
@@ -75,7 +75,7 @@ v1-to-v2 feature migration or fixture was added.
 | secure-store:lifesort-document-cache-key | `lifesort-document-cache-key`, SecureStore | B | Base64 AES key bytes since 0746c50 | `core/storage/documentCacheStorage.ts` | Immutable/no-schema key material | Key-epoch-aware deletion on logout |
 | filesystem:document-directory/attachments | `documentDirectory/attachments/*`, filesystem | B | `LSATTACH` binary header + version 1 + IV/tag metadata + AES-GCM bytes in `.lsenc`; legacy plaintext files pre-0746c50 | `documentCacheStorage` on metadata migration/view/cache use | External specialized migration, encrypted pending-cleanup records | Parent attachment cleanup / persistent cache clear on logout |
 | filesystem:cache-directory/lifesort-decrypted-attachments | `cacheDirectory/lifesort-decrypted-attachments/*`, filesystem | B | Temporary plaintext interoperability copies, never canonical persisted schema | `documentCacheStorage` viewer/share/upload | Cleanup-only, not migration staging | Viewer/temp lifecycle and logout |
-| filesystem:document-directory/lifesort-backup-json | `documentDirectory/lifesort-backup-<date>.json`, filesystem | B | `{version:1,exportedAt,data}` since 49c4355; user-triggered archive | `utils/shared/dataBackup.ts` / `backupValidation.ts`; never startup hydrated | External export/import contract; APP-097 | Existing logout does not sweep these exports; unchanged audit finding |
+| filesystem:document-directory/lifesort-backup-json | `documentDirectory/lifesort-backup-<date>.json`, filesystem | B | `{version:1,exportedAt,data}` since 49c4355; `version:2` since APP-040 (Economy money in MinorUnits); user-triggered archive | `utils/shared/dataBackup.ts` / `backupValidation.ts`; never startup hydrated | External export/import contract; APP-097 | Existing logout does not sweep these exports; unchanged audit finding |
 
 Remote Supabase tables/auth/buckets remain server persistence, not locally
 hydrated keys. Cached remote data appears only within the local rows above.
@@ -119,6 +119,10 @@ persistence inventory; no migration work was added to them.
 | `home-layout/d417466-v0.json` | Home | d417466 | Zustand 0, with detail map | Zustand 1 | Synthetic preferences only |
 | `outbox/d417466-v1.json` | Outbox | d417466 | Envelope 1 | Envelope 1, exact bytes unchanged | Synthetic account/IDs and module booleans only |
 | `cycle/94f39eb-plaintext-v0.json` | Cycle | 94f39eb, before 0711414 encryption | Plaintext Zustand 0 | AES-GCM envelope 1, inner Zustand 0 | Synthetic defaults and empty arrays; no health records |
+| `expenses/49c4355-plaintext-v0.json` | Expenses | 49c4355, before attachments and encryption | Plaintext Zustand 0, major-unit floats | AES-GCM envelope 1, inner Zustand 1 (APP-040) | Synthetic names and amounts |
+| `expenses/c73bf68-inner-v0.json` | Expenses | c73bf68 | Inner Zustand 0 of the envelope (tests encrypt it) | Inner Zustand 1 (APP-040) | Synthetic amounts and attachment references |
+| `income/c73bf68-v0.json` | Income | c73bf68 | Zustand 0, major-unit floats | Zustand 1 (APP-040) | Synthetic amounts |
+| `savings-goals/c73bf68-v0.json` | Savings | c73bf68 | Zustand 0, major-unit floats | Zustand 1 (APP-040) | Synthetic goals and history |
 
 All files are under `__tests__/fixtures/local-migrations`, containing raw UTF-8
 serialized JSON rather than parsed fixtures. The manifest records sensitivity,
@@ -150,9 +154,10 @@ External feature stores receive envelope/version protection; comprehensive
 nested-record validation and feature-schema upgrades are deliberately deferred.
 A future external owner can declare its own payload version independently.
 Encryption nonce randomness remains inside specialized secure adapters.
-There is no arbitrary down-migration, DB migration, money conversion, backup/DR
-platform, multi-key transaction framework, deployment or network-dependent
-transform. Old pre-harness binaries cannot be retroactively made downgrade-safe.
+There is no arbitrary down-migration, DB migration, backup/DR platform,
+multi-key transaction framework, deployment or network-dependent transform.
+(APP-038 itself converted no money; APP-040 later added the Economy money
+definitions described in [app-040-money.md](./app-040-money.md).) Old pre-harness binaries cannot be retroactively made downgrade-safe.
 The failed-startup screen gives restart/newer-version guidance without a reset.
 
 

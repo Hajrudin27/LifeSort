@@ -1,8 +1,11 @@
 import { economyTotalsForMonth } from './monthlyTotals';
+import { formatDkk, moneyLocaleFor } from '@/core/money/format';
+import { absMinorUnits, sumMinorUnits } from '@/core/money/minorUnits';
 import { isInMonth, type MonthlyFact } from '@/core/modules/monthlyReview';
 import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useIncomeStore } from '@/store/useIncomeStore';
+import i18n from '@/localization/i18n';
 import { useSavingsGoalsStore } from '@/store/useSavingsGoalsStore';
 
 /** Økonomiens kendsgerninger for måneden. Summer af brugerens egne poster. */
@@ -15,10 +18,13 @@ export async function economyMonthlyReview(monthKey: string): Promise<MonthlyFac
     monthKey,
   );
   const income = totals.settledIncome;
-  const savedThisMonth = useSavingsGoalsStore
-    .getState()
-    .history.filter((entry) => isInMonth(entry.date, monthKey))
-    .reduce((sum, entry) => sum + entry.amount, 0);
+  const savedThisMonth = sumMinorUnits(
+    useSavingsGoalsStore
+      .getState()
+      .history.filter((entry) => isInMonth(entry.date, monthKey))
+      .map((entry) => entry.amount),
+  );
+  const locale = moneyLocaleFor(i18n.language);
 
   const facts: MonthlyFact[] = [];
 
@@ -29,7 +35,7 @@ export async function economyMonthlyReview(monthKey: string): Promise<MonthlyFac
       moduleId: 'economy',
       labelKey: 'review.economySpent',
       params: {
-        amount: totals.settledSpending.toFixed(0),
+        amount: formatDkk(totals.settledSpending, locale),
         count: totals.expenseCount,
       },
       sensitivity: 'financial',
@@ -40,7 +46,7 @@ export async function economyMonthlyReview(monthKey: string): Promise<MonthlyFac
     facts.push({
       moduleId: 'economy',
       labelKey: 'review.economyIncome',
-      params: { amount: income.toFixed(0) },
+      params: { amount: formatDkk(income, locale) },
       sensitivity: 'financial',
     });
   }
@@ -51,7 +57,7 @@ export async function economyMonthlyReview(monthKey: string): Promise<MonthlyFac
       // Både ind- og udbetalinger tæller med; en udbetaling er ikke et nederlag,
       // den er en oplysning.
       labelKey: savedThisMonth > 0 ? 'review.economySaved' : 'review.economyWithdrawn',
-      params: { amount: Math.abs(savedThisMonth).toFixed(0) },
+      params: { amount: formatDkk(absMinorUnits(savedThisMonth), locale) },
       sensitivity: 'financial',
     });
   }

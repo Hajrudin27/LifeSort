@@ -1,3 +1,4 @@
+import { absMinorUnits, isMinorUnits, type MinorUnits } from '@/core/money/minorUnits';
 import type { Expense } from '@/types/expense';
 import type { FinancialTransaction, ManualMonthlyIncome } from './financialReadModel';
 
@@ -13,7 +14,7 @@ export function manualExpenseEntries(expenses: readonly Expense[]): FinancialTra
   }));
 }
 
-export function manualIncomeEntries(incomeByMonth: Readonly<Record<string, number>>): ManualMonthlyIncome[] {
+export function manualIncomeEntries(incomeByMonth: Readonly<Record<string, MinorUnits>>): ManualMonthlyIncome[] {
   return Object.entries(incomeByMonth).map(([monthKey, amount]) => ({
     source: { kind: 'manual', representation: 'monthly-aggregate', monthKey },
     semantic: 'income',
@@ -26,13 +27,14 @@ export function manualIncomeEntries(incomeByMonth: Readonly<Record<string, numbe
  * Non-persisted LifeSort bank boundary, NOT a provider payload. No current bank
  * source exists. A future adapter must supply one account's active snapshots and
  * stable transaction IDs (including across pending -> booked), removing deleted
- * records upstream. Amounts are signed major units: debit negative, credit/refund
- * positive; transfer either sign. Currency is checked before any aggregation.
+ * records upstream. `amountMinor` is signed DKK MinorUnits (APP-040): debit
+ * negative, credit/refund positive; transfer either sign. Currency is checked
+ * before any aggregation; the adapter converts provider money before this point.
  */
 export type BankFinancialInput = {
   readonly id: string;
   readonly kind: 'debit' | 'credit' | 'transfer' | 'refund';
-  readonly amount: number;
+  readonly amountMinor: MinorUnits;
   readonly currency: string;
   readonly date: string;
   readonly status: 'pending' | 'booked';
@@ -42,15 +44,15 @@ export type BankFinancialInput = {
 export function bankFinancialEntries(inputs: readonly BankFinancialInput[]): FinancialTransaction[] {
   return inputs.map((input) => {
     if (input.currency !== 'DKK') throw new Error('financial_currency_unsupported');
-    if (!Number.isFinite(input.amount) ||
-        (input.kind === 'debit' && input.amount > 0) ||
-        ((input.kind === 'credit' || input.kind === 'refund') && input.amount < 0)) {
+    if (!isMinorUnits(input.amountMinor) ||
+        (input.kind === 'debit' && input.amountMinor > 0) ||
+        ((input.kind === 'credit' || input.kind === 'refund') && input.amountMinor < 0)) {
       throw new Error('financial_bank_amount_invalid');
     }
     return {
       source: { kind: 'bank', representation: 'transaction', id: input.id },
       semantic: input.kind === 'debit' ? 'expense' : input.kind === 'credit' ? 'income' : input.kind,
-      amount: Math.abs(input.amount),
+      amount: absMinorUnits(input.amountMinor),
       currency: 'DKK',
       date: input.date,
       status: input.status,

@@ -11,6 +11,7 @@ import ProgressBar from "@/components/ProgressBar";
 import SwipeableRow from "@/components/SwipeableRow";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { formatDkk, moneyLocaleFor } from "@/core/money/format";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
 import { SavingsGoalIcon } from "@/types/savingsGoal";
@@ -19,7 +20,8 @@ import { getIconSymbolName } from "@/utils/savings/savingsGoalIcon";
 type SortMode = "progress" | "newest";
 
 export default function SavingsIconScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = moneyLocaleFor(i18n.language);
   const { icon } = useLocalSearchParams<{ icon: SavingsGoalIcon }>();
   const borderColor = useThemeColor({}, "border");
   const surface = useThemeColor({}, "surface");
@@ -181,8 +183,8 @@ export default function SavingsIconScreen() {
                     progress={item.savedAmount / item.targetAmount}
                   />
                   <Text style={[styles.meta, { color: textMuted }]}>
-                    {item.savedAmount.toFixed(2)} {t("savings.of")}{" "}
-                    {item.targetAmount.toFixed(2)} kr.
+                    {formatDkk(item.savedAmount, locale)} {t("savings.of")}{" "}
+                    {formatDkk(item.targetAmount, locale)}
                   </Text>
                   {isReached && !item.archived && (
                     <Text style={[styles.archiveHint, { color: textMuted }]}>

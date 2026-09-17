@@ -11,6 +11,8 @@ import ProgressBar from "@/components/ProgressBar";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useBrandTints } from "@/hooks/useBrandTints";
 import { useAccentTints } from "@/hooks/useAccentTints";
+import { formatDkk, moneyLocaleFor } from "@/core/money/format";
+import { subtractMinorUnits, type MinorUnits } from "@/core/money/minorUnits";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { useIncomeStore } from "@/store/useIncomeStore";
 import { getCategoryIconName } from "@/utils/expense/expenseCategoryIcon";
@@ -31,7 +33,7 @@ export default function ExpensesScreen() {
   const border = useThemeColor({}, "border");
   const textMuted = useThemeColor({}, "textMuted");
   const danger = useThemeColor({}, "danger");
-  const locale = i18n.language === "da" ? "da-DK" : "en-US";
+  const locale = moneyLocaleFor(i18n.language);
 
   const [selectedMonth, setSelectedMonth] = useState(() => new Date());
   const monthKey = getMonthKey(selectedMonth);
@@ -53,8 +55,7 @@ export default function ExpensesScreen() {
   const total = totals.settledSpending;
   const remaining = totals.hasIncome ? totals.balance : null;
 
-  const formatCurrency = (amount: number) =>
-    `${Math.round(amount).toLocaleString(locale)} kr.`;
+  const formatCurrency = (amount: MinorUnits) => formatDkk(amount, locale);
 
   const usedCategories = Array.from(
     new Set(monthExpenses.map((e) => e.category)),
@@ -73,7 +74,7 @@ export default function ExpensesScreen() {
   const hasPrevData = allExpenses.some(
     (e) => e.nextPaymentDate.slice(0, 7) === prevMonthKey,
   );
-  const diff = total - prevTotal;
+  const diff = subtractMinorUnits(total, prevTotal);
   const diffLabel = `${diff >= 0 ? "+" : ""}${formatCurrency(diff)}`;
   const percent = prevTotal > 0 ? Math.round((diff / prevTotal) * 100) : null;
 
@@ -309,7 +310,7 @@ export default function ExpensesScreen() {
                 {budgetProgress !== null && <ProgressBar progress={budgetProgress} />}
                 {isOverBudget && (
                   <Text style={[styles.overBudgetText, { color: danger }]}>
-                    {t("expenses.overBudget", { amount: Math.round(subtotal - budget!).toLocaleString(locale) })}
+                    {t("expenses.overBudget", { amount: formatCurrency(subtractMinorUnits(subtotal, budget!)) })}
                   </Text>
                 )}
               </View>

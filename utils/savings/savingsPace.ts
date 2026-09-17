@@ -1,3 +1,10 @@
+import {
+  MINOR_UNITS_PER_MAJOR_UNIT,
+  minorUnits,
+  subtractMinorUnits,
+  sumMinorUnits,
+  type MinorUnits,
+} from "@/core/money/minorUnits";
 import { SavingsContribution, SavingsGoal } from "@/types/savingsGoal";
 
 // Beregner det gennemsnitlige, positive bidrag per måned baseret på historik,
@@ -6,7 +13,7 @@ export function estimateMonthsToGoal(
   goal: SavingsGoal,
   history: SavingsContribution[],
 ): number | null {
-  const remaining = goal.targetAmount - goal.savedAmount;
+  const remaining = subtractMinorUnits(goal.targetAmount, goal.savedAmount);
   if (remaining <= 0) return 0; // allerede nået
 
   const goalHistory = history.filter(
@@ -24,8 +31,8 @@ export function estimateMonthsToGoal(
       1,
   );
 
-  const totalContributed = goalHistory.reduce((sum, h) => sum + h.amount, 0);
-  const avgPerMonth = totalContributed / monthsElapsed;
+  const totalContributed = sumMinorUnits(goalHistory.map((h) => h.amount));
+  const avgPerMonth = totalContributed / monthsElapsed; // afledt tempo i øre/måned, ikke et kanonisk beløb
 
   if (avgPerMonth <= 0) return null;
 
@@ -33,9 +40,10 @@ export function estimateMonthsToGoal(
 }
 
 // Hvis en deadline er sat: hvor meget skal der spares op per måned for at nå den?
+// Returnerer en afledt rate i øre/måned (kan være brøkdel) — ikke et kanonisk beløb.
 export function requiredMonthlyAmount(goal: SavingsGoal): number | null {
   if (!goal.deadline) return null;
-  const remaining = goal.targetAmount - goal.savedAmount;
+  const remaining = subtractMinorUnits(goal.targetAmount, goal.savedAmount);
   if (remaining <= 0) return 0;
 
   const now = new Date();
@@ -47,4 +55,9 @@ export function requiredMonthlyAmount(goal: SavingsGoal): number | null {
   );
 
   return remaining / monthsLeft;
+}
+
+/** Visning af en afledt månedsrate: nærmeste hele krone, som skærmen viste før APP-040 (toFixed(0)). */
+export function monthlyRateForDisplay(rateInMinorUnits: number): MinorUnits {
+  return minorUnits(Math.round(rateInMinorUnits / MINOR_UNITS_PER_MAJOR_UNIT) * MINOR_UNITS_PER_MAJOR_UNIT);
 }

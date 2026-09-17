@@ -1,3 +1,4 @@
+import { sumMinorUnits, type MinorUnits } from '@/core/money/minorUnits';
 import { economyTotalsForMonth } from '@/features/economy/monthlyTotals';
 import { Expense } from '@/types/expense';
 import { SavingsContribution } from '@/types/savingsGoal';
@@ -6,7 +7,7 @@ import { addMonths, getMonthKey } from '@/utils/shared/monthKey';
 export interface MonthlyPoint {
   monthKey: string;
   label: string;
-  value: number;
+  value: MinorUnits; // DKK øre; charts only use its proportions
 }
 
 function shortMonthLabel(date: Date, locale: string): string {
@@ -25,7 +26,7 @@ export function getExpenseTrend(expenses: Expense[], monthsBack: number, locale:
   return points;
 }
 
-export function getIncomeTrend(incomeByMonth: Record<string, number>, monthsBack: number, locale: string): MonthlyPoint[] {
+export function getIncomeTrend(incomeByMonth: Record<string, MinorUnits>, monthsBack: number, locale: string): MonthlyPoint[] {
   const now = new Date();
   const points: MonthlyPoint[] = [];
   for (let i = monthsBack - 1; i >= 0; i--) {
@@ -45,9 +46,9 @@ export function getSavingsTrend(history: SavingsContribution[], monthsBack: numb
     const d = addMonths(now, -i);
     const key = getMonthKey(d);
     const endOfMonthKey = `${key}-31`; // ISO-strenge sammenlignes korrekt alfabetisk
-    const cumulative = sorted
-      .filter((c) => c.date.slice(0, 10) <= endOfMonthKey)
-      .reduce((sum, c) => sum + c.amount, 0);
+    const cumulative = sumMinorUnits(
+      sorted.filter((c) => c.date.slice(0, 10) <= endOfMonthKey).map((c) => c.amount),
+    );
     points.push({ monthKey: key, label: shortMonthLabel(d, locale), value: cumulative });
   }
   return points;

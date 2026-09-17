@@ -1,5 +1,8 @@
 import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
+import type { MinorUnits } from '@/core/money/minorUnits';
+import { minorUnitsToServerNumeric, serverNumericToMinorUnits } from '@/core/money/serverNumeric';
+import { supportedMoney } from '@/core/money/supportedMoney';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -13,10 +16,10 @@ import { deleteAttachmentRemote, fetchAttachmentsFor, uploadAttachment } from '@
 interface ExpensesState {
   expenses: Expense[];
   seriesStoppedAt: Record<string, string>; // seriesId -> måned den er stoppet fra
-  categoryBudgets: Record<string, number>; // kategori -> månedligt loft
+  categoryBudgets: Record<string, MinorUnits>; // kategori -> månedligt loft i øre
   addExpense: (input: {
     name: string;
-    amount: number;
+    amount: MinorUnits;
     category: ExpenseCategory;
     nextPaymentDate: string;
     isRecurring: boolean;
@@ -25,7 +28,7 @@ interface ExpensesState {
   removeExpense: (id: string) => void;
   deleteRecurringFromMonth: (seriesId: string, fromMonthKey: string) => void;
   rollForwardMonth: (monthKey: string) => void;
-  setCategoryBudget: (category: string, limit: number) => void;
+  setCategoryBudget: (category: string, limit: MinorUnits) => void;
   removeCategoryBudget: (category: string) => void;
   addAttachment: (expenseId: string, attachment: Attachment) => void;
   removeAttachment: (expenseId: string, attachmentId: string) => void;
@@ -46,7 +49,8 @@ function toRow(userId: string, e: Expense) {
     series_id: e.seriesId ?? null,
     is_recurring: e.isRecurring,
     name: e.name,
-    amount: e.amount,
+    // APP-040: exact decimal DKK for the numeric column, never amount / 100.
+    amount: minorUnitsToServerNumeric(e.amount),
     category: e.category,
     next_payment_date: e.nextPaymentDate,
     created_at: e.createdAt,
@@ -77,12 +81,39 @@ async function syncDeleteExpenses(ids: string[]) {
   await supabase.from('expenses').delete().eq('user_id', userId).in('id', ids);
 }
 
-async function syncUpsertCategoryBudget(userId: string, category: string, limit: number) {
-  await supabase.from('expense_category_budgets').upsert({ user_id: userId, category, monthly_limit: limit });
+async function syncUpsertCategoryBudget(userId: string, category: string, limit: MinorUnits) {
+  await supabase
+    .from('expense_category_budgets')
+    .upsert({ user_id: userId, category, monthly_limit: minorUnitsToServerNumeric(limit) });
 }
 
 async function syncDeleteCategoryBudget(userId: string, category: string) {
   await supabase.from('expense_category_budgets').delete().eq('user_id', userId).eq('category', category);
+}
+
+type ExpenseRow = {
+  id: string;
+  series_id: string | null;
+  is_recurring: boolean;
+  name: string;
+  amount: unknown;
+  category: string;
+  next_payment_date: string;
+  created_at: string;
+};
+
+function expenseFromRow(row: ExpenseRow): Expense {
+  return {
+    id: row.id,
+    seriesId: row.series_id ?? row.id,
+    isRecurring: row.is_recurring,
+    name: row.name,
+    amount: serverNumericToMinorUnits(row.amount),
+    category: row.category as ExpenseCategory,
+    nextPaymentDate: row.next_payment_date,
+    attachments: [],
+    createdAt: row.created_at,
+  };
 }
 
 export const useExpensesStore = create<ExpensesState>()(
@@ -100,6 +131,8 @@ export const useExpensesStore = create<ExpensesState>()(
           attachments: [],
           createdAt: new Date().toISOString(),
           ...input,
+          // APP-040: kun beløb der kan gemmes, synkroniseres og vises præcist — før set().
+          amount: supportedMoney(input.amount),
         };
         set((state) => ({ expenses: [...state.expenses, newExpense] }));
         syncUpsertExpense(newExpense);
@@ -111,7 +144,8 @@ export const useExpensesStore = create<ExpensesState>()(
         if (!target) return;
 
         const editedMonth = target.nextPaymentDate.slice(0, 7);
-        const updatedExpense = { ...target, ...updates };
+        // Beløbet valideres altid før set(): en ikke-beløbsændring bevarer det eksisterende øre-beløb uændret.
+        const updatedExpense = { ...target, ...updates, amount: supportedMoney(updates.amount ?? target.amount) };
 
         let removedExpenses: Expense[] = [];
 
@@ -190,6 +224,7 @@ export const useExpensesStore = create<ExpensesState>()(
             if (!latestBefore.isRecurring) continue;
 
             newInstances.push({
+              // Beløbet er allerede i øre og kopieres uændret — aldrig skaleret igen.
               ...latestBefore,
               id: newEntityId(),
               seriesId, // også når en ældre rod kun har id og intet seriesId
@@ -208,11 +243,12 @@ export const useExpensesStore = create<ExpensesState>()(
       },
 
       setCategoryBudget: (category, limit) => {
+        const canonical = supportedMoney(limit);
         set((state) => ({
-          categoryBudgets: { ...state.categoryBudgets, [category]: limit },
+          categoryBudgets: { ...state.categoryBudgets, [category]: canonical },
         }));
         getUserId().then((userId) => {
-          if (userId) syncUpsertCategoryBudget(userId, category, limit);
+          if (userId) syncUpsertCategoryBudget(userId, category, canonical);
         });
       },
 
@@ -279,34 +315,41 @@ export const useExpensesStore = create<ExpensesState>()(
             .eq('user_id', userId),
         ]);
 
+        // APP-040: convert and validate the complete remote snapshot BEFORE any
+        // state change. One invalid amount rejects the whole fetch, so invalid
+        // server money can never overwrite or mix into valid local data.
+        let remoteExpenses: Expense[] | null = null;
+        let remoteBudgets: { category: string; limit: MinorUnits }[] | null = null;
+        try {
+          if (!expensesResult.error && expensesResult.data) {
+            remoteExpenses = (expensesResult.data as ExpenseRow[]).map(expenseFromRow);
+          }
+          if (!budgetsResult.error && budgetsResult.data) {
+            remoteBudgets = (budgetsResult.data as { category: string; monthly_limit: unknown }[]).map((row) => ({
+              category: row.category,
+              limit: serverNumericToMinorUnits(row.monthly_limit),
+            }));
+          }
+        } catch {
+          return; // rejected: MoneyError carries only a fixed code, and nothing is logged
+        }
+
         let newExpenseIds: string[] = [];
 
         set((state) => {
           const next: Partial<ExpensesState> = {};
 
-          if (!expensesResult.error && expensesResult.data) {
+          if (remoteExpenses) {
             const existingIds = new Set(state.expenses.map((e) => e.id));
-            const newRows = expensesResult.data.filter((row) => !existingIds.has(row.id));
-            newExpenseIds = newRows.map((row) => row.id);
-
-            const fetched: Expense[] = newRows.map((row) => ({
-              id: row.id,
-              seriesId: row.series_id ?? row.id,
-              isRecurring: row.is_recurring,
-              name: row.name,
-              amount: Number(row.amount),
-              category: row.category as ExpenseCategory,
-              nextPaymentDate: row.next_payment_date,
-              attachments: [],
-              createdAt: row.created_at,
-            }));
+            const fetched = remoteExpenses.filter((expense) => !existingIds.has(expense.id));
+            newExpenseIds = fetched.map((expense) => expense.id);
             next.expenses = [...state.expenses, ...fetched];
           }
 
-          if (!budgetsResult.error && budgetsResult.data) {
+          if (remoteBudgets) {
             const merged = { ...state.categoryBudgets };
-            for (const row of budgetsResult.data) {
-              if (!(row.category in merged)) merged[row.category] = Number(row.monthly_limit);
+            for (const budget of remoteBudgets) {
+              if (!(budget.category in merged)) merged[budget.category] = budget.limit;
             }
             next.categoryBudgets = merged;
           }
@@ -329,6 +372,8 @@ export const useExpensesStore = create<ExpensesState>()(
     }),
     {
       name: 'lifesort-expenses',
+      // APP-040 v1: money in DKK MinorUnits. The encrypted adapter upgrades v0.
+      version: 1,
       storage: createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage)),
       onRehydrateStorage: () => (state) => {
         if (!state) return;

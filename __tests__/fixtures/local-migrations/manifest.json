@@ -42,5 +42,49 @@
     "serialization": "raw JSON bytes",
     "synthetic": true,
     "sensitivity": "B/D; synthetic defaults, no health records"
+  },
+  {
+    "file": "expenses/49c4355-plaintext-v0.json",
+    "storeId": "async-storage:lifesort-expenses",
+    "storageKey": "lifesort-expenses",
+    "sourceCommit": "49c4355",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A (plaintext pre-0746c50 metadata; synthetic amounts only)"
+  },
+  {
+    "file": "expenses/c73bf68-inner-v0.json",
+    "storeId": "async-storage:lifesort-expenses",
+    "storageKey": "lifesort-expenses",
+    "sourceCommit": "c73bf68",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A,B (inner payload of the AES-GCM envelope; tests encrypt it; synthetic amounts and attachment references)"
+  },
+  {
+    "file": "income/c73bf68-v0.json",
+    "storeId": "async-storage:lifesort-income-v2",
+    "storageKey": "lifesort-income-v2",
+    "sourceCommit": "c73bf68",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A"
+  },
+  {
+    "file": "savings-goals/c73bf68-v0.json",
+    "storeId": "async-storage:lifesort-savings-goals",
+    "storageKey": "lifesort-savings-goals",
+    "sourceCommit": "c73bf68",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A"
   }
 ]

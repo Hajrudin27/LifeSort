@@ -8,6 +8,7 @@ import Card from "@/components/Card";
 import SavingsIconPicker from "@/components/SavingsIconPicker";
 import { useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { parseSupportedMoneyInput } from "@/core/money/supportedMoney";
 import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
 import { SavingsGoalIcon } from "@/types/savingsGoal";
 
@@ -21,15 +22,14 @@ export default function NewSavingsGoalScreen() {
   const [targetAmount, setTargetAmount] = useState("");
   const [icon, setIcon] = useState<SavingsGoalIcon>("other");
 
-  const canSave =
-    name.trim().length > 0 &&
-    !isNaN(parseFloat(targetAmount)) &&
-    parseFloat(targetAmount) > 0;
+  const parsedTarget = parseSupportedMoneyInput(targetAmount);
+  const canSave = name.trim().length > 0 && parsedTarget.ok && parsedTarget.value > 0;
 
   const save = () => {
+    if (!parsedTarget.ok) return;
     addGoal({
       name: name.trim(),
-      targetAmount: parseFloat(targetAmount),
+      targetAmount: parsedTarget.value,
       icon,
     });
     router.back();

@@ -1,3 +1,4 @@
+import type { MinorUnits } from '@/core/money/minorUnits';
 import type { Expense } from '@/types/expense';
 import { financialTotalsForMonth } from './financialReadModel';
 import { bankFinancialEntries, manualExpenseEntries, manualIncomeEntries, type BankFinancialInput } from './financialSources';
@@ -5,7 +6,7 @@ import { bankFinancialEntries, manualExpenseEntries, manualIncomeEntries, type B
 /** Production currently has no bank source; callers use the empty default. */
 export function economyTotalsForMonth(
   expenses: readonly Expense[],
-  incomeByMonth: Readonly<Record<string, number>>,
+  incomeByMonth: Readonly<Record<string, MinorUnits>>,
   monthKey: string,
   bank: readonly BankFinancialInput[] = [],
 ) {

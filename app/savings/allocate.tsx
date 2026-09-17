@@ -8,6 +8,17 @@ import { FlatList, Pressable, StyleSheet, TextInput } from "react-native";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import { Text, useThemeColor, View } from "@/components/Themed";
+import { minorUnitsToInputText } from "@/core/money/decimal";
+import { decimalSeparatorFor, formatDkk, moneyLocaleFor } from "@/core/money/format";
+import {
+  addMinorUnits,
+  divideMinorUnits,
+  subtractMinorUnits,
+  sumMinorUnits,
+  ZERO_MINOR_UNITS,
+  type MinorUnits,
+} from "@/core/money/minorUnits";
+import { parseSupportedMoneyInput, supportedSumOrNull } from "@/core/money/supportedMoney";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { useIncomeStore } from "@/store/useIncomeStore";
@@ -15,7 +26,8 @@ import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
 import { getMonthKey } from "@/utils/shared/monthKey";
 
 export default function AllocateSavingsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = moneyLocaleFor(i18n.language);
   const accentTints = useAccentTints();
   const borderColor = useThemeColor({}, "border");
   const surface = useThemeColor({}, "surface");
@@ -32,32 +44,45 @@ export default function AllocateSavingsScreen() {
   );
 
   const totals = economyTotalsForMonth(expenses, incomeByMonth, currentMonthKey);
-  const totalSaved = goals.reduce((sum, g) => sum + g.savedAmount, 0);
-  const available = totals.balance - totalSaved + extraSavings;
+  const totalSaved = sumMinorUnits(goals.map((g) => g.savedAmount));
+  const available = addMinorUnits(subtractMinorUnits(totals.balance, totalSaved), extraSavings);
 
   const [amounts, setAmounts] = useState<Record<string, string>>({});
 
-  const allocatedTotal = Object.values(amounts).reduce(
-    (sum, v) => sum + (parseFloat(v) || 0),
-    0,
+  // APP-040: an empty field counts as zero; any other text must parse exactly to
+  // supported money, and the goal's resulting balance must be supported too.
+  // Malformed or unsupported input blocks confirmation instead of being read leniently.
+  const parsedAmounts = goals.map((g) => {
+    const text = amounts[g.id] ?? "";
+    return { goal: g, id: g.id, parsed: text.trim().length === 0 ? null : parseSupportedMoneyInput(text) };
+  });
+  const hasInvalidAmount = parsedAmounts.some(
+    (a) =>
+      a.parsed !== null &&
+      (!a.parsed.ok || (a.parsed.value > 0 && supportedSumOrNull(a.goal.savedAmount, a.parsed.value) === null)),
   );
-  const remaining = available - allocatedTotal;
-  const canConfirm = allocatedTotal > 0 && remaining >= 0;
+  const enteredAmounts: { id: string; amount: MinorUnits }[] = parsedAmounts.flatMap((a) =>
+    a.parsed?.ok ? [{ id: a.id, amount: a.parsed.value }] : [],
+  );
+  const allocatedTotal = sumMinorUnits(enteredAmounts.map((a) => a.amount));
+  const remaining = subtractMinorUnits(available, allocatedTotal);
+  const canConfirm = !hasInvalidAmount && allocatedTotal > 0 && remaining >= 0;
 
   const distributeEqually = () => {
     if (goals.length === 0 || available <= 0) return;
-    const perGoal = Math.floor((available / goals.length) * 100) / 100;
+    // Equal whole-øre shares. The remainder (fewer øre than there are goals)
+    // stays visibly unallocated in "remaining", as the old floor-to-øre split did.
+    const { share } = divideMinorUnits(available, goals.length);
     const next: Record<string, string> = {};
     goals.forEach((g) => {
-      next[g.id] = perGoal.toString();
+      next[g.id] = minorUnitsToInputText(share, decimalSeparatorFor(locale));
     });
     setAmounts(next);
   };
 
   const confirm = () => {
-    const allocations = goals
-      .map((g) => ({ id: g.id, amount: parseFloat(amounts[g.id] ?? "0") || 0 }))
-      .filter((a) => a.amount > 0);
+    if (!canConfirm) return;
+    const allocations = enteredAmounts.filter((a) => a.amount > ZERO_MINOR_UNITS);
     distributeContributions(allocations);
     router.back();
   };
@@ -67,14 +92,14 @@ export default function AllocateSavingsScreen() {
       <Text style={[styles.availableLabel, { color: textMuted }]}>
         {t("savings.available")}
       </Text>
-      <Text style={styles.availableAmount}>{available.toFixed(2)} kr.</Text>
+      <Text style={styles.availableAmount}>{formatDkk(available, locale)}</Text>
       <Text
         style={[
           styles.remaining,
           { color: remaining < 0 ? danger : textMuted },
         ]}
       >
-        {remaining.toFixed(2)} kr. {t("savings.remainingToAllocate")}
+        {formatDkk(remaining, locale)} {t("savings.remainingToAllocate")}
       </Text>
 
       {goals.length > 1 && available > 0 && (

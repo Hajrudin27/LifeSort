@@ -46,7 +46,9 @@ export default function BackupScreen() {
             ? 'backup.importErrorInvalidFormat'
             : result.error === 'unsupported_version'
               ? 'backup.importErrorUnsupportedVersion'
-              : 'backup.importErrorParseFailed';
+              : result.error === 'invalid_money'
+                ? 'backup.importErrorInvalidMoney'
+                : 'backup.importErrorParseFailed';
         Alert.alert(t('backup.importErrorTitle'), t(messageKey));
         return;
       }

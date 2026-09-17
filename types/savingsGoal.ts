@@ -1,3 +1,5 @@
+import type { MinorUnits } from '@/core/money/minorUnits';
+
 export type SavingsGoalIcon =
   | "travel"
   | "home"
@@ -12,8 +14,8 @@ export interface SavingsGoal {
   id: string;
   name: string;
   icon: SavingsGoalIcon;
-  targetAmount: number;
-  savedAmount: number;
+  targetAmount: MinorUnits; // DKK øre (APP-040)
+  savedAmount: MinorUnits;
   deadline?: string;
   archived?: boolean;
   createdAt: string;
@@ -22,6 +24,6 @@ export interface SavingsGoal {
 export interface SavingsContribution {
   id: string;
   goalId: string;
-  amount: number; // signeret: positiv = indbetaling, negativ = udtræk
+  amount: MinorUnits; // DKK øre, signeret: positiv = indbetaling, negativ = udtræk
   date: string; // ISO
 }

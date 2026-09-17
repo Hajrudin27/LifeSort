@@ -1,5 +1,6 @@
 import type { DataDomainId } from '@/core/storage/dataProfileRegistry';
 import type { TodoItem } from '@/types/life';
+import { isSupportedMoney } from '@/core/money/supportedMoney';
 import type { SavingsContribution } from '@/types/savingsGoal';
 import type { Attachment } from '@/types/attachment';
 
@@ -110,7 +111,7 @@ const todoFields: FieldRules<Readonly<TodoItem>> = {
   dueDate: optionalString, completed: boolean, createdAt: string,
 };
 const contributionFields: FieldRules<Readonly<SavingsContribution>> = {
-  id: nonempty, goalId: nonempty, amount: (v) => typeof v === 'number' && Number.isFinite(v), date: string,
+  id: nonempty, goalId: nonempty, amount: isSupportedMoney, date: string,
 };
 const documentFields: FieldRules<DocumentIdentity> = {
   id: nonempty, name: string, kind: (v) => v === 'image' || v === 'document',

@@ -13,17 +13,23 @@ import SavingsHistoryChart from "@/components/SavingsHistoryChart";
 import SavingsIconPicker from "@/components/SavingsIconPicker";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { minorUnitsToInputText } from "@/core/money/decimal";
+import { decimalSeparatorFor, formatDkk, moneyLocaleFor } from "@/core/money/format";
+import { negateMinorUnits } from "@/core/money/minorUnits";
+import { parseSupportedMoneyInput, supportedSumOrNull } from "@/core/money/supportedMoney";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
 import { SavingsGoalIcon } from "@/types/savingsGoal";
 import {
   estimateMonthsToGoal,
+  monthlyRateForDisplay,
   requiredMonthlyAmount,
 } from "@/utils/savings/savingsPace";
 import { todayIso } from "@/utils/shared/localDate";
 
 export default function SavingsGoalDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = moneyLocaleFor(i18n.language);
   const { id } = useLocalSearchParams<{ id: string }>();
   const borderColor = useThemeColor({}, "border");
   const surface = useThemeColor({}, "surface");
@@ -48,7 +54,7 @@ export default function SavingsGoalDetailScreen() {
 
   const [name, setName] = useState(goal?.name ?? "");
   const [targetAmount, setTargetAmount] = useState(
-    goal?.targetAmount.toString() ?? "",
+    goal ? minorUnitsToInputText(goal.targetAmount, decimalSeparatorFor(locale)) : "",
   );
   const [icon, setIcon] = useState<SavingsGoalIcon>(goal?.icon ?? "other");
   const [hasDeadline, setHasDeadline] = useState(!!goal?.deadline);
@@ -68,19 +74,27 @@ export default function SavingsGoalDetailScreen() {
     );
   }
 
-  const canSave =
-    name.trim().length > 0 &&
-    !isNaN(parseFloat(targetAmount)) &&
-    parseFloat(targetAmount) > 0;
+  // APP-040: text → supported DKK MinorUnits; the existing positive/limit rules are
+  // unchanged, and a resulting balance the store would reject keeps the action disabled.
+  const parsedTarget = parseSupportedMoneyInput(targetAmount);
+  const canSave = name.trim().length > 0 && parsedTarget.ok && parsedTarget.value > 0;
+  const parsedContribution = parseSupportedMoneyInput(contribution);
   const canContribute =
-    !isNaN(parseFloat(contribution)) && parseFloat(contribution) > 0;
+    parsedContribution.ok &&
+    parsedContribution.value > 0 &&
+    supportedSumOrNull(goal.savedAmount, parsedContribution.value) !== null;
 
-  const parsedTransferAmount = parseFloat(transferAmount);
+  const parsedTransfer = parseSupportedMoneyInput(transferAmount);
   const validTransferAmount =
-    !isNaN(parsedTransferAmount) &&
-    parsedTransferAmount > 0 &&
-    parsedTransferAmount <= goal.savedAmount;
-  const canTransfer = transferTarget !== null && validTransferAmount;
+    parsedTransfer.ok &&
+    parsedTransfer.value > 0 &&
+    parsedTransfer.value <= goal.savedAmount &&
+    supportedSumOrNull(goal.savedAmount, negateMinorUnits(parsedTransfer.value)) !== null;
+  const transferGoal = otherGoals.find((g) => g.id === transferTarget);
+  const canTransfer =
+    transferGoal !== undefined &&
+    validTransferAmount &&
+    supportedSumOrNull(transferGoal.savedAmount, parsedTransfer.value) !== null;
   const canWithdraw = validTransferAmount;
 
   const estimatedMonths = estimateMonthsToGoal(goal, allHistory);
@@ -102,9 +116,10 @@ export default function SavingsGoalDetailScreen() {
     })();
 
   const save = () => {
+    if (!parsedTarget.ok) return;
     updateGoal(goal.id, {
       name: name.trim(),
-      targetAmount: parseFloat(targetAmount),
+      targetAmount: parsedTarget.value,
       icon,
       deadline: hasDeadline ? deadline : undefined,
     });
@@ -113,19 +128,21 @@ export default function SavingsGoalDetailScreen() {
   };
 
   const confirmContribution = () => {
-    addContribution(goal.id, parseFloat(contribution));
+    if (!parsedContribution.ok) return;
+    addContribution(goal.id, parsedContribution.value);
     setContribution("");
   };
 
   const doTransfer = () => {
-    if (!transferTarget) return;
-    transferBetweenGoals(goal.id, transferTarget, parsedTransferAmount);
+    if (!transferTarget || !parsedTransfer.ok) return;
+    transferBetweenGoals(goal.id, transferTarget, parsedTransfer.value);
     setTransferAmount("");
     setTransferTarget(null);
   };
 
   const doWithdraw = () => {
-    addContribution(goal.id, -parsedTransferAmount);
+    if (!parsedTransfer.ok) return;
+    addContribution(goal.id, negateMinorUnits(parsedTransfer.value));
     setTransferAmount("");
   };
 
@@ -176,8 +193,8 @@ export default function SavingsGoalDetailScreen() {
       <Card style={styles.progressCard}>
         <ProgressBar progress={goal.savedAmount / goal.targetAmount} />
         <Text style={[styles.progressText, { color: textMuted }]}>
-          {goal.savedAmount.toFixed(2)} {t("savings.of")}{" "}
-          {goal.targetAmount.toFixed(2)} kr.
+          {formatDkk(goal.savedAmount, locale)} {t("savings.of")}{" "}
+          {formatDkk(goal.targetAmount, locale)}
         </Text>
       </Card>
 
@@ -225,7 +242,7 @@ export default function SavingsGoalDetailScreen() {
               ]}
             >
               {t("savings.paceRequired", {
-                amount: requiredMonthly.toFixed(0),
+                amount: formatDkk(monthlyRateForDisplay(requiredMonthly), locale),
               })}
             </Text>
           )}

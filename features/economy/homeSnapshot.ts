@@ -1,8 +1,11 @@
 import { economyTotalsForMonth } from './monthlyTotals';
+import { formatDkk, moneyLocaleFor } from '@/core/money/format';
+import { sumMinorUnits } from '@/core/money/minorUnits';
 import type { HomeSnapshot } from '@/core/modules/moduleRegistry';
 import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useIncomeStore } from '@/store/useIncomeStore';
+import i18n from '@/localization/i18n';
 import { useSavingsGoalsStore } from '@/store/useSavingsGoalsStore';
 import { getMonthKey } from '@/utils/shared/monthKey';
 
@@ -26,15 +29,15 @@ export async function economyHomeSnapshot(): Promise<HomeSnapshot | null> {
   );
 
   const goals = useSavingsGoalsStore.getState().goals;
-  const totalSaved = goals.reduce((sum, goal) => sum + goal.savedAmount, 0);
-  const totalTarget = goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
+  const totalSaved = sumMinorUnits(goals.map((goal) => goal.savedAmount));
+  const totalTarget = sumMinorUnits(goals.map((goal) => goal.targetAmount));
 
   const moneyAvailable = totals.balance;
 
   return {
     moduleId: 'economy',
     titleKey: 'home.moneySnapshotLabel',
-    value: `${moneyAvailable.toFixed(0)} kr.`,
+    value: formatDkk(moneyAvailable, moneyLocaleFor(i18n.language)),
     // Sparemålene fylder ikke et helt kort, men er det mest brugbare at vide
     // ved siden af "hvor meget er der tilbage".
     helperKey: totalTarget > 0 ? 'home.moneySnapshotHelperSavings' : 'home.moneySnapshotHelper',

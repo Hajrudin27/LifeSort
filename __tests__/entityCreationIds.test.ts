@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { randomUUID } from 'expo-crypto';
 import { newEntityId } from '@/core/ids';
+import { minorUnits } from '@/core/money/minorUnits';
 import { Expense } from '@/types/expense';
 
 // Exercise the real Zustand persistence/hydration and domain actions without a device.
@@ -41,7 +42,7 @@ import { useWarrantiesStore } from '@/store/useWarrantiesStore';
 import { scheduleTripPackingReminder } from '@/utils/trip/tripReminder';
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const expenseInput = { name: 'Synthetic rent', amount: 100, category: 'bill', nextPaymentDate: '2026-09-01', isRecurring: true };
+const expenseInput = { name: 'Synthetic rent', amount: minorUnits(10_000), category: 'bill', nextPaymentDate: '2026-09-01', isRecurring: true };
 const tripInput = { name: 'Synthetic trip', startDate: '2027-01-01', endDate: '2027-01-03', budget: null };
 
 function expectFreshIds(records: { id: string }[]) {
@@ -93,10 +94,11 @@ it('mints fresh recurrence instance IDs, preserves series/month deduplication an
   expectFreshIds(instances);
   expect(instances.every((e) => e.seriesId === rootId)).toBe(true);
   const october = instances.find((e) => e.nextPaymentDate === '2026-10-01')!;
-  store.updateExpense(october.id, { amount: 200 });
+  store.updateExpense(october.id, { amount: minorUnits(20_050) });
   store.rollForwardMonth('2026-11');
   const november = useExpensesStore.getState().expenses.find((e) => e.nextPaymentDate === '2026-11-01')!;
-  expect(november.amount).toBe(200);
+  // APP-040: the copied instance keeps the øre value exactly; it is never scaled again.
+  expect(november.amount).toBe(20_050);
   expect(november.id).not.toBe(instances[2].id);
   expect(november.seriesId).toBe(rootId);
   store.deleteRecurringFromMonth(rootId, '2026-11');
@@ -119,11 +121,11 @@ it('keeps trip references and reminder IDs, while copied packing items get new I
 
 it('gives savings contributions independent IDs while preserving both goal references', () => {
   const store = useSavingsGoalsStore.getState();
-  const first = store.addGoal({ name: 'First', targetAmount: 100, icon: 'other' });
-  const second = store.addGoal({ name: 'Second', targetAmount: 100, icon: 'other' });
-  store.addContribution(first, 50);
-  store.distributeContributions([{ id: first, amount: 10 }, { id: second, amount: 20 }]);
-  store.transferBetweenGoals(first, second, 5);
+  const first = store.addGoal({ name: 'First', targetAmount: minorUnits(10_000), icon: 'other' });
+  const second = store.addGoal({ name: 'Second', targetAmount: minorUnits(10_000), icon: 'other' });
+  store.addContribution(first, minorUnits(5_000));
+  store.distributeContributions([{ id: first, amount: minorUnits(1_000) }, { id: second, amount: minorUnits(2_000) }]);
+  store.transferBetweenGoals(first, second, minorUnits(500));
   const state = useSavingsGoalsStore.getState();
   expectFreshIds([...state.goals, ...state.history]);
   expect(state.history.map((h) => h.goalId)).toEqual([first, first, second, first, second]);
@@ -182,7 +184,9 @@ it.each([false, true])('hydrates, updates and deletes legacy expense/attachment 
     attachments: [{ id: attachmentId, uri: 'file:///legacy.jpg', name: 'legacy.jpg', kind: 'image' }],
     createdAt: '2024-09-01T00:00:00.000Z',
   } as Expense;
-  await AsyncStorage.setItem('lifesort-expenses', JSON.stringify({ version: 0, state: { expenses: [legacy], seriesStoppedAt: {}, categoryBudgets: {} } }));
+  // This suite bypasses the encrypted adapter, which owns the APP-040 inner v0 -> v1
+  // money upgrade (covered in economyMoneyMigration.test.ts); seed the current v1 shape.
+  await AsyncStorage.setItem('lifesort-expenses', JSON.stringify({ version: 1, state: { expenses: [legacy], seriesStoppedAt: {}, categoryBudgets: {} } }));
   await useExpensesStore.persist.rehydrate();
   const store = useExpensesStore.getState();
   expect(store.expenses).toEqual([legacy]);

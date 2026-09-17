@@ -1,3 +1,4 @@
+import { minorUnits } from '@/core/money/minorUnits';
 import { Attachment } from '@/types/attachment';
 import { Expense } from '@/types/expense';
 import { Trip, TripAttachment, TripExpense } from '@/types/trip';
@@ -86,7 +87,7 @@ function expense(id: string, nextPaymentDate = '2026-09-01', attachments: Attach
     seriesId: 'series-1',
     isRecurring: true,
     name: id,
-    amount: 100,
+    amount: minorUnits(10_000),
     category: 'home',
     nextPaymentDate,
     attachments,
@@ -193,10 +194,10 @@ describe('APP-029 parent attachment cache cleanup', () => {
     const otherSeries = { ...expense('other', '2026-11-01', [attachment('other')]), seriesId: 'series-2' };
     useExpensesStore.setState({ expenses: [edited, future, otherSeries] });
 
-    useExpensesStore.getState().updateExpense('edited', { amount: 250 });
+    useExpensesStore.getState().updateExpense('edited', { amount: minorUnits(25_000) });
 
     expect(useExpensesStore.getState().expenses.map((e) => e.id).sort()).toEqual(['edited', 'other']);
-    expect(useExpensesStore.getState().expenses.find((e) => e.id === 'edited')?.amount).toBe(250);
+    expect(useExpensesStore.getState().expenses.find((e) => e.id === 'edited')?.amount).toBe(25_000);
     expect(mockDeleteCachedAttachmentFile).toHaveBeenCalledWith('file:///doc/attachments/future.lsenc');
     expect(mockDeleteCachedAttachmentFile).not.toHaveBeenCalledWith('file:///doc/attachments/edited.lsenc');
     expect(mockDeleteCachedAttachmentFile).not.toHaveBeenCalledWith('file:///doc/attachments/other.lsenc');

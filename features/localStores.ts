@@ -1,4 +1,5 @@
 import type { LocalStoreReset } from '@/core/auth/clearLocalUserData';
+import { ZERO_MINOR_UNITS } from '@/core/money/minorUnits';
 import { useAppLockStore } from '@/store/useAppLockStore';
 import { useCVStore } from '@/store/useCVStore';
 import { useCareerStore } from '@/store/useCareerStore';
@@ -56,7 +57,7 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
   },
   {
     key: 'lifesort-savings-goals',
-    reset: () => useSavingsGoalsStore.setState({ goals: [], history: [], extraSavings: 0 }),
+    reset: () => useSavingsGoalsStore.setState({ goals: [], history: [], extraSavings: ZERO_MINOR_UNITS }),
   },
   { key: 'lifesort-warranties', reset: () => useWarrantiesStore.setState({ warranties: [] }) },
   {

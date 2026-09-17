@@ -15,6 +15,9 @@ import Button from "@/components/Button";
 import ProgressBar from "@/components/ProgressBar";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { formatDkk, moneyLocaleFor } from "@/core/money/format";
+import { addMinorUnits, subtractMinorUnits, sumMinorUnits } from "@/core/money/minorUnits";
+import { parseSupportedMoneyInput, supportedSumOrNull } from "@/core/money/supportedMoney";
 import Kicker from "@/components/Kicker";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useHomeBackTitle } from "@/hooks/useHomeBackTitle";
@@ -25,7 +28,8 @@ import { getIconSymbolName } from "@/utils/savings/savingsGoalIcon";
 import { getMonthKey } from "@/utils/shared/monthKey";
 
 export default function SavingsGoalsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = moneyLocaleFor(i18n.language);
   const { from } = useLocalSearchParams<{ from?: string }>();
   useHomeBackTitle(from);
 
@@ -43,19 +47,24 @@ export default function SavingsGoalsScreen() {
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
   const currentMonthKey = getMonthKey(new Date());
   const totals = economyTotalsForMonth(expenses, incomeByMonth, currentMonthKey);
-  const totalSaved = goals.reduce((sum, g) => sum + g.savedAmount, 0);
-  const totalTarget = goals.reduce((sum, g) => sum + g.targetAmount, 0);
+  const totalSaved = sumMinorUnits(goals.map((g) => g.savedAmount));
+  const totalTarget = sumMinorUnits(goals.map((g) => g.targetAmount));
   const overallProgress = totalTarget > 0 ? totalSaved / totalTarget : 0;
-  const available = totals.balance - totalSaved + extraSavings;
+  const available = addMinorUnits(subtractMinorUnits(totals.balance, totalSaved), extraSavings);
 
   const usedIcons = Array.from(new Set(goals.map((g) => g.icon)));
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [addAmount, setAddAmount] = useState("");
-  const canAdd = !isNaN(parseFloat(addAmount)) && parseFloat(addAmount) > 0;
+  const parsedAddAmount = parseSupportedMoneyInput(addAmount);
+  const canAdd =
+    parsedAddAmount.ok &&
+    parsedAddAmount.value > 0 &&
+    supportedSumOrNull(extraSavings, parsedAddAmount.value) !== null;
 
   const confirmAdd = () => {
-    addExtraSavings(parseFloat(addAmount));
+    if (!parsedAddAmount.ok) return;
+    addExtraSavings(parsedAddAmount.value);
     setAddAmount("");
     setShowAddModal(false);
   };
@@ -95,7 +104,7 @@ export default function SavingsGoalsScreen() {
           </View>
           <View style={styles.heroTextGroup}>
             <Text style={styles.heroKicker}>{t("savings.available")}</Text>
-            <Text style={styles.heroAmount}>{available.toFixed(0)} kr.</Text>
+            <Text style={styles.heroAmount}>{formatDkk(available, locale)}</Text>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -140,8 +149,7 @@ export default function SavingsGoalsScreen() {
               />
             </View>
             <Text style={styles.heroProgressLabel}>
-              {totalSaved.toFixed(0)} {t("savings.of")} {totalTarget.toFixed(0)}{" "}
-              kr.
+              {formatDkk(totalSaved, locale)} {t("savings.of")} {formatDkk(totalTarget, locale)}
             </Text>
           </View>
         )}
@@ -170,8 +178,8 @@ export default function SavingsGoalsScreen() {
         }
         renderItem={({ item: icon }) => {
           const inIcon = goals.filter((g) => g.icon === icon);
-          const saved = inIcon.reduce((sum, g) => sum + g.savedAmount, 0);
-          const target = inIcon.reduce((sum, g) => sum + g.targetAmount, 0);
+          const saved = sumMinorUnits(inIcon.map((g) => g.savedAmount));
+          const target = sumMinorUnits(inIcon.map((g) => g.targetAmount));
           const progress = target > 0 ? saved / target : 0;
           const isReached = target > 0 && saved >= target;
 
@@ -242,7 +250,7 @@ export default function SavingsGoalsScreen() {
                     </View>
                     <Text style={{ color: textMuted, fontSize: 12 }}>
                       {t("savings.goalsCount", { count: inIcon.length })} ·{" "}
-                      {saved.toFixed(0)} / {target.toFixed(0)} kr.
+                      {formatDkk(saved, locale)} / {formatDkk(target, locale)}
                     </Text>
                   </View>
                   <SymbolView

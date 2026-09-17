@@ -155,7 +155,7 @@ migration, encrypted retry records for required plaintext cleanup, and
 temporary decrypted cache cleanup. APP-030 cryptographic UUID changes, APP-031
 durable outbox, APP-032 idempotency, APP-033 revisions/`updated_at`, APP-034
 tombstones, APP-035 conflict handling, APP-036 sync UX, APP-037
-connectivity-aware sync and APP-038 migration harness are implemented. APP-038 migrates Home layout and validates outbox compatibility; feature-schema expansion remains deferred.
+connectivity-aware sync and APP-038 migration harness are implemented. APP-038 migrates Home layout and validates outbox compatibility; feature-schema expansion remains deferred. APP-040 adds Economy money v0→v1 (income and savings as versioned surfaces; expenses inside the encrypted adapter); profiles are unchanged.
 
 ## Human Review Notes
 
@@ -172,7 +172,8 @@ connectivity-aware sync and APP-038 migration harness are implemented. APP-038 m
 `PersistenceSurface.migration` declares `kind`, `owner`, `reason`, and the known
 payload `currentVersion` when applicable. Every device surface must supply a
 policy. Versioned definitions are resolved from these registered surfaces;
-there is no second persistence inventory. External Zustand owners retain v0
+there is no second persistence inventory. External Zustand owners retain their
+declared version (v0, or v1 for the encrypted expenses adapter since APP-040)
 and receive an envelope/version guard at the adapter boundary. Specialized
 health and document adapters retain encryption ownership. Remote surfaces and
 bundled immutable content do not participate in the local startup runner.

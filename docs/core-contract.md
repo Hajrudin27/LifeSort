@@ -55,8 +55,9 @@ are core today and are already held to R6:
 
 Areas the specification names that **do not exist yet**: `privacy/`,
 `notifications/`, `search/`, `feature-flags/`, `entitlements/`, `analytics/`,
-`ai/`, `observability/`, `money/`, `validation/`. They arrive with the stories
-that need them. Creating empty folders for them now would be architecture
+`ai/`, `observability/`, `validation/`. They arrive with the stories that need
+them. (`money/` arrived with APP-040: `core/money` holds the integer minor-unit
+primitive, parser, boundary converters and localized formatter.) Creating empty folders for them now would be architecture
 theatre.
 
 ## The rules

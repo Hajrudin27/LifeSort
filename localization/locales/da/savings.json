@@ -58,7 +58,7 @@
   "paceTitle": "Tempo",
   "paceEstimate": "Ved dit nuværende tempo når du målet om ca. {{months}} måneder.",
   "paceReached": "Målet er allerede nået!",
-  "paceRequired": "For at nå din deadline skal du spare {{amount}} kr. om måneden.",
+  "paceRequired": "For at nå din deadline skal du spare {{amount}} om måneden.",
   "setDeadlineToggle": "Sæt en deadline",
   "deadlineLabel": "Deadline",
   "distributeEqually": "Fordel ligeligt",

@@ -12,6 +12,9 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { StateStorage } from 'zustand/middleware';
 
+import { expensesMoneyMigration } from './migrations/economyMoney';
+import { migrateLocalStore, type LocalMigrationDefinition } from './migrations/harness';
+
 const KEYCHAIN_KEY = 'lifesort-document-cache-key';
 const METADATA_ENVELOPE_MARKER = '__lifesort_encrypted_document_metadata__';
 const ENVELOPE_VERSION = 1;
@@ -706,10 +709,33 @@ function visitAttachmentLists(payload: Record<string, unknown>, visit: (attachme
   }
 }
 
-function looksLikeKnownDocumentMetadataPayload(storageName: string, parsed: Record<string, unknown>): boolean {
-  // Historical writers always used Zustand's explicit default version 0.
+/**
+ * APP-040: inner Zustand schema upgrades owned by this adapter. The APP-038
+ * harness runs against an in-memory capture only; this adapter then performs the
+ * single encrypted commit. No plaintext candidate is ever written anywhere.
+ */
+const INNER_SCHEMA_MIGRATIONS: Readonly<Record<string, LocalMigrationDefinition>> = {
+  [expensesMoneyMigration.storageKey]: expensesMoneyMigration,
+};
+
+/** Returns the upgraded plaintext, or the input unchanged when already current. */
+async function upgradeInnerPayloadInMemory(storageName: string, plaintext: string): Promise<string> {
+  const definition = INNER_SCHEMA_MIGRATIONS[storageName];
+  if (!definition) return plaintext;
+  const inMemory = { getItem: async () => plaintext, setItem: async () => undefined };
+  return (await migrateLocalStore(definition, inMemory)).raw ?? plaintext;
+}
+
+function looksLikeKnownDocumentMetadataPayload(
+  storageName: string,
+  parsed: Record<string, unknown>,
+  acceptCurrentInnerVersion = false,
+): boolean {
+  // Historical writers always used Zustand's explicit default version 0; only
+  // encrypted payloads may already carry an adapter-owned current version.
   // Reject before encryption, key creation, or attachment migration.
-  if (parsed.version !== 0) return false;
+  const currentInnerVersion = INNER_SCHEMA_MIGRATIONS[storageName]?.currentVersion ?? 0;
+  if (parsed.version !== 0 && !(acceptCurrentInnerVersion && parsed.version === currentInnerVersion)) return false;
   if (!isRecord(parsed.state)) return false;
   const state = parsed.state;
   if (storageName === 'lifesort-expenses') {
@@ -733,8 +759,12 @@ async function prepareLegacyPayloadMigration(storageName: string, value: string)
     );
   }
 
+  // APP-040: upgrade the inner schema in memory before any key, file or metadata
+  // write, so unsupported money leaves the plaintext legacy payload untouched.
+  const upgraded = parseStoredJson(await upgradeInnerPayloadInMemory(storageName, value));
+
   const migrations: LegacyFileMigration[] = [];
-  visitAttachmentLists(parsed, (attachment) => {
+  visitAttachmentLists(upgraded, (attachment) => {
     const uri = attachment.uri;
     if (typeof uri === 'string' && isLegacyPlaintextAttachmentCacheUri(uri)) {
       const encryptedUri = nextEncryptedAttachmentUri();
@@ -747,7 +777,7 @@ async function prepareLegacyPayloadMigration(storageName: string, value: string)
     await encryptAttachmentBytesToUri(migration.sourceUri, migration.encryptedUri);
   }
 
-  const migratedValue = JSON.stringify(parsed);
+  const migratedValue = JSON.stringify(upgraded);
   return {
     value: migratedValue,
     cleanupRecords: migrations,
@@ -822,6 +852,18 @@ async function retryPendingLegacyPlaintextCleanup(
   await bestEffortRemovePendingCleanupRecordsFromCurrentEnvelope(name, plaintext, stored, operationEpoch);
 }
 
+/** One encrypted commit of an upgraded inner schema. Any pending legacy cleanup is
+ * finished first; the rewrite then carries no cleanup records. */
+async function commitUpgradedInnerPayload(
+  name: string,
+  value: string,
+  pendingCleanupRecords: readonly LegacyPlaintextCleanupRecord[],
+  operationEpoch: number,
+): Promise<void> {
+  await finalizeLegacyPlaintextCleanup(pendingCleanupRecords);
+  await performEncryptedDocumentMetadataWrite(name, value, operationEpoch);
+}
+
 async function performLegacyPayloadMigration(name: string, stored: string, operationEpoch: number): Promise<string> {
   let prepared: PreparedPayloadMigration | null = null;
   try {
@@ -871,12 +913,19 @@ async function readDocumentMetadataPayload(name: string): Promise<string | null>
   if (parsed.marker === METADATA_ENVELOPE_MARKER) {
     try {
       const { plaintext, pendingCleanupRecords } = await decryptDocumentMetadataEnvelope(name, stored, epoch);
-      if (!looksLikeKnownDocumentMetadataPayload(name, parseStoredJson(plaintext))) {
+      if (!looksLikeKnownDocumentMetadataPayload(name, parseStoredJson(plaintext), true)) {
         throw new DocumentCacheProtectedDataError('legacy-plaintext-malformed', 'Unsupported document metadata schema.');
       }
-      await trackWrite(retryPendingLegacyPlaintextCleanup(name, plaintext, pendingCleanupRecords, stored, epoch));
+      // Validation and conversion finish before any write; failure keeps the
+      // prior encrypted bytes and blocks ordinary writes like any protected failure.
+      const upgraded = await upgradeInnerPayloadInMemory(name, plaintext);
+      if (upgraded === plaintext) {
+        await trackWrite(retryPendingLegacyPlaintextCleanup(name, plaintext, pendingCleanupRecords, stored, epoch));
+      } else {
+        await trackWrite(commitUpgradedInnerPayload(name, upgraded, pendingCleanupRecords, epoch));
+      }
       blockedStorageNames.delete(name);
-      return plaintext;
+      return upgraded;
     } catch (error) {
       if (!isCleanupLifecycleFailure(error)) blockedStorageNames.add(name);
       throw error;

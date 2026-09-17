@@ -2,13 +2,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { StateStorage } from 'zustand/middleware';
 import { PERSISTENCE_SURFACES, getPersistenceSurface } from '@/core/storage/dataProfileRegistry';
 import { LocalMigrationError, migrateLocalStore, type LocalMigrationDefinition } from './harness';
+import { incomeMoneyMigration, savingsGoalsMoneyMigration } from './economyMoney';
 import { homeLayoutMigration } from './homeLayout';
 import { outboxMigration } from './outbox';
 
+/** Zustand stores whose hydration reads run their versioned definition directly. */
+const ZUSTAND_VERSIONED_DEFINITIONS: readonly LocalMigrationDefinition[] = [
+  homeLayoutMigration, incomeMoneyMigration, savingsGoalsMoneyMigration,
+];
+
 /** Implementations, not another inventory: inclusion and versions come from governance. */
 export function definitionForSurface(id: string): LocalMigrationDefinition {
-  if (id === homeLayoutMigration.storeId) return homeLayoutMigration;
-  if (id === outboxMigration.storeId) return outboxMigration;
+  const definition = [...ZUSTAND_VERSIONED_DEFINITIONS, outboxMigration].find((candidate) => candidate.storeId === id);
+  if (definition) return definition;
   throw new LocalMigrationError(id, 'unsupported-version');
 }
 
@@ -65,9 +71,9 @@ export function migrationGatedStorage(storage: StateStorage): StateStorage<Promi
     getItem(name) {
       const read = (async () => {
         await ensureLocalMigrations();
-        if (name === homeLayoutMigration.storageKey) {
-          return (await migrateLocalStore(homeLayoutMigration, AsyncStorage)).raw;
-        }
+        // A rehydrate after the startup gate must still upgrade and validate.
+        const versioned = ZUSTAND_VERSIONED_DEFINITIONS.find((definition) => definition.storageKey === name);
+        if (versioned) return (await migrateLocalStore(versioned, AsyncStorage)).raw;
         let raw: string | null;
         try { raw = await storage.getItem(name); } catch {
           // Never forward native errors that may contain decrypted records.

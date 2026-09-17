@@ -34,28 +34,22 @@ const REMINDER_MODULES = [
 /** Typer med en vedhæftnings-form. To i dag; den ene mangler storagePath. */
 const ATTACHMENT_TYPE_FILES = ['types/attachment.ts', 'types/trip.ts'];
 
-/** Skærme der formaterer beløb selv, i stedet for gennem et Money-primitiv. */
+/**
+ * Skærme der formaterer beløb selv, i stedet for gennem et Money-primitiv.
+ * APP-040 flyttede Økonomiens beløb til core/money/format.ts; Food og Travel er
+ * ikke migreret. ExpensePieChart står her for en procentsats, ikke et beløb.
+ */
 const MONEY_FORMATTING_FILES = [
-  'app/(tabs)/economy.tsx',
-  'app/economy/insights.tsx',
-  'app/expenses/search.tsx',
-  'app/expenses/upcoming.tsx',
   'app/food/index.tsx',
   'app/food/offers.tsx',
   'app/food/recipes/[id].tsx',
   'app/food/weekly-plan.tsx',
-  'app/savings/[id].tsx',
-  'app/savings/allocate.tsx',
-  'app/savings/icon/[icon].tsx',
-  'app/savings/index.tsx',
   'app/travel/[id]/expenses/index.tsx',
   'app/travel/[id]/index.tsx',
   'app/travel/index.tsx',
   'components/ExpensePieChart.tsx',
   // APP-011 flyttede Homes beløbsformatering herind. Den forsvandt ikke —
   // den flyttede, og skal med i frysningen, hvor den nu står.
-  'features/economy/homeSnapshot.ts',
-  'features/economy/monthlyReview.ts',
   'features/food/homeSnapshot.ts',
   'features/food/monthlyReview.ts',
 ];

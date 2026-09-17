@@ -5,17 +5,21 @@ The Economy monthly summary now derives from `economyTotalsForMonth` in
 pure `financialTotalsForMonth` function. No source, normalized entry, link or
 total is persisted. No store, schema, storage version or migration changed.
 
+> **APP-040 update.** Every amount in this read model is now DKK `MinorUnits`
+> (integer øre) and is summed with checked integer arithmetic; the accounting
+> rules below are unchanged. See [APP-040 money primitive](./app-040-money.md).
+
 ## Sources and amounts
 
 - `Expense[]` becomes booked manual transaction entries, identified by expense
   instance `id`. `seriesId` is not an economic identity across months. Existing
-  signed JS-number amounts and `nextPaymentDate` are preserved. The adapter does
+  signed amounts (DKK `MinorUnits` since APP-040) and `nextPaymentDate` are preserved. The adapter does
   not reinterpret a negative legacy expense as a new financial type.
-- `incomeByMonth: Record<string, number>` becomes manual monthly aggregates,
+- `incomeByMonth: Record<string, MinorUnits>` becomes manual monthly aggregates,
   identified only by their month within the aggregate namespace. These have no
   transaction ID or correlation. Zero remains distinguishable from absent income.
 - `BankFinancialInput` is a non-persisted, Economy-owned boundary: `id`, `kind`
-  (`debit | credit | transfer | refund`), signed major-unit `amount`, `currency`,
+  (`debit | credit | transfer | refund`), signed `amountMinor` (DKK `MinorUnits`), `currency`,
   `date`, `status` (`pending | booked`) and optional `correlationId`. It contains
   no provider payload, account details, merchant or description. A future adapter
   must provide a stable ID across pending/booked snapshots and normalize dates
@@ -71,8 +75,9 @@ and read no clock, auth, storage, network or mutable module state.
 
 Economy remains DKK. The bank boundary rejects any other currency before
 deduplication or filtering, even for pending/out-of-month entries. Core entries
-are typed DKK and also checked at runtime. There is no FX or Money migration.
-Existing JS floating-point precision and formatting remain for APP-040.
+are typed DKK and also checked at runtime. There is no FX. APP-040 replaced the
+former JS floating-point amounts with integer `MinorUnits` and one localized
+formatter; a non-integer or unsafe amount is `financial_amount_invalid`.
 
 ## Consumer scope
 

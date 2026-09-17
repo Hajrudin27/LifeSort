@@ -91,7 +91,9 @@ export async function importBackup(): Promise<ImportResult | null> {
 
   // Filen valideres HELT igennem, før der skrives noget som helst. Slår bare ét
   // felt fejl, afvises hele importen — en halvt gendannet tilstand ville være
-  // værre end ingen gendannelse, og handlingen kan ikke fortrydes.
+  // værre end ingen gendannelse, og handlingen kan ikke fortrydes. Det gælder
+  // også Økonomiens beløb (APP-040): format 1 konverteres og format 2 valideres
+  // her, så setState nedenfor kun modtager kanoniske øre.
   const parsed = parseBackupFile(content);
   if (!parsed.ok) {
     return { success: false, restoredKeys: [], skippedKeys: [], error: parsed.error };

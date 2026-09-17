@@ -1,3 +1,4 @@
+import { minorUnits } from '@/core/money/minorUnits';
 import { isInMonth, previousMonthKey } from '@/core/modules/monthlyReview';
 import { MONTHLY_REVIEW_PROVIDERS } from '@/features/monthlyReview';
 import { useExpensesStore } from '@/store/useExpensesStore';
@@ -12,13 +13,15 @@ import { useTodoStore } from '@/store/useTodoStore';
  */
 
 const MONTH = '2026-08';
+/** APP-040: Økonomiens beløb er øre; faktaene viser dem lokaliseret (testsprog: da). */
+const plain = (value: unknown) => (typeof value === 'string' ? value.replace(/[\u00a0\u202f]/g, ' ') : value);
 
 const expense = (id: string, amount: number, date: string) => ({
   id,
   seriesId: id,
   isRecurring: false,
   name: `Post ${id}`,
-  amount,
+  amount: minorUnits(amount),
   category: 'other',
   nextPaymentDate: date,
   attachments: [],
@@ -38,17 +41,18 @@ describe('kun udledte kendsgerninger', () => {
   it('summerer præcis de poster, måneden indeholder', async () => {
     useExpensesStore.setState({
       expenses: [
-        expense('a', 100, '2026-08-03'),
-        expense('b', 250, '2026-08-28'),
+        expense('a', 10_000, '2026-08-03'),
+        expense('b', 25_050, '2026-08-28'),
         // Naboer i kalenderen, men ikke i måneden.
-        expense('c', 999, '2026-07-31'),
-        expense('d', 999, '2026-09-01'),
+        expense('c', 99_900, '2026-07-31'),
+        expense('d', 99_900, '2026-09-01'),
       ],
     });
 
     const facts = await MONTHLY_REVIEW_PROVIDERS.economy!(MONTH);
     const spent = facts.find((fact) => fact.labelKey === 'review.economySpent');
-    expect(spent?.params).toEqual({ amount: '350', count: 2 });
+    expect(spent?.params?.count).toBe(2);
+    expect(plain(spent?.params?.amount)).toBe('350,50 kr.');
   });
 
   it('siger ingenting, når der ingen poster er — frem for at vise nul', async () => {
@@ -76,11 +80,11 @@ describe('kun udledte kendsgerninger', () => {
 
   it('behandler en udbetaling som en oplysning, ikke et nederlag', async () => {
     useSavingsGoalsStore.setState({
-      history: [{ id: 'h1', goalId: 'g1', amount: -500, date: '2026-08-12' }],
+      history: [{ id: 'h1', goalId: 'g1', amount: minorUnits(-50_000), date: '2026-08-12' }],
     });
     const facts = await MONTHLY_REVIEW_PROVIDERS.economy!(MONTH);
     expect(facts[0].labelKey).toBe('review.economyWithdrawn');
-    expect(facts[0].params).toEqual({ amount: '500' });
+    expect(plain(facts[0].params?.amount)).toBe('500 kr.');
   });
 
   it('tæller ikke det, der IKKE blev gjort', async () => {
@@ -100,7 +104,7 @@ describe('kun udledte kendsgerninger', () => {
 
 describe('determinisme', () => {
   it('giver samme svar, hver gang det spørges', async () => {
-    useExpensesStore.setState({ expenses: [expense('a', 120, '2026-08-05')] });
+    useExpensesStore.setState({ expenses: [expense('a', 12_000, '2026-08-05')] });
     const first = await MONTHLY_REVIEW_PROVIDERS.economy!(MONTH);
     for (let i = 0; i < 5; i++) {
       expect(await MONTHLY_REVIEW_PROVIDERS.economy!(MONTH)).toEqual(first);

@@ -13,5 +13,6 @@
   "importErrorInvalidFormat": "Filen ser ikke ud til at være en gyldig LifeSort-backup.",
   "importErrorParseFailed": "Filen kunne ikke læses. Prøv en anden fil.",
   "importErrorUnsupportedVersion": "Filen er lavet med en nyere version af LifeSort. Opdatér appen og prøv igen.",
+  "importErrorInvalidMoney": "Filen indeholder beløb, der ikke kan gendannes præcist. Dine nuværende data er ikke ændret.",
   "lastExportLabel": "Sidst eksporteret: {{date}}"
 }

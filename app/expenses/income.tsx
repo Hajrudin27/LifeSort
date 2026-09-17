@@ -7,6 +7,9 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { minorUnitsToInputText } from "@/core/money/decimal";
+import { parseSupportedMoneyInput } from "@/core/money/supportedMoney";
+import { decimalSeparatorFor, moneyLocaleFor } from "@/core/money/format";
 import { useIncomeStore } from "@/store/useIncomeStore";
 import { formatMonthLabel, getMonthKey } from "@/utils/shared/monthKey";
 import { Stack, useLocalSearchParams } from "expo-router";
@@ -19,18 +22,23 @@ export default function IncomeScreen() {
 
   const monthKey = month ?? getMonthKey(new Date());
   const monthDate = new Date(`${monthKey}-01`);
-  const locale = i18n.language === "da" ? "da-DK" : "en-US";
+  const locale = moneyLocaleFor(i18n.language);
 
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
   const setIncomeForMonth = useIncomeStore((s) => s.setIncomeForMonth);
   const currentAmount = incomeByMonth[monthKey];
 
-  const [amount, setAmount] = useState(currentAmount?.toString() ?? "");
+  const [amount, setAmount] = useState(
+    currentAmount !== undefined ? minorUnitsToInputText(currentAmount, decimalSeparatorFor(locale)) : "",
+  );
 
-  const canSave = amount.trim().length > 0 && !isNaN(parseFloat(amount));
+  // Eksisterende regel: ethvert gyldigt beløb, også nul, er en registreret indtægt.
+  const parsedAmount = parseSupportedMoneyInput(amount);
+  const canSave = parsedAmount.ok;
 
   const save = () => {
-    setIncomeForMonth(monthKey, parseFloat(amount));
+    if (!parsedAmount.ok) return;
+    setIncomeForMonth(monthKey, parsedAmount.value);
     router.back();
   };
 

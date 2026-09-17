@@ -96,6 +96,11 @@ the Zustand actions, so code that writes without navigating to a `new` screen
 still writes. Enforcing at the store is the durable fix and arrives with the
 registry.
 
+**Economy module availability is not banking availability.** Closing `economy`
+closes all of Economy, manual expenses, income and savings included. Never use it
+to turn off banking; a bank-specific switch belongs to Open Banking (OB-004). See
+[app-041-manual-economy.md](./app-041-manual-economy.md).
+
 ## Rollout notes
 
 - The flag is read at startup only. A user with the app already open keeps the

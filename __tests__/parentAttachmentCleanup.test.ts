@@ -86,6 +86,7 @@ function expense(id: string, nextPaymentDate = '2026-09-01', attachments: Attach
     id,
     seriesId: 'series-1',
     isRecurring: true,
+    recurrenceFrequency: 'monthly' as const, recurrenceAnchorDay: 1,
     name: id,
     amount: minorUnits(10_000),
     category: 'home',

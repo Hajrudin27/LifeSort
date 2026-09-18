@@ -9,7 +9,7 @@ const m = minorUnits;
 const MONTH = '2026-09';
 const DATE = '2026-09-10';
 const expense: Expense = {
-  id: 'manual-1', seriesId: 'series-1', isRecurring: false,
+  id: 'manual-1', seriesId: 'series-1', isRecurring: false, recurrenceFrequency: null, recurrenceAnchorDay: null,
   name: 'Synthetic shop', amount: m(50_000), category: 'other',
   nextPaymentDate: DATE, attachments: [], createdAt: `${DATE}T12:00:00Z`,
 };

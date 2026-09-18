@@ -19,7 +19,7 @@ import { useSavingsGoalsStore } from '@/store/useSavingsGoalsStore';
 const m = minorUnits;
 const MONTH = '2026-09';
 const plain = (text: string | undefined) => text?.replace(/[\u00a0\u202f]/g, ' ');
-const input = { name: 'Synthetic expense', amount: m(50_000), category: 'other', nextPaymentDate: '2026-09-10', isRecurring: false };
+const input = { name: 'Synthetic expense', amount: m(50_000), category: 'other', nextPaymentDate: '2026-09-10', isRecurring: false, recurrenceFrequency: null };
 /** Current Economy routes covered by the manual-mode regression. */
 const MANUAL_ECONOMY_ROUTES = [
   '/economy', '/economy/insights', '/expenses', '/expenses/new', '/expenses/edit/synthetic', '/expenses/income',

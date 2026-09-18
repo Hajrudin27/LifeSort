@@ -68,7 +68,7 @@ beforeEach(async () => {
 });
 
 describe('APP-040 expense write paths', () => {
-  const input = (amount: MinorUnits) => ({ name: 'Synthetic lunch', amount, category: 'food', nextPaymentDate: '2026-09-10', isRecurring: true });
+  const input = (amount: MinorUnits) => ({ name: 'Synthetic lunch', amount, category: 'food', nextPaymentDate: '2026-09-10', isRecurring: true, recurrenceFrequency: 'monthly' as const });
 
   it('create → edit → non-money rewrite → recurring copy → delete keeps canonical øre everywhere', async () => {
     const store = useExpensesStore.getState();
@@ -76,7 +76,7 @@ describe('APP-040 expense write paths', () => {
     expect(useExpensesStore.getState().expenses[0].amount).toBe(8_950);
     await flush();
     expect(writesTo('expenses')).toEqual([expect.objectContaining({ id, amount: '89.50' })]);
-    expect((await persisted('lifesort-expenses'))).toMatchObject({ version: 1, state: { expenses: [{ id, amount: 8_950 }] } });
+    expect((await persisted('lifesort-expenses'))).toMatchObject({ version: 2, state: { expenses: [{ id, amount: 8_950, recurrenceFrequency: 'monthly' }] } });
 
     store.updateExpense(id, { amount: parsed('0.99') });
     expect(useExpensesStore.getState().expenses[0].amount).toBe(99);
@@ -172,7 +172,7 @@ describe('APP-040 income and savings write paths', () => {
 });
 
 describe('APP-040 remote hydration validates before mutating', () => {
-  const localExpense = { id: 'local', seriesId: 'local', isRecurring: false, name: 'Local', amount: m(1_250), category: 'other', nextPaymentDate: '2026-09-01', attachments: [], createdAt: '2026-09-01T00:00:00.000Z' };
+  const localExpense = { id: 'local', seriesId: 'local', isRecurring: false, recurrenceFrequency: null, recurrenceAnchorDay: null, name: 'Local', amount: m(1_250), category: 'other', nextPaymentDate: '2026-09-01', attachments: [], createdAt: '2026-09-01T00:00:00.000Z' };
   const row = (id: string, amount: unknown) => ({ id, series_id: id, is_recurring: false, name: `Remote ${id}`, amount, category: 'other', next_payment_date: '2026-09-02', created_at: '2026-09-02T00:00:00.000Z' });
 
   it('merges valid server numerics (JSON numbers) as exact MinorUnits', async () => {
@@ -222,7 +222,7 @@ describe('APP-040 remote hydration validates before mutating', () => {
   it('round-trips a device write to another device through the server representation exactly', async () => {
     // Including the largest supported amounts: 2^33 DKK and its neighbours below.
     const amounts = ['0', '0,01', '0,50', '12,50', '-25,75', '123456789,99', '8589934592', '8589934591,99', '-8589934592'];
-    for (const text of amounts) useExpensesStore.getState().addExpense({ name: 'Synthetic', amount: parsed(text), category: 'other', nextPaymentDate: '2026-09-05', isRecurring: false });
+    for (const text of amounts) useExpensesStore.getState().addExpense({ name: 'Synthetic', amount: parsed(text), category: 'other', nextPaymentDate: '2026-09-05', isRecurring: false, recurrenceFrequency: null });
     const original = useExpensesStore.getState().expenses.map((e) => [e.id, e.amount]);
     await flush();
     const sent = writesTo('expenses').flat() as Row[];
@@ -248,13 +248,13 @@ describe('APP-040 unsupported persisted money is rejected before any store mutat
 
   it('Expenses: add, amount edit and category budget leave state, disk and server untouched', async () => {
     const store = useExpensesStore.getState();
-    const id = store.addExpense({ name: 'Existing', amount: EDGE, category: 'other', nextPaymentDate: '2026-09-01', isRecurring: false });
+    const id = store.addExpense({ name: 'Existing', amount: EDGE, category: 'other', nextPaymentDate: '2026-09-01', isRecurring: false, recurrenceFrequency: null });
     store.setCategoryBudget('other', m(10_000));
     const before = await snapshot('lifesort-expenses');
     mockWrites.length = 0;
 
     for (const unsupported of [JUST_ABOVE, ALIASED, MAX]) {
-      expect(() => store.addExpense({ name: 'New', amount: unsupported, category: 'other', nextPaymentDate: '2026-09-02', isRecurring: false })).toThrow('money_unsupported_amount');
+      expect(() => store.addExpense({ name: 'New', amount: unsupported, category: 'other', nextPaymentDate: '2026-09-02', isRecurring: false, recurrenceFrequency: null })).toThrow('money_unsupported_amount');
       expect(() => store.updateExpense(id, { amount: unsupported, name: 'Renamed' })).toThrow('money_unsupported_amount');
       expect(() => store.setCategoryBudget('other', unsupported)).toThrow('money_unsupported_amount');
     }

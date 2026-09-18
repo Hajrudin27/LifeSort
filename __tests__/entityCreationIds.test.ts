@@ -42,7 +42,7 @@ import { useWarrantiesStore } from '@/store/useWarrantiesStore';
 import { scheduleTripPackingReminder } from '@/utils/trip/tripReminder';
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const expenseInput = { name: 'Synthetic rent', amount: minorUnits(10_000), category: 'bill', nextPaymentDate: '2026-09-01', isRecurring: true };
+const expenseInput = { name: 'Synthetic rent', amount: minorUnits(10_000), category: 'bill', nextPaymentDate: '2026-09-01', isRecurring: true, recurrenceFrequency: 'monthly' as const };
 const tripInput = { name: 'Synthetic trip', startDate: '2027-01-01', endDate: '2027-01-03', budget: null };
 
 function expectFreshIds(records: { id: string }[]) {
@@ -184,9 +184,9 @@ it.each([false, true])('hydrates, updates and deletes legacy expense/attachment 
     attachments: [{ id: attachmentId, uri: 'file:///legacy.jpg', name: 'legacy.jpg', kind: 'image' }],
     createdAt: '2024-09-01T00:00:00.000Z',
   } as Expense;
-  // This suite bypasses the encrypted adapter, which owns the APP-040 inner v0 -> v1
-  // money upgrade (covered in economyMoneyMigration.test.ts); seed the current v1 shape.
-  await AsyncStorage.setItem('lifesort-expenses', JSON.stringify({ version: 1, state: { expenses: [legacy], seriesStoppedAt: {}, categoryBudgets: {} } }));
+  // This suite bypasses the encrypted adapter, which owns the inner upgrades
+  // (covered in economyMoneyMigration.test.ts); seed the current v2 shape.
+  await AsyncStorage.setItem('lifesort-expenses', JSON.stringify({ version: 2, state: { expenses: [legacy], seriesStoppedAt: {}, categoryBudgets: {} } }));
   await useExpensesStore.persist.rehydrate();
   const store = useExpensesStore.getState();
   expect(store.expenses).toEqual([legacy]);

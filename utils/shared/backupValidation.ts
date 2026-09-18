@@ -9,6 +9,12 @@
  * ændre prototypen på state-objektet.
  */
 
+import {
+  DEFAULT_RECURRENCE_FREQUENCY,
+  isCoherentRecurrence,
+  parseIsoDate,
+  repairLegacyOccurrenceDate,
+} from '@/core/economy/recurrence';
 import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { supportedMoney } from '@/core/money/supportedMoney';
@@ -18,9 +24,12 @@ import { supportedMoney } from '@/core/money/supportedMoney';
  *  1 — før APP-040: Økonomiens beløb er JS-tal i hele kroner.
  *  2 — APP-040: Økonomiens beløb er DKK MinorUnits (øre), og kun understøttede
  *      beløb (`isSupportedMoney`): dem appen kan gemme, synkronisere og vise præcist.
- * Nye eksporter skriver altid 2. Øvrige moduler er semantisk uændrede.
+ *  3 — APP-042: udgifter bærer `recurrenceFrequency` og `recurrenceAnchorDay`
+ *      eksplicit. Ældre filer kender kun `isRecurring`, som i alle udgivne
+ *      versioner betød "hver måned" på datoens dag.
+ * Nye eksporter skriver altid 3. Øvrige moduler er semantisk uændrede.
  */
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString';
 
@@ -149,6 +158,68 @@ function canonicalEconomyMoney(
   return { ok: true, value: next };
 }
 
+/**
+ * APP-042: gendannede udgifter skal opfylde samme gentagelses-invariant som
+ * formularer, store og server — også fra en gammel fil.
+ *
+ * FORMAT 1-2 (historiske filer) normaliseres: frekvensen udledes af `isRecurring`
+ * (true → hver måned, som appen faktisk opførte sig) og dagsankeret af datoens
+ * dags-token. Er datoen den kendte gamle defekt (fx "2026-02-31", som den
+ * tidligere rollForwardMonth kunne skrive), klippes selve datoen til månedens
+ * sidste rigtige dag, mens den tilsigtede dag bevares som anker.
+ *
+ * FORMAT 3 er APP-042's kanoniske skema og normaliseres IKKE. Hver udgift skal
+ * selv bære begge felter — også `null`/`null` for en engangsudgift — og en fast
+ * udgifts `nextPaymentDate` skal være en rigtig kalenderdato, præcis som lokale
+ * v2-bytes. Manglende felter, en ukendt frekvens, et anker uden for 1–31 eller en
+ * umulig dato afvises frem for at blive repareret eller gættet.
+ */
+const RECURRENCE_FIELDS = ['recurrenceFrequency', 'recurrenceAnchorDay'] as const;
+
+function canonicalExpenseRecurrence(
+  partial: Record<string, unknown>,
+  version: number,
+): { ok: true; value: Record<string, unknown> } | { ok: false; error: BackupParseError } {
+  const expenses = partial.expenses;
+  if (expenses === undefined) return { ok: true, value: partial };
+  const canonical: Record<string, unknown>[] = [];
+  for (const expense of expenses as Record<string, unknown>[]) {
+    const isRecurring = expense.isRecurring;
+    if (typeof isRecurring !== 'boolean') return { ok: false, error: 'invalid_format' };
+
+    let next = { ...expense };
+    if (version < 3) {
+      if (!isRecurring) {
+        next = { ...next, recurrenceFrequency: null, recurrenceAnchorDay: null };
+      } else {
+        const repaired = repairLegacyOccurrenceDate(expense.nextPaymentDate);
+        if (!repaired) return { ok: false, error: 'invalid_format' };
+        next = {
+          ...next,
+          nextPaymentDate: repaired.date,
+          recurrenceFrequency: DEFAULT_RECURRENCE_FREQUENCY,
+          recurrenceAnchorDay: repaired.anchorDay,
+        };
+      }
+    } else {
+      // Kanonisk format 3: felterne skal findes på udgiften selv, og en fast
+      // udgifts dato skal være en dato kalenderen har. Intet repareres her.
+      if (!RECURRENCE_FIELDS.every((field) => Object.prototype.hasOwnProperty.call(expense, field))) {
+        return { ok: false, error: 'invalid_format' };
+      }
+      if (isRecurring && parseIsoDate(expense.nextPaymentDate) === null) {
+        return { ok: false, error: 'invalid_format' };
+      }
+    }
+
+    if (!isCoherentRecurrence(isRecurring, next.recurrenceFrequency, next.recurrenceAnchorDay)) {
+      return { ok: false, error: 'invalid_format' };
+    }
+    canonical.push(next);
+  }
+  return { ok: true, value: { ...partial, expenses: canonical } };
+}
+
 // `__proto__` er den nøgle der kan ændre et objekts prototype gennem Object.assign.
 // De to øvrige kan ikke det, men har ingen plads i data og fjernes for en sikkerheds skyld.
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -199,7 +270,13 @@ export function parseBackupFile(content: string): BackupParseResult {
     if (Object.keys(partial).length === 0) continue;
     const canonical = canonicalEconomyMoney(storeKey, partial, version);
     if (!canonical.ok) return canonical;
-    data[storeKey] = canonical.value;
+    if (storeKey !== 'expenses') {
+      data[storeKey] = canonical.value;
+      continue;
+    }
+    const recurrence = canonicalExpenseRecurrence(canonical.value, version);
+    if (!recurrence.ok) return recurrence;
+    data[storeKey] = recurrence.value;
   }
 
   return { ok: true, version, data };

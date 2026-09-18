@@ -20,6 +20,7 @@ const expense = (id: string, amount: number, date: string) => ({
   id,
   seriesId: id,
   isRecurring: false,
+  recurrenceFrequency: null, recurrenceAnchorDay: null,
   name: `Post ${id}`,
   amount: minorUnits(amount),
   category: 'other',

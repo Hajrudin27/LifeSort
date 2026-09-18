@@ -240,14 +240,14 @@ describe('APP-029 document cache storage', () => {
 
   it('encrypts document metadata stores and keeps ordinary Profile A fields usable', async () => {
     const jsonStorage = createJSONStorage(() => documentMetadataEncryptedStorage)!;
-    // The current (APP-040 v1) shape the expenses store writes: money in øre.
+    // The current (APP-040 v1 money, APP-042 v2 recurrence) shape the expenses store writes.
     const payload = {
       state: {
-        expenses: [{ id: 'expense-1', name: 'Rent', amount: 100000, attachments: [{ id: 'a1', uri: 'file:///x', name: 'receipt.jpg', kind: 'image' }] }],
+        expenses: [{ id: 'expense-1', name: 'Rent', amount: 100000, isRecurring: false, recurrenceFrequency: null, recurrenceAnchorDay: null, attachments: [{ id: 'a1', uri: 'file:///x', name: 'receipt.jpg', kind: 'image' }] }],
         seriesStoppedAt: {},
         categoryBudgets: { food: 100000 },
       },
-      version: 1,
+      version: 2,
     };
 
     await jsonStorage.setItem('lifesort-expenses', payload);
@@ -539,11 +539,16 @@ describe('APP-029 document cache storage', () => {
     await AsyncStorage.setItem(key, JSON.stringify(metadataFor(key)));
     const jsonStorage = createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage))!;
     const hydrated = await jsonStorage.getItem(key);
-    // APP-040: expenses' inner schema upgrades to v1 (100 kr -> 10000 øre) in the
-    // same encrypted commit; trips and warranties stay at their v0 schema.
-    expect(hydrated!.version).toBe(key === 'lifesort-expenses' ? 1 : 0);
+    // APP-040 + APP-042: expenses' inner schema upgrades to v2 (100 kr -> 10000 øre,
+    // plus an explicit recurrence) in the same encrypted commit; trips and warranties
+    // stay at their v0 schema.
+    expect(hydrated!.version).toBe(key === 'lifesort-expenses' ? 2 : 0);
     expect(hydrated!.state).toBeDefined();
-    if (key === 'lifesort-expenses') expect((hydrated!.state as { expenses: { amount: number }[] }).expenses[0].amount).toBe(10000);
+    if (key === 'lifesort-expenses') {
+      const expense = (hydrated!.state as { expenses: { amount: number; recurrenceFrequency: unknown }[] }).expenses[0];
+      expect(expense.amount).toBe(10000);
+      expect(expense.recurrenceFrequency).toBeNull();
+    }
     const encrypted = await AsyncStorage.getItem(key);
     expect(encrypted).toContain('__lifesort_encrypted_document_metadata__');
     (AsyncStorage.setItem as jest.Mock).mockClear();

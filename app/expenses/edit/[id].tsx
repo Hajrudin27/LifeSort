@@ -1,7 +1,7 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, ScrollView, Switch, TextInput } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, TextInput } from "react-native";
 
 import AttachmentList from "@/components/AttachmentList";
 import Button from "@/components/Button";
@@ -10,6 +10,11 @@ import CategoryPicker from "@/components/CategoryPicker";
 import DatePickerField from "@/components/DatePickerField";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import {
+  DEFAULT_RECURRENCE_FREQUENCY,
+  RECURRENCE_FREQUENCIES,
+  type RecurrenceFrequency,
+} from "@/core/economy/recurrence";
 import { minorUnitsToInputText } from "@/core/money/decimal";
 import { parseSupportedMoneyInput } from "@/core/money/supportedMoney";
 import { decimalSeparatorFor, moneyLocaleFor } from "@/core/money/format";
@@ -38,6 +43,10 @@ export default function EditExpenseScreen() {
   const [category, setCategory] = useState<ExpenseCategory>(expense?.category ?? "subscription");
   const [nextPaymentDate, setNextPaymentDate] = useState(expense?.nextPaymentDate ?? "");
   const [isRecurring, setIsRecurring] = useState(expense?.isRecurring ?? false);
+  // APP-042: en migreret række viser sin faktiske frekvens; nye valg er altid synlige.
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>(
+    expense?.recurrenceFrequency ?? DEFAULT_RECURRENCE_FREQUENCY,
+  );
 
   if (!expense) {
     return (
@@ -53,7 +62,15 @@ export default function EditExpenseScreen() {
 
   const save = () => {
     if (!parsedAmount.ok) return;
-    updateExpense(expense.id, { name: name.trim(), amount: parsedAmount.value, category, nextPaymentDate, isRecurring });
+    updateExpense(expense.id, {
+      name: name.trim(),
+      amount: parsedAmount.value,
+      category,
+      nextPaymentDate,
+      isRecurring,
+      // Slås gentagelsen fra, gemmes den uden frekvens; fremtidige måneder følger den nye værdi.
+      recurrenceFrequency: isRecurring ? recurrenceFrequency : null,
+    });
     router.back();
   };
 
@@ -107,8 +124,42 @@ export default function EditExpenseScreen() {
 
         <View style={sharedStyles.rowBetween}>
           <Text>{t("expenses.recurring")}</Text>
-          <Switch value={isRecurring} onValueChange={setIsRecurring} trackColor={{ true: tint }} />
+          <Switch
+            value={isRecurring}
+            onValueChange={setIsRecurring}
+            trackColor={{ true: tint }}
+            accessibilityLabel={t("expenses.recurring")}
+          />
         </View>
+
+        {isRecurring && (
+          <>
+            <Text style={sharedStyles.fieldLabel}>{t("expenses.recurrenceFrequencyLabel")}</Text>
+            <View style={sharedStyles.chipRow}>
+              {RECURRENCE_FREQUENCIES.map((frequency) => {
+                const selected = recurrenceFrequency === frequency;
+                return (
+                  <Pressable
+                    key={frequency}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={t(`expenses.recurrence.${frequency}`)}
+                    onPress={() => setRecurrenceFrequency(frequency)}
+                    style={[
+                      styles.frequencyChip,
+                      { borderColor: selected ? tint : borderColor, backgroundColor: selected ? tint : surface },
+                    ]}
+                  >
+                    {/* Markeringen står også i teksten, ikke kun i farven. */}
+                    <Text style={{ color: selected ? "#FFFFFF" : undefined, fontWeight: selected ? "700" : "500" }}>
+                      {selected ? `✓ ${t(`expenses.recurrence.${frequency}`)}` : t(`expenses.recurrence.${frequency}`)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        )}
       </Card>
 
       <Text style={sharedStyles.sectionLabel}>{t("expenses.attachmentsLabel")}</Text>
@@ -123,3 +174,7 @@ export default function EditExpenseScreen() {
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  frequencyChip: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
+});

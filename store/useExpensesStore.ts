@@ -1,4 +1,12 @@
 import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
+import {
+  anchorDayFromIsoDate,
+  coherentRecurrence,
+  isRecurrenceAnchorDay,
+  isRecurrenceFrequency,
+  occurrenceDateForMonth,
+  type RecurrenceFrequency,
+} from '@/core/economy/recurrence';
 import { newEntityId } from '@/core/ids';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { minorUnitsToServerNumeric, serverNumericToMinorUnits } from '@/core/money/serverNumeric';
@@ -23,8 +31,15 @@ interface ExpensesState {
     category: ExpenseCategory;
     nextPaymentDate: string;
     isRecurring: boolean;
+    // APP-042: must be null for a one-time cost and a frequency for a recurring one.
+    // The day anchor is derived from nextPaymentDate, never supplied by a caller.
+    recurrenceFrequency: RecurrenceFrequency | null;
   }) => string;
-  updateExpense: (id: string, updates: Partial<Omit<Expense, 'id' | 'seriesId' | 'createdAt' | 'attachments'>>) => void;
+  updateExpense: (
+    id: string,
+    // recurrenceAnchorDay is deliberately not part of the payload: the store owns it.
+    updates: Partial<Omit<Expense, 'id' | 'seriesId' | 'createdAt' | 'attachments' | 'recurrenceAnchorDay'>>,
+  ) => void;
   removeExpense: (id: string) => void;
   deleteRecurringFromMonth: (seriesId: string, fromMonthKey: string) => void;
   rollForwardMonth: (monthKey: string) => void;
@@ -48,6 +63,9 @@ function toRow(userId: string, e: Expense) {
     user_id: userId,
     series_id: e.seriesId ?? null,
     is_recurring: e.isRecurring,
+    // APP-042: null for one-time costs; the column's CHECK mirrors this invariant.
+    recurrence_frequency: e.recurrenceFrequency,
+    recurrence_anchor_day: e.recurrenceAnchorDay,
     name: e.name,
     // APP-040: exact decimal DKK for the numeric column, never amount / 100.
     amount: minorUnitsToServerNumeric(e.amount),
@@ -95,6 +113,8 @@ type ExpenseRow = {
   id: string;
   series_id: string | null;
   is_recurring: boolean;
+  recurrence_frequency: unknown;
+  recurrence_anchor_day: unknown;
   name: string;
   amount: unknown;
   category: string;
@@ -107,6 +127,13 @@ function expenseFromRow(row: ExpenseRow): Expense {
     id: row.id,
     seriesId: row.series_id ?? row.id,
     isRecurring: row.is_recurring,
+    // APP-042: an unknown or contradictory server value throws, which rejects the
+    // whole fetch in fetchFromSupabase rather than letting it reach app state.
+    ...coherentRecurrence(
+      row.is_recurring,
+      isRecurrenceFrequency(row.recurrence_frequency) ? row.recurrence_frequency : null,
+      isRecurrenceAnchorDay(row.recurrence_anchor_day) ? row.recurrence_anchor_day : null,
+    ),
     name: row.name,
     amount: serverNumericToMinorUnits(row.amount),
     category: row.category as ExpenseCategory,
@@ -133,6 +160,15 @@ export const useExpensesStore = create<ExpensesState>()(
           ...input,
           // APP-040: kun beløb der kan gemmes, synkroniseres og vises præcist — før set().
           amount: supportedMoney(input.amount),
+          // APP-042: en gentagelse uden gyldig frekvens afvises før set(), og
+          // dagsankeret udledes af den dato brugeren valgte — ikke af en parameter.
+          // Datoen skal være en rigtig kalenderdato: "2026-02-31" afvises her,
+          // selv om migrering og gamle backups må reparere den slags historik.
+          ...coherentRecurrence(
+            input.isRecurring,
+            input.recurrenceFrequency,
+            input.isRecurring ? anchorDayFromIsoDate(input.nextPaymentDate) : null,
+          ),
         };
         set((state) => ({ expenses: [...state.expenses, newExpense] }));
         syncUpsertExpense(newExpense);
@@ -145,7 +181,29 @@ export const useExpensesStore = create<ExpensesState>()(
 
         const editedMonth = target.nextPaymentDate.slice(0, 7);
         // Beløbet valideres altid før set(): en ikke-beløbsændring bevarer det eksisterende øre-beløb uændret.
-        const updatedExpense = { ...target, ...updates, amount: supportedMoney(updates.amount ?? target.amount) };
+        const merged = { ...target, ...updates };
+        // APP-042: ankeret følger den valgte betalingsdato — men kun når datoen
+        // faktisk ændres. Redigeringsskærmen sender altid datoen med, så en februar-
+        // forekomst på den 28. med anker 31 ville ellers blive omankret til 28 ved en
+        // ren navne- eller frekvensændring og glide i marts. En engangsudgift der
+        // bliver fast, eller en ny dato, sætter ankeret (streng dato); alt andet
+        // bevarer det. Slås gentagelsen fra, ryger begge dele.
+        const dateChanged =
+          updates.nextPaymentDate !== undefined && updates.nextPaymentDate !== target.nextPaymentDate;
+        const keepsAnchor =
+          target.isRecurring && isRecurrenceAnchorDay(target.recurrenceAnchorDay) && !dateChanged;
+        const anchorDay = keepsAnchor
+          ? target.recurrenceAnchorDay
+          : anchorDayFromIsoDate(merged.nextPaymentDate);
+        const updatedExpense = {
+          ...merged,
+          amount: supportedMoney(updates.amount ?? target.amount),
+          ...coherentRecurrence(
+            merged.isRecurring,
+            merged.isRecurring ? merged.recurrenceFrequency : null,
+            merged.isRecurring ? anchorDay : null,
+          ),
+        };
 
         let removedExpenses: Expense[] = [];
 
@@ -222,13 +280,25 @@ export const useExpensesStore = create<ExpensesState>()(
               .pop();
             if (!latestBefore) continue;
             if (!latestBefore.isRecurring) continue;
+            // APP-042: frekvensen bestemmer hvilke måneder der forfalder, og ankeret
+            // bestemmer dagen — en kort måned klipper kun denne ene forekomst.
+            // Uden gyldig frekvens og anker dannes ingenting.
+            if (!isRecurrenceFrequency(latestBefore.recurrenceFrequency)) continue;
+            if (!isRecurrenceAnchorDay(latestBefore.recurrenceAnchorDay)) continue;
+            const nextPaymentDate = occurrenceDateForMonth(
+              latestBefore.nextPaymentDate,
+              latestBefore.recurrenceFrequency,
+              latestBefore.recurrenceAnchorDay,
+              monthKey,
+            );
+            if (!nextPaymentDate) continue;
 
             newInstances.push({
               // Beløbet er allerede i øre og kopieres uændret — aldrig skaleret igen.
               ...latestBefore,
               id: newEntityId(),
               seriesId, // også når en ældre rod kun har id og intet seriesId
-              nextPaymentDate: `${monthKey}-${latestBefore.nextPaymentDate.slice(8)}`,
+              nextPaymentDate,
               attachments: [], // en ny måneds instans arver ALDRIG forrige måneds kvittering
               createdAt: new Date().toISOString(),
             });
@@ -307,7 +377,7 @@ export const useExpensesStore = create<ExpensesState>()(
         const [expensesResult, budgetsResult] = await Promise.all([
           supabase
             .from('expenses')
-            .select('id, series_id, is_recurring, name, amount, category, next_payment_date, created_at')
+            .select('id, series_id, is_recurring, recurrence_frequency, recurrence_anchor_day, name, amount, category, next_payment_date, created_at')
             .eq('user_id', userId),
           supabase
             .from('expense_category_budgets')
@@ -372,8 +442,9 @@ export const useExpensesStore = create<ExpensesState>()(
     }),
     {
       name: 'lifesort-expenses',
-      // APP-040 v1: money in DKK MinorUnits. The encrypted adapter upgrades v0.
-      version: 1,
+      // APP-040 v1: money in DKK MinorUnits. APP-042 v2: explicit recurrenceFrequency.
+      // The encrypted adapter runs both upgrades before hydration.
+      version: 2,
       storage: createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage)),
       onRehydrateStorage: () => (state) => {
         if (!state) return;

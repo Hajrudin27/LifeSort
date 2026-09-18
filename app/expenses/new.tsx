@@ -13,6 +13,11 @@ import Hero, { HeroBadge, HeroBadgeText } from "@/components/Hero";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useBrandTints } from "@/hooks/useBrandTints";
 import { useExpensesStore } from "@/store/useExpensesStore";
+import {
+  DEFAULT_RECURRENCE_FREQUENCY,
+  RECURRENCE_FREQUENCIES,
+  type RecurrenceFrequency,
+} from "@/core/economy/recurrence";
 import { parseSupportedMoneyInput } from "@/core/money/supportedMoney";
 import { useToastStore } from "@/store/useToastStore";
 import { ExpenseCategory } from "@/types/expense";
@@ -59,6 +64,8 @@ export default function NewExpenseScreen() {
   const [nextPaymentDate, setNextPaymentDate] = useState(todayIso);
   const [paymentMode, setPaymentMode] = useState<"today" | "tomorrow" | "week" | "month" | "custom">("today");
   const [isRecurring, setIsRecurring] = useState(false);
+  // APP-042: synlig fra det øjeblik gentagelsen slås til — aldrig en skjult standard.
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>(DEFAULT_RECURRENCE_FREQUENCY);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
   // APP-040: text → DKK MinorUnits directly, and only amounts the store accepts.
@@ -90,6 +97,7 @@ export default function NewExpenseScreen() {
       category,
       nextPaymentDate,
       isRecurring,
+      recurrenceFrequency: isRecurring ? recurrenceFrequency : null,
     });
     showToast(t("expenses.createdToast"));
     setCreatedId(id);
@@ -191,7 +199,9 @@ export default function NewExpenseScreen() {
         </View>
 
         <Pressable
-          accessibilityRole="button"
+          accessibilityRole="switch"
+          accessibilityState={{ checked: isRecurring }}
+          accessibilityLabel={t("expenses.recurring")}
           style={[styles.recurringCard, { borderColor: isRecurring ? tint : borderColor, backgroundColor: surface }]}
           onPress={() => setIsRecurring((current) => !current)}
         >
@@ -210,6 +220,44 @@ export default function NewExpenseScreen() {
             <View style={[styles.toggleKnob, isRecurring && styles.toggleKnobActive]} />
           </View>
         </Pressable>
+
+        {isRecurring && (
+          <View style={styles.optionSection}>
+            <Text style={styles.sectionEyebrow}>{t("expenses.recurrenceFrequencyLabel")}</Text>
+            <View style={styles.paymentChips}>
+              {RECURRENCE_FREQUENCIES.map((frequency) => {
+                const selected = recurrenceFrequency === frequency;
+                return (
+                  <Pressable
+                    key={frequency}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={t(`expenses.recurrence.${frequency}`)}
+                    onPress={() => setRecurrenceFrequency(frequency)}
+                    style={[
+                      styles.paymentChip,
+                      { borderColor: selected ? tint : borderColor, backgroundColor: selected ? tint : surface },
+                    ]}
+                  >
+                    {/* Ikon + tekst, så valget ikke kun aflæses på farven. */}
+                    <View style={styles.frequencyChipContent}>
+                      {selected && (
+                        <SymbolView
+                          name={{ ios: "checkmark", android: "check", web: "check" }}
+                          size={13}
+                          tintColor="#FFFFFF"
+                        />
+                      )}
+                      <Text style={[styles.paymentChipText, { color: selected ? "#FFFFFF" : undefined }]}>
+                        {t(`expenses.recurrence.${frequency}`)}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         <Button label={t("expenses.save")} disabled={!canSave} onPress={save} style={styles.saveButton} />
       </ScrollView>
@@ -282,6 +330,7 @@ const styles = StyleSheet.create({
   paymentChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   paymentChip: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
   paymentChipText: { fontSize: 13, fontWeight: "800" },
+  frequencyChipContent: { flexDirection: "row", alignItems: "center", gap: 6 },
   recurringCard: {
     borderWidth: 1.5,
     borderRadius: 20,

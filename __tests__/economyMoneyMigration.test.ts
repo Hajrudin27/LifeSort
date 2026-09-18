@@ -92,14 +92,26 @@ describe('APP-040 v0 → v1 per store (historical fixtures)', () => {
     const storage = memory(raw);
     await migrateLocalStore(expensesMoneyMigration, storage);
     const after = JSON.parse(storage.bytes()!);
+    expect(after.version).toBe(2);
     expect(after.state.expenses.map((e: Json) => [e.id, e.amount])).toEqual([
       ['9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d', 825_000], ['1725206400000', 1_234],
       ['5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d', 19_995], ['3d4e5f6a-7b8c-4d9e-8f0a-1b2c3d4e5f6a', 0],
     ]);
     expect(after.state.categoryBudgets).toEqual({ bill: 900_000, shopping: 150_050 });
-    const shape = (state: Json) => withoutMoney(state, { expenses: ['amount'] }, ['categoryBudgets']);
+    // APP-042: the one recurring expense becomes monthly, anchored to its payment
+    // date's day; the one-time ones get null for both fields.
+    expect(after.state.expenses.map((e: Json) => [e.isRecurring, e.recurrenceFrequency, e.recurrenceAnchorDay])).toEqual([
+      [true, 'monthly', 1], [false, null, null], [false, null, null], [false, null, null],
+    ]);
+    const withoutRecurrence = (state: Json) => ({
+      ...state,
+      expenses: state.expenses.map(
+        ({ recurrenceFrequency: _f, recurrenceAnchorDay: _a, ...rest }: Json) => rest,
+      ),
+    });
+    const shape = (state: Json) => withoutMoney(withoutRecurrence(state), { expenses: ['amount'] }, ['categoryBudgets']);
     expect(shape(after.state)).toEqual(shape(before.state));
-    expect(keyOrder(after)).toBe(keyOrder(before));
+    expect(keyOrder(withoutRecurrence(after.state))).toBe(keyOrder(before.state));
   });
 
   it('expenses (49c4355 plaintext shape, before attachments existed): signs and recurrence metadata survive', async () => {
@@ -111,6 +123,10 @@ describe('APP-040 v0 → v1 per store (historical fixtures)', () => {
     expect(after.state.categoryBudgets).toEqual({ bill: 700_000, food: 123_456 });
     expect(after.state.seriesStoppedAt).toEqual({ '1725206400000': '2024-12' });
     expect(after.state.expenses.every((e: Json) => !('attachments' in e))).toBe(true);
+    // APP-042: both instances of the recurring rent series become monthly, each
+    // anchored to the day its own date was written with.
+    expect(after.state.expenses.map((e: Json) => [e.recurrenceFrequency, e.recurrenceAnchorDay]))
+      .toEqual([['monthly', 1], ['monthly', 1], [null, null], [null, null], [null, null]]);
   });
 
   it.each([
@@ -136,17 +152,28 @@ describe('APP-040 migration failure preserves the original bytes', () => {
     ['unsafe scaled income', incomeMoneyMigration, JSON.stringify({ state: { incomeByMonth: { '2026-09': 1e14 } }, version: 0 }), 'transform-failed'],
     ['JSON null (a former NaN) in savings', savingsGoalsMoneyMigration, JSON.stringify({ state: { goals: [], history: [], extraSavings: null }, version: 0 }), 'transform-failed'],
     ['one bad history row among good ones', savingsGoalsMoneyMigration, JSON.stringify({ state: { goals: [{ id: 'g', targetAmount: 10, savedAmount: 1 }], history: [{ id: 'h1', amount: 1 }, { id: 'h2', amount: 0.001 }], extraSavings: 0 }, version: 0 }), 'transform-failed'],
-    ['third decimal in an expense budget', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 10 }], seriesStoppedAt: {}, categoryBudgets: { food: 99.999 } }, version: 0 }), 'transform-failed'],
-    ['missing amount', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e' }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 0 }), 'transform-failed'],
+    ['third decimal in an expense budget', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 10, isRecurring: false }], seriesStoppedAt: {}, categoryBudgets: { food: 99.999 } }, version: 0 }), 'transform-failed'],
+    ['missing amount', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', isRecurring: false }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 0 }), 'transform-failed'],
+    // APP-042: a v0/v1 expense whose recurrence flag is missing or not a boolean is not a shape any build wrote.
+    ['v0 expense without isRecurring', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 10 }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 0 }), 'transform-failed'],
+    ['v1 expense with a non-boolean isRecurring', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1_000, isRecurring: 'yes' }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 1 }), 'transform-failed'],
+    ['v1 expense that already carries a frequency', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1_000, isRecurring: true, recurrenceFrequency: 'monthly' }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 1 }), 'transform-failed'],
+    ['v2 expense with an unknown frequency', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1_000, isRecurring: true, nextPaymentDate: '2026-01-15', recurrenceFrequency: 'weekly', recurrenceAnchorDay: 15 }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 2 }), 'validation-failed'],
+    ['v2 recurring expense without a frequency', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1_000, isRecurring: true, nextPaymentDate: '2026-01-15', recurrenceFrequency: null, recurrenceAnchorDay: 15 }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 2 }), 'validation-failed'],
+    ['v2 recurring expense without an anchor day', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1_000, isRecurring: true, nextPaymentDate: '2026-01-15', recurrenceFrequency: 'monthly', recurrenceAnchorDay: null }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 2 }), 'validation-failed'],
+    ['v2 recurring expense with both recurrence properties absent', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1_000, isRecurring: true, nextPaymentDate: '2026-01-15' }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 2 }), 'validation-failed'],
+    ['v2 one-time expense with both recurrence properties absent', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1_000, isRecurring: false, nextPaymentDate: '2026-01-15' }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 2 }), 'validation-failed'],
+    ['v2 one-time expense carrying a frequency', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1_000, isRecurring: false, nextPaymentDate: '2026-01-15', recurrenceFrequency: 'yearly', recurrenceAnchorDay: null }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 2 }), 'validation-failed'],
+    ['v2 recurring expense on an impossible date', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1_000, isRecurring: true, nextPaymentDate: '2026-02-31', recurrenceFrequency: 'monthly', recurrenceAnchorDay: 31 }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 2 }), 'validation-failed'],
     ['unknown state key', incomeMoneyMigration, JSON.stringify({ state: { incomeByMonth: {}, extra: 1 }, version: 0 }), 'transform-failed'],
     ['versionless payload', incomeMoneyMigration, JSON.stringify({ state: { incomeByMonth: { '2026-09': 1 } } }), 'unknown-legacy-shape'],
     ['future version', savingsGoalsMoneyMigration, JSON.stringify({ state: { goals: [], history: [], extraSavings: 0 }, version: 2 }), 'unsupported-newer-version'],
     ['v1 with a fractional minor unit', incomeMoneyMigration, JSON.stringify({ state: { incomeByMonth: { '2026-09': 12.5 } }, version: 1 }), 'validation-failed'],
-    ['v1 with an unsafe integer', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 2 ** 60 }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 1 }), 'validation-failed'],
+    ['v1 with an unsafe integer', expensesMoneyMigration, JSON.stringify({ state: { expenses: [{ id: 'e', amount: 2 ** 60, isRecurring: false }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 1 }), 'transform-failed'],
     // Safe integers that are valid MinorUnits but cannot round-trip the server transport or display exactly.
     ['v1 income with MAX_SAFE_INTEGER', incomeMoneyMigration, JSON.stringify({ state: { incomeByMonth: { '2026-09': Number.MAX_SAFE_INTEGER } }, version: 1 }), 'validation-failed'],
     ['v1 savings history just above 2^33 DKK', savingsGoalsMoneyMigration, JSON.stringify({ state: { goals: [], history: [{ id: 'h', amount: 2 ** 33 * 100 + 1 }], extraSavings: 0 }, version: 1 }), 'validation-failed'],
-    ['v1 expense budget just above 2^33 DKK', expensesMoneyMigration, JSON.stringify({ state: { expenses: [], seriesStoppedAt: {}, categoryBudgets: { food: -(2 ** 33 * 100 + 1) } }, version: 1 }), 'validation-failed'],
+    ['v1 expense budget just above 2^33 DKK', expensesMoneyMigration, JSON.stringify({ state: { expenses: [], seriesStoppedAt: {}, categoryBudgets: { food: -(2 ** 33 * 100 + 1) } }, version: 1 }), 'transform-failed'],
     ['v1 exact cent that a sub-cent value aliases', incomeMoneyMigration, JSON.stringify({ state: { incomeByMonth: { '2026-09': 2_000_000_000_000_000 } }, version: 1 }), 'validation-failed'],
     ['v0 legacy value that converts to unsupported money', incomeMoneyMigration, JSON.stringify({ state: { incomeByMonth: { '2026-09': 8589934592.01 } }, version: 0 }), 'transform-failed'],
     // The raw bytes an old writer produced for parseFloat("20000000000000.001"): identical to the cent's.
@@ -224,7 +251,7 @@ describe('APP-040 per-store partial upgrade and restart safety (APP-038 runtime)
   });
 });
 
-describe('APP-040 encrypted Expenses: inner v0 → v1 through the secure adapter', () => {
+describe('APP-040/APP-042 encrypted Expenses: inner v0 → v2 through the secure adapter', () => {
   const innerV0 = fixture('expenses/c73bf68-inner-v0.json');
   const plaintextV0 = fixture('expenses/49c4355-plaintext-v0.json');
 
@@ -246,8 +273,10 @@ describe('APP-040 encrypted Expenses: inner v0 → v1 through the secure adapter
     writes.mockClear();
     const returned = JSON.parse((await documentMetadataEncryptedStorage.getItem(EXPENSES))!);
 
-    expect(returned.version).toBe(1);
+    // One commit carries both inner upgrades: APP-040 money and APP-042 recurrence.
+    expect(returned.version).toBe(2);
     expect(returned.state.expenses.map((e: Json) => e.amount)).toEqual([825_000, 1_234, 19_995, 0]);
+    expect(returned.state.expenses.map((e: Json) => e.recurrenceFrequency)).toEqual(['monthly', null, null, null]);
     expect(writes).toHaveBeenCalledTimes(1);
     expect(writes.mock.calls[0][0]).toBe(EXPENSES);
     expect(await AsyncStorage.getAllKeys()).toEqual([EXPENSES]);
@@ -263,21 +292,22 @@ describe('APP-040 encrypted Expenses: inner v0 → v1 through the secure adapter
     expect(writes).not.toHaveBeenCalled();
   });
 
-  it('upgrades a pre-encryption plaintext v0 payload into a single encrypted v1 commit', async () => {
+  it('upgrades a pre-encryption plaintext v0 payload into a single encrypted v2 commit', async () => {
     await AsyncStorage.setItem(EXPENSES, plaintextV0);
     const writes = AsyncStorage.setItem as jest.Mock;
     writes.mockClear();
     const returned = JSON.parse((await documentMetadataEncryptedStorage.getItem(EXPENSES))!);
-    expect(returned.version).toBe(1);
+    expect(returned.version).toBe(2);
     expect(returned.state.expenses.map((e: Json) => e.amount)).toEqual([650_000, 650_000, 3_250, 30, -2_575]);
-    // The money upgrade happens before the first encrypted commit. APP-029's existing
-    // cleanup-record rewrite then re-encrypts the same v1 plaintext; no write is ever
-    // plaintext, v0, or to another key.
+    expect(returned.state.expenses.map((e: Json) => e.recurrenceFrequency)).toEqual(['monthly', 'monthly', null, null, null]);
+    // The inner upgrades happen before the first encrypted commit. APP-029's existing
+    // cleanup-record rewrite then re-encrypts the same v2 plaintext; no write is ever
+    // plaintext, an older version, or to another key.
     expect(writes.mock.calls.length).toBeGreaterThanOrEqual(1);
     for (const [key, value] of writes.mock.calls) {
       expect(key).toBe(EXPENSES);
       expect(value).toContain('__lifesort_encrypted_document_metadata__');
-      expect(JSON.parse(await decryptDocumentMetadataPayload(EXPENSES, value)).version).toBe(1);
+      expect(JSON.parse(await decryptDocumentMetadataPayload(EXPENSES, value)).version).toBe(2);
     }
     expect(await AsyncStorage.getAllKeys()).toEqual([EXPENSES]);
     expect(await AsyncStorage.getItem(EXPENSES)).not.toContain('Synthetic');
@@ -310,9 +340,10 @@ describe('APP-040 encrypted Expenses: inner v0 → v1 through the secure adapter
     expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
   });
 
-  it('rejects an encrypted v1 payload holding a safe integer the app cannot support, keeping the encrypted bytes', async () => {
-    const v1 = JSON.stringify({ state: { expenses: [{ id: 'e', amount: Number.MAX_SAFE_INTEGER }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 1 });
-    const encrypted = await encryptDocumentMetadataPayload(EXPENSES, v1);
+  it('rejects an encrypted v2 payload holding a safe integer the app cannot support, keeping the encrypted bytes', async () => {
+    // Canonical v2 in every respect except the amount, so it fails on the money rule.
+    const v2 = JSON.stringify({ state: { expenses: [{ id: 'e', amount: Number.MAX_SAFE_INTEGER, isRecurring: false, recurrenceFrequency: null, recurrenceAnchorDay: null }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 2 });
+    const encrypted = await encryptDocumentMetadataPayload(EXPENSES, v2);
     await AsyncStorage.setItem(EXPENSES, encrypted);
     const writes = AsyncStorage.setItem as jest.Mock;
     writes.mockClear();
@@ -321,16 +352,16 @@ describe('APP-040 encrypted Expenses: inner v0 → v1 through the secure adapter
     expect(writes).not.toHaveBeenCalled();
   });
 
-  it('rejects an encrypted v1 payload holding a fractional minor unit without rescaling or rewriting it', async () => {
-    const v1 = JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1250.5 }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 1 });
-    const encrypted = await encryptDocumentMetadataPayload(EXPENSES, v1);
+  it('rejects an encrypted v2 payload holding a fractional minor unit without rescaling or rewriting it', async () => {
+    const v2 = JSON.stringify({ state: { expenses: [{ id: 'e', amount: 1250.5, isRecurring: false, recurrenceFrequency: null, recurrenceAnchorDay: null }], seriesStoppedAt: {}, categoryBudgets: {} }, version: 2 });
+    const encrypted = await encryptDocumentMetadataPayload(EXPENSES, v2);
     await AsyncStorage.setItem(EXPENSES, encrypted);
     await expect(documentMetadataEncryptedStorage.getItem(EXPENSES)).rejects.toMatchObject({ code: 'validation-failed' });
     expect(await AsyncStorage.getItem(EXPENSES)).toBe(encrypted);
   });
 
   it('rejects a future inner version before any write, and the gated store surfaces only a fixed code', async () => {
-    const future = JSON.stringify({ ...JSON.parse(innerV0), version: 2 });
+    const future = JSON.stringify({ ...JSON.parse(innerV0), version: 3 });
     const encrypted = await encryptDocumentMetadataPayload(EXPENSES, future);
     await AsyncStorage.setItem(EXPENSES, encrypted);
     const error = await Promise.resolve(migrationGatedStorage(documentMetadataEncryptedStorage).getItem(EXPENSES))

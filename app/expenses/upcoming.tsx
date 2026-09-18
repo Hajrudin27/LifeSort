@@ -98,7 +98,12 @@ export default function UpcomingExpensesScreen() {
                 </View>
                 <View style={styles.rowText}>
                   <Text style={styles.rowName}>{item.name}</Text>
-                  <Text style={{ color: textMuted, fontSize: 12 }}>{getCategoryLabel(item.category, t)}</Text>
+                  <Text style={{ color: textMuted, fontSize: 12 }}>
+                    {/* APP-042: for en fast udgift står kadencen ved siden af kategorien. */}
+                    {item.isRecurring && item.recurrenceFrequency
+                      ? `${getCategoryLabel(item.category, t)} · ${t(`expenses.recurrence.${item.recurrenceFrequency}`)}`
+                      : getCategoryLabel(item.category, t)}
+                  </Text>
                 </View>
                 <View style={styles.rowRight}>
                   <Text style={styles.rowAmount}>{formatDkk(item.amount, locale)}</Text>

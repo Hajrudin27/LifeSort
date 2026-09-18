@@ -49,7 +49,7 @@
     "storageKey": "lifesort-expenses",
     "sourceCommit": "49c4355",
     "sourceVersion": 0,
-    "targetVersion": 1,
+    "targetVersion": 2,
     "serialization": "raw JSON bytes",
     "synthetic": true,
     "sensitivity": "A (plaintext pre-0746c50 metadata; synthetic amounts only)"
@@ -60,7 +60,7 @@
     "storageKey": "lifesort-expenses",
     "sourceCommit": "c73bf68",
     "sourceVersion": 0,
-    "targetVersion": 1,
+    "targetVersion": 2,
     "serialization": "raw JSON bytes",
     "synthetic": true,
     "sensitivity": "A,B (inner payload of the AES-GCM envelope; tests encrypt it; synthetic amounts and attachment references)"
@@ -86,5 +86,16 @@
     "serialization": "raw JSON bytes",
     "synthetic": true,
     "sensitivity": "A"
+  },
+  {
+    "file": "expenses/22bbf3a-inner-v1.json",
+    "storeId": "async-storage:lifesort-expenses",
+    "storageKey": "lifesort-expenses",
+    "sourceCommit": "22bbf3a",
+    "sourceVersion": 1,
+    "targetVersion": 2,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A,B (inner payload of the AES-GCM envelope after APP-040; synthetic øre amounts and attachment references)"
   }
 ]

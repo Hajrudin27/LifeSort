@@ -39,7 +39,7 @@ beforeEach(async () => {
   jest.setSystemTime(new Date('2026-09-16T12:00:00Z'));
   const month = getMonthKey(new Date());
   useExpensesStore.setState({
-    expenses: [{ id: 'e1', seriesId: 'e1', isRecurring: false, name: 'Synthetic', amount: minorUnits(123_450), category: 'other', nextPaymentDate: `${month}-10`, attachments: [], createdAt: `${month}-10T00:00:00.000Z` }],
+    expenses: [{ id: 'e1', seriesId: 'e1', isRecurring: false, recurrenceFrequency: null, recurrenceAnchorDay: null, name: 'Synthetic', amount: minorUnits(123_450), category: 'other', nextPaymentDate: `${month}-10`, attachments: [], createdAt: `${month}-10T00:00:00.000Z` }],
     categoryBudgets: {},
   });
   useIncomeStore.setState({ incomeByMonth: { [month]: minorUnits(1_000_000) } });
@@ -73,7 +73,7 @@ it('formats Economy MinorUnits once and keeps Food major units untouched', () =>
 
 it('renders an unsupported derived total of supported expenses exactly instead of throwing', () => {
   const month = getMonthKey(new Date());
-  const expense = (id: string, amount: number) => ({ id, seriesId: id, isRecurring: false, name: 'Synthetic', amount: minorUnits(amount), category: 'other', nextPaymentDate: `${month}-10`, attachments: [], createdAt: `${month}-10T00:00:00.000Z` });
+  const expense = (id: string, amount: number) => ({ id, seriesId: id, isRecurring: false, recurrenceFrequency: null, recurrenceAnchorDay: null, name: 'Synthetic', amount: minorUnits(amount), category: 'other', nextPaymentDate: `${month}-10`, attachments: [], createdAt: `${month}-10T00:00:00.000Z` });
   useExpensesStore.setState({ expenses: [expense('big-1', 2 ** 33 * 100), expense('big-2', 2 ** 33 * 100 - 1)] });
   useIncomeStore.setState({ incomeByMonth: {} });
 

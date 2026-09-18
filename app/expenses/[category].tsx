@@ -69,7 +69,11 @@ export default function CategoryExpensesScreen() {
         <View style={styles.expenseTextGroup}>
           <Text style={styles.expenseName} numberOfLines={1}>{item.name}</Text>
           <Text style={[styles.expenseMeta, { color: textMuted }]} numberOfLines={1}>
-            {item.isRecurring ? t("expenses.recurring") : t("expenses.oneTimePayment")}
+            {!item.isRecurring
+              ? t("expenses.oneTimePayment")
+              : item.recurrenceFrequency
+                ? t(`expenses.recurrence.${item.recurrenceFrequency}`)
+                : t("expenses.recurring")}
           </Text>
         </View>
         <View style={styles.expenseAmountGroup}>

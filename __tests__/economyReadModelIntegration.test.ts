@@ -13,7 +13,7 @@ import { categoryTotalForMonth, totalForMonth } from '@/utils/expense/expenseSta
 /** APP-040: store amounts are DKK MinorUnits; displayed values are localized (test language: da). */
 const m = minorUnits;
 const MONTH = '2026-09';
-const input = { name: 'Synthetic expense', amount: m(50_000), category: 'other', nextPaymentDate: '2026-09-10', isRecurring: false };
+const input = { name: 'Synthetic expense', amount: m(50_000), category: 'other', nextPaymentDate: '2026-09-10', isRecurring: false, recurrenceFrequency: null };
 const plain = (text: string | undefined) => text?.replace(/[\u00a0\u202f]/g, ' ');
 function totals() {
   return economyTotalsForMonth(useExpensesStore.getState().expenses, useIncomeStore.getState().incomeByMonth, MONTH);

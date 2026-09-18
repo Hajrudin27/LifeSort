@@ -32,5 +32,48 @@
   "newExpenseTitle": "Ny udgift",
   "newExpenseSubtitle": "Registrer abonnement, regning eller køb.",
   "upcomingTitle": "Kommende betalinger",
-  "upcomingSubtitle": "Se hvad der snart rammer budgettet."
+  "upcomingSubtitle": "Se hvad der snart rammer budgettet.",
+  "affordability": {
+    "title": "Har jeg råd?",
+    "entrySubtitle": "Se, hvad et køb vil betyde for månedens plan.",
+    "intro": "Se, hvad ét køb vil betyde for månedens plan. Det er en beregning, ikke et råd.",
+    "amountLabel": "Købets beløb",
+    "amountPlaceholder": "Fx 2500",
+    "amountInvalid": "Skriv et beløb, der er større end nul.",
+    "planTitle": "Månedens plan",
+    "loading": "Henter månedens tal …",
+    "incomeLabel": "Registreret indkomst",
+    "incomeMissing": "Ikke registreret",
+    "spendingLabel": "Registrerede udgifter",
+    "beforeLabel": "Tilbage før købet",
+    "beforeUnavailable": "Kræver månedens indkomst",
+    "resultTitle": "Med købet",
+    "purchaseLabel": "Køb",
+    "afterLabel": "Tilbage efter købet",
+    "status": {
+      "within": "Inden for månedens plan",
+      "over": "Over månedens plan",
+      "incomplete": "Indkomst ikke registreret"
+    },
+    "result": {
+      "within": "Ud fra din nuværende plan har du {{after}} tilbage i denne måned efter købet.",
+      "over": "Din nuværende plan har {{before}} tilbage i denne måned. Efter købet vil den være {{after}} under nul.",
+      "alreadyOver": "Din nuværende plan er allerede {{before}} under nul. Efter købet vil den være {{after}} under nul.",
+      "incomplete": "Månedens indkomst er ikke registreret, så LifeSort kan ikke regne ud, hvad der vil være tilbage. Tilføj månedens indkomst for at se, hvad købet betyder."
+    },
+    "cannotCalculate": "LifeSort kan ikke beregne, hvad dette beløb betyder for planen.",
+    "assumptionsTitle": "Sådan regnes det ud",
+    "assumptions": {
+      "currentMonth": "Kun denne måned indgår.",
+      "registered": "Beregningen bygger på den indkomst og de udgifter, der er registreret i LifeSort – også faste udgifter, der forfalder i denne måned.",
+      "noForecast": "Fremtidig indkomst og fremtidige køb forudsiges ikke.",
+      "noCredit": "Kredit, lån, overtræk og køb nu – betal senere indgår ikke.",
+      "savings": "Sparemål holdes adskilt: de lægges ikke til som penge, du kan bruge, og penge flyttet til et mål tæller ikke som en udgift.",
+      "notSaved": "Købet gemmes ikke – det er kun en beregning.",
+      "sameFigures": "Tallene er de samme som i din økonomioversigt."
+    },
+    "a11y": {
+      "amount": "Købets beløb i kroner"
+    }
+  }
 }

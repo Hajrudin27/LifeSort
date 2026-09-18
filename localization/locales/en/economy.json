@@ -32,5 +32,48 @@
   "newExpenseTitle": "New expense",
   "newExpenseSubtitle": "Register a subscription, bill, or purchase.",
   "upcomingTitle": "Upcoming payments",
-  "upcomingSubtitle": "See what will hit the budget soon."
+  "upcomingSubtitle": "See what will hit the budget soon.",
+  "affordability": {
+    "title": "Purchase impact",
+    "entrySubtitle": "See what a purchase would do to this month's plan.",
+    "intro": "See what one purchase would do to this month's plan. It's a calculation, not advice.",
+    "amountLabel": "Purchase amount",
+    "amountPlaceholder": "E.g. 2500",
+    "amountInvalid": "Enter an amount greater than zero.",
+    "planTitle": "This month's plan",
+    "loading": "Loading this month's figures…",
+    "incomeLabel": "Registered income",
+    "incomeMissing": "Not registered",
+    "spendingLabel": "Registered spending",
+    "beforeLabel": "Left before the purchase",
+    "beforeUnavailable": "Needs this month's income",
+    "resultTitle": "With the purchase",
+    "purchaseLabel": "Purchase",
+    "afterLabel": "Left after the purchase",
+    "status": {
+      "within": "Within this month's plan",
+      "over": "Over this month's plan",
+      "incomplete": "Income not registered"
+    },
+    "result": {
+      "within": "Based on your current plan, you would have {{after}} left this month after the purchase.",
+      "over": "Your current plan has {{before}} left this month. After the purchase, it would be {{after}} below zero.",
+      "alreadyOver": "Your current plan is already {{before}} below zero. After the purchase, it would be {{after}} below zero.",
+      "incomplete": "This month's income isn't registered, so LifeSort can't calculate what would be left. Add this month's income to see the purchase impact."
+    },
+    "cannotCalculate": "LifeSort can't calculate what this amount would mean for the plan.",
+    "assumptionsTitle": "How it's calculated",
+    "assumptions": {
+      "currentMonth": "Only this month is included.",
+      "registered": "It uses the income and spending registered in LifeSort, including fixed expenses due this month.",
+      "noForecast": "Future income and purchases are not forecast.",
+      "noCredit": "Credit, loans, overdrafts and buy now, pay later are not included.",
+      "savings": "Savings goals are kept separate: they are not added as money you can spend, and moving money to a goal does not count as spending.",
+      "notSaved": "The purchase is not saved – it is only a calculation.",
+      "sameFigures": "The figures are the same as in your Economy overview."
+    },
+    "a11y": {
+      "amount": "Purchase amount in kroner"
+    }
+  }
 }

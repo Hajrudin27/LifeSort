@@ -686,6 +686,13 @@ function RootLayoutNav({ language }: { language: string | null }) {
             }}
           />
           <Stack.Screen
+            name="economy/affordability"
+            options={{
+              title: t("economy.affordability.title"),
+              headerBackTitle: t("economy.title"),
+            }}
+          />
+          <Stack.Screen
             name="settings/profile"
             options={{
               title: t("profile.title"),

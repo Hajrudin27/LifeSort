@@ -111,7 +111,7 @@ carries the same classification, and a test keeps the two in step.
 
 ## §2 Route inventory
 
-All 91 route files under `app/`. `Route` is the Expo Router URL path; the
+All 97 route files under `app/`. `Route` is the Expo Router URL path; the
 `(tabs)` group segment is not part of the URL. `_layout`, `+html` and
 `+not-found` are framework files rather than navigable screens and are listed so
 the inventory is complete.
@@ -156,6 +156,7 @@ to Supabase tables in §3.
 | `/cycle/new` | `app/cycle/new.tsx` | `cycle` | `useCycleStore` | health | Hajrudin Kardasevic |
 | `/cycle/settings` | `app/cycle/settings.tsx` | `cycle` | `useCycleStore`<br>`useToastStore` | health | Hajrudin Kardasevic |
 | `/cycle/symptoms` | `app/cycle/symptoms.tsx` | `cycle` | `useCycleStore` | health | Hajrudin Kardasevic |
+| `/economy/affordability` | `app/economy/affordability.tsx` | `economy` | `useExpensesStore`<br>`useIncomeStore` | financial | Hajrudin Kardasevic |
 | `/economy/insights` | `app/economy/insights.tsx` | `economy` | `useExpensesStore`<br>`useIncomeStore`<br>`useSavingsGoalsStore` | financial | Hajrudin Kardasevic |
 | `/expenses/[category]` | `app/expenses/[category].tsx` | `economy` | `useExpensesStore` | financial | Hajrudin Kardasevic |
 | `/expenses/edit/[id]` | `app/expenses/edit/[id].tsx` | `economy` | `useExpensesStore` | financial, document | Hajrudin Kardasevic |

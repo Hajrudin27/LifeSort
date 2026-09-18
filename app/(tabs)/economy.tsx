@@ -337,6 +337,14 @@ export default function EconomyScreen() {
             onPress={() => router.push("/expenses/upcoming")}
             style={styles.quickItem}
           />
+          <QuickActionCard
+            icon={{ ios: "plusminus.circle.fill", android: "calculate", web: "calculate" }}
+            title={t("economy.affordability.title")}
+            subtitle={t("economy.affordability.entrySubtitle")}
+            tone={brand.glowSecondary}
+            onPress={() => router.push("/economy/affordability")}
+            style={styles.quickItem}
+          />
         </View>
       </Screen>
 

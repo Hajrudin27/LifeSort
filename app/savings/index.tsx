@@ -108,7 +108,7 @@ export default function SavingsGoalsScreen() {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t("savings.a11y.addGoal")}
+            accessibilityLabel={t("savings.a11y.addExtraSavings")}
             hitSlop={6}
             style={styles.addButton}
             onPress={() => setShowAddModal(true)}

@@ -2,8 +2,6 @@ import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
 import {
   addMinorUnits,
-  negateMinorUnits,
-  subtractMinorUnits,
   ZERO_MINOR_UNITS,
   type MinorUnits,
 } from '@/core/money/minorUnits';
@@ -19,6 +17,15 @@ import {
   SavingsGoal,
   SavingsGoalIcon,
 } from "@/types/savingsGoal";
+import {
+  allocationMovements,
+  applySavingsMovements,
+  contributionMovements,
+  savingsDeadline,
+  savingsTarget,
+  transferMovements,
+  type SavingsMovement,
+} from "@/utils/savings/savingsGoalRules";
 
 type GoalEditableFields = Pick<
   SavingsGoal,
@@ -84,17 +91,22 @@ async function syncUpsertGoal(goal: SavingsGoal) {
   await supabase.from("savings_goals").upsert(goalToRow(userId, goal));
 }
 
-async function syncUpsertGoals(goals: SavingsGoal[]) {
+/**
+ * APP-043: history is attempted only after the goal upsert has SUCCEEDED, so the
+ * (user_id, goal_id) foreign key never sees history ahead of its goal, and a
+ * refused goal write cannot leave server history describing a balance change the
+ * server balance never got. Supabase reports query failures as `{ error }`
+ * rather than throwing. Still the legacy best-effort path: nothing is retried or
+ * logged, and a history insert that fails after its goal succeeded is not rolled
+ * back (known sync debt, see docs/app-043-savings-goals.md).
+ */
+async function syncMovements(goals: SavingsGoal[], contributions: SavingsContribution[]) {
   const userId = await getUserId();
-  if (!userId || goals.length === 0) return;
-  await supabase
+  if (!userId) return;
+  const { error } = await supabase
     .from("savings_goals")
     .upsert(goals.map((g) => goalToRow(userId, g)));
-}
-
-async function syncInsertContributions(contributions: SavingsContribution[]) {
-  const userId = await getUserId();
-  if (!userId || contributions.length === 0) return;
+  if (error) return;
   await supabase
     .from("savings_history")
     .insert(contributions.map((c) => contributionToRow(userId, c)));
@@ -123,16 +135,40 @@ async function syncExtraSavings(amount: MinorUnits) {
     .upsert({ user_id: userId, amount: minorUnitsToServerNumeric(amount) });
 }
 
-/** Saldo på et mål falder aldrig under nul ved ind- eller udbetaling (eksisterende regel). */
-function nonNegative(amount: MinorUnits): MinorUnits {
-  return amount < 0 ? ZERO_MINOR_UNITS : amount;
+type Movable = Pick<SavingsGoalsState, "goals" | "history">;
+
+/**
+ * APP-043: the only way a balance changes. Movements are validated against the
+ * current goals first (utils/savings/savingsGoalRules.ts); then each is applied
+ * to its goal AND appended as history with the same amount, in one set().
+ */
+function commitMovements(
+  current: Movable,
+  set: (next: Movable) => void,
+  movements: readonly SavingsMovement[],
+) {
+  const nextGoals = applySavingsMovements(current.goals, movements);
+  const date = new Date().toISOString();
+  const entries: SavingsContribution[] = movements.map((movement) => ({
+    id: newEntityId(),
+    goalId: movement.goalId,
+    amount: movement.amount,
+    date,
+  }));
+
+  set({ goals: nextGoals, history: [...current.history, ...entries] });
+
+  const touchedIds = new Set(movements.map((movement) => movement.goalId));
+  syncMovements(nextGoals.filter((g) => touchedIds.has(g.id)), entries);
 }
 
 /*
  * APP-040: every amount an action persists — input, contribution, resulting
  * balance and resulting extra savings — passes `supportedMoney` BEFORE set().
- * Actions compute the complete next state from get() first, so a rejected
- * amount leaves the store (and the server) untouched.
+ * APP-043: target, deadline and every balance movement are validated by
+ * utils/savings/savingsGoalRules.ts. Actions compute the complete next state
+ * from get() first, so a rejected operation leaves the store, the persisted
+ * bytes and the server untouched.
  */
 
 export const useSavingsGoalsStore = create<SavingsGoalsState>()(
@@ -143,13 +179,17 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
       extraSavings: ZERO_MINOR_UNITS,
 
       addGoal: (input) => {
+        const targetAmount = savingsTarget(input.targetAmount);
+        const deadline = savingsDeadline(input.deadline);
         const id = newEntityId();
         const newGoal: SavingsGoal = {
           id,
           createdAt: new Date().toISOString(),
           savedAmount: ZERO_MINOR_UNITS,
-          ...input,
-          targetAmount: supportedMoney(input.targetAmount),
+          name: input.name,
+          targetAmount,
+          icon: input.icon,
+          ...(deadline === undefined ? {} : { deadline }),
         };
         set((state) => ({ goals: [...state.goals, newGoal] }));
         syncUpsertGoal(newGoal);
@@ -157,11 +197,14 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
       },
 
       updateGoal: (id, updates) => {
-        // Et målbeløb kan ikke fjernes; er feltet med, skal det være understøttede øre.
-        const checked =
-          'targetAmount' in updates
-            ? { ...updates, targetAmount: supportedMoney(updates.targetAmount) }
-            : updates;
+        // Et målbeløb kan ikke fjernes; er feltet med, skal det være understøttede,
+        // positive øre. Kun de redigerbare felter kopieres, så savedAmount aldrig
+        // kan ændres herfra. En deadline kan fjernes (undefined).
+        const checked: Partial<GoalEditableFields> = {};
+        if (updates.name !== undefined) checked.name = updates.name;
+        if (updates.icon !== undefined) checked.icon = updates.icon;
+        if ('targetAmount' in updates) checked.targetAmount = savingsTarget(updates.targetAmount);
+        if ('deadline' in updates) checked.deadline = savingsDeadline(updates.deadline);
         set((state) => ({
           goals: state.goals.map((g) =>
             g.id === id ? { ...g, ...checked } : g,
@@ -171,83 +214,18 @@ export const useSavingsGoalsStore = create<SavingsGoalsState>()(
         if (updated) syncUpsertGoal(updated);
       },
 
+      // Signed: positive deposits, negative withdrawals. A withdrawal larger than
+      // the balance is refused, never clamped.
       addContribution: (id, amount) => {
-        const contribution: SavingsContribution = {
-          id: newEntityId(),
-          goalId: id,
-          amount: supportedMoney(amount),
-          date: new Date().toISOString(),
-        };
-        const { goals, history } = get();
-        const nextGoals = goals.map((g) =>
-          g.id === id
-            ? { ...g, savedAmount: supportedMoney(nonNegative(addMinorUnits(g.savedAmount, contribution.amount))) }
-            : g,
-        );
-
-        set({ goals: nextGoals, history: [...history, contribution] });
-
-        const updatedGoal = get().goals.find((g) => g.id === id);
-        if (updatedGoal) syncUpsertGoal(updatedGoal);
-        syncInsertContributions([contribution]);
+        commitMovements(get(), set, contributionMovements(id, amount));
       },
 
       distributeContributions: (allocations) => {
-        const newContributions: SavingsContribution[] = allocations.map(
-          (a) => ({
-            id: newEntityId(),
-            goalId: a.id,
-            amount: supportedMoney(a.amount),
-            date: new Date().toISOString(),
-          }),
-        );
-        const { goals, history } = get();
-        const nextGoals = goals.map((g) => {
-          const allocation = newContributions.find((c) => c.goalId === g.id);
-          return allocation
-            ? { ...g, savedAmount: supportedMoney(addMinorUnits(g.savedAmount, allocation.amount)) }
-            : g;
-        });
-
-        set({ goals: nextGoals, history: [...history, ...newContributions] });
-
-        const touchedIds = new Set(allocations.map((a) => a.id));
-        const touchedGoals = get().goals.filter((g) => touchedIds.has(g.id));
-        syncUpsertGoals(touchedGoals);
-        syncInsertContributions(newContributions);
+        commitMovements(get(), set, allocationMovements(allocations));
       },
 
       transferBetweenGoals: (fromId, toId, amount) => {
-        const transferred = supportedMoney(amount);
-        const fromContribution: SavingsContribution = {
-          id: newEntityId(),
-          goalId: fromId,
-          amount: negateMinorUnits(transferred),
-          date: new Date().toISOString(),
-        };
-        const toContribution: SavingsContribution = {
-          id: newEntityId(),
-          goalId: toId,
-          amount: transferred,
-          date: new Date().toISOString(),
-        };
-
-        const { goals, history } = get();
-        const nextGoals = goals.map((g) => {
-          if (g.id === fromId)
-            return { ...g, savedAmount: supportedMoney(nonNegative(subtractMinorUnits(g.savedAmount, transferred))) };
-          if (g.id === toId)
-            return { ...g, savedAmount: supportedMoney(addMinorUnits(g.savedAmount, transferred)) };
-          return g;
-        });
-
-        set({ goals: nextGoals, history: [...history, fromContribution, toContribution] });
-
-        const touchedGoals = get().goals.filter(
-          (g) => g.id === fromId || g.id === toId,
-        );
-        syncUpsertGoals(touchedGoals);
-        syncInsertContributions([fromContribution, toContribution]);
+        commitMovements(get(), set, transferMovements(fromId, toId, amount));
       },
 
       removeGoal: (id) => {

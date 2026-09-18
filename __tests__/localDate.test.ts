@@ -1,6 +1,7 @@
 import {
   addDaysIso,
   daysBetweenIso,
+  parseCalendarDate,
   parseIsoDate,
   toLocalIsoDate,
 } from '@/utils/shared/localDate';
@@ -71,5 +72,39 @@ describe('addDaysIso', () => {
   it('håndterer skudår', () => {
     expect(addDaysIso('2028-02-28', 1)).toBe('2028-02-29');
     expect(addDaysIso('2026-02-28', 1)).toBe('2026-03-01');
+  });
+});
+
+describe('parseCalendarDate (APP-043)', () => {
+  it('returns the calendar parts of an exact YYYY-MM-DD date', () => {
+    expect(parseCalendarDate('2027-06-30')).toEqual({ year: 2027, month: 6, day: 30 });
+    expect(parseCalendarDate('2020-01-31')).toEqual({ year: 2020, month: 1, day: 31 });
+    expect(parseCalendarDate('2026-12-01')).toEqual({ year: 2026, month: 12, day: 1 });
+  });
+
+  it('rejects dates the calendar does not have instead of rolling them over', () => {
+    for (const impossible of ['2027-02-29', '2027-02-30', '2026-04-31', '2026-13-01', '2026-00-10', '2026-06-00', '2026-06-32']) {
+      expect(parseCalendarDate(impossible)).toBeNull();
+    }
+  });
+
+  it('handles leap years, including the century rules', () => {
+    expect(parseCalendarDate('2028-02-29')).toEqual({ year: 2028, month: 2, day: 29 });
+    expect(parseCalendarDate('2000-02-29')).toEqual({ year: 2000, month: 2, day: 29 });
+    expect(parseCalendarDate('1900-02-29')).toBeNull();
+    expect(parseCalendarDate('2100-02-29')).toBeNull();
+  });
+
+  it('accepts nothing but the exact shape, and repairs nothing', () => {
+    for (const malformed of ['2027-6-1', '2027-06-1', '27-06-01', '2027/06/01', '2027-06-01T00:00:00.000Z',
+      '2027-06-01T00:00', ' 2027-06-01', '2027-06-01 ', '2027-06-01\n', '', '２０２７-06-01', null, undefined, 20270601, new Date(2027, 5, 1)]) {
+      expect(parseCalendarDate(malformed)).toBeNull();
+    }
+  });
+
+  it('reads the text only: the last day of a month stays that day in any timezone', () => {
+    // new Date('2026-10-01') is 30 September west of UTC; the parts never pass through a Date.
+    expect(parseCalendarDate('2026-10-01')).toEqual({ year: 2026, month: 10, day: 1 });
+    expect(parseCalendarDate('2026-12-31')).toEqual({ year: 2026, month: 12, day: 31 });
   });
 });

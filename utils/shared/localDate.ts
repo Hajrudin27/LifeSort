@@ -58,3 +58,29 @@ export function addDaysIso(iso: string, days: number): string {
 export function daysUntilIso(iso: string): number {
   return daysBetweenIso(todayIso(), iso);
 }
+
+export type CalendarDate = { readonly year: number; readonly month: number; readonly day: number };
+
+const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * Streng validering af en kalenderdato: præcis 'YYYY-MM-DD' og en dag kalenderen
+ * har (skudår medregnet), ellers null. Ren tekst og heltal — ingen Date, så
+ * hverken UTC eller lokal tidszone kan flytte datoen. Intet repareres: 2027-02-30
+ * rulles ikke over til marts, og '2027-6-1' eller et tidsstempel afvises.
+ */
+export function parseCalendarDate(value: unknown): CalendarDate | null {
+  if (typeof value !== 'string') return null;
+  const match = CALENDAR_DATE.exec(value);
+  if (!match) return null;
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  if (month < 1 || month > 12) return null;
+  const monthLength = month === 2 && isLeapYear(year) ? 29 : DAYS_IN_MONTH[month - 1];
+  if (day < 1 || day > monthLength) return null;
+  return { year, month, day };
+}

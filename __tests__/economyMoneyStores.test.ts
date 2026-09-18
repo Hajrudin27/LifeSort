@@ -133,7 +133,7 @@ describe('APP-040 income and savings write paths', () => {
     expect(await persisted('lifesort-income-v2')).toEqual({ state: { incomeByMonth: { '2026-09': 3_215_005, '2026-10': 0 } }, version: 1 });
   });
 
-  it('savings goal, contribution, withdrawal clamp, transfer, equal distribution and extra savings stay integral', async () => {
+  it('savings goal, contribution, withdrawal, transfer, equal distribution and extra savings stay integral', async () => {
     const store = useSavingsGoalsStore.getState();
     const a = store.addGoal({ name: 'A', targetAmount: parsed('1000'), icon: 'travel' });
     const b = store.addGoal({ name: 'B', targetAmount: parsed('10,01'), icon: 'other' });
@@ -143,8 +143,11 @@ describe('APP-040 income and savings write paths', () => {
     store.addContribution(a, parsed('0,10'));
     store.addContribution(a, parsed('0,20'));
     expect(useSavingsGoalsStore.getState().goals[0].savedAmount).toBe(30); // not 0.30000000000000004
-    store.addContribution(a, negateMinorUnits(parsed('5')));
-    expect(useSavingsGoalsStore.getState().goals[0].savedAmount).toBe(0); // existing clamp at zero
+    // APP-043: a withdrawal larger than the balance is refused, never clamped.
+    expect(() => store.addContribution(a, negateMinorUnits(parsed('5')))).toThrow('savings_insufficient_balance');
+    expect(useSavingsGoalsStore.getState().goals[0].savedAmount).toBe(30);
+    store.addContribution(a, negateMinorUnits(parsed('0,30')));
+    expect(useSavingsGoalsStore.getState().goals[0].savedAmount).toBe(0);
     store.addContribution(a, parsed('100'));
     store.transferBetweenGoals(a, b, parsed('33,33'));
     expect(useSavingsGoalsStore.getState().goals.map((g) => g.savedAmount)).toEqual([6_667, 3_333]);
@@ -158,10 +161,10 @@ describe('APP-040 income and savings write paths', () => {
 
     const state = useSavingsGoalsStore.getState();
     expect(state.goals.map((g) => [g.targetAmount, g.savedAmount, g.archived])).toEqual([[100_000, 7_000, false], [1_002, 3_666, undefined]]);
-    expect(state.history.map((h) => h.amount)).toEqual([10, 20, -500, 10_000, -3_333, 3_333, 333, 333]);
+    expect(state.history.map((h) => h.amount)).toEqual([10, 20, -30, 10_000, -3_333, 3_333, 333, 333]);
     expect(state.extraSavings).toBe(5);
     await flush();
-    expect(writesTo('savings_history').flat().map((row: any) => row.amount)).toEqual(['0.10', '0.20', '-5.00', '100.00', '-33.33', '33.33', '3.33', '3.33']);
+    expect(writesTo('savings_history').flat().map((row: any) => row.amount)).toEqual(['0.10', '0.20', '-0.30', '100.00', '-33.33', '33.33', '3.33', '3.33']);
     expect(writesTo('savings_extra')).toEqual([{ user_id: 'synthetic-user', amount: '0.05' }]);
     expect(writesTo('savings_goals').flat().every((row: any) => typeof row.target_amount === 'string' && typeof row.saved_amount === 'string')).toBe(true);
     const disk = await persisted('lifesort-savings-goals');

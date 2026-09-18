@@ -16,16 +16,24 @@ import { sharedStyles } from "@/constants/sharedStyles";
 import { minorUnitsToInputText } from "@/core/money/decimal";
 import { decimalSeparatorFor, formatDkk, moneyLocaleFor } from "@/core/money/format";
 import { negateMinorUnits } from "@/core/money/minorUnits";
-import { parseSupportedMoneyInput, supportedSumOrNull } from "@/core/money/supportedMoney";
+import { parseSupportedMoneyInput } from "@/core/money/supportedMoney";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
 import { SavingsGoalIcon } from "@/types/savingsGoal";
 import {
+  contributionMovements,
+  isValidSavingsDeadline,
+  savingsMovementsAllowed,
+  transferMovements,
+} from "@/utils/savings/savingsGoalRules";
+import {
   estimateMonthsToGoal,
+  isDeadlineOverdue,
   monthlyRateForDisplay,
+  monthsUntilDeadline,
   requiredMonthlyAmount,
 } from "@/utils/savings/savingsPace";
-import { todayIso } from "@/utils/shared/localDate";
+import { parseIsoDate, todayIso } from "@/utils/shared/localDate";
 
 export default function SavingsGoalDetailScreen() {
   const { t, i18n } = useTranslation();
@@ -74,46 +82,41 @@ export default function SavingsGoalDetailScreen() {
     );
   }
 
-  // APP-040: text → supported DKK MinorUnits; the existing positive/limit rules are
-  // unchanged, and a resulting balance the store would reject keeps the action disabled.
+  // APP-040: text → supported DKK MinorUnits. APP-043: an action is enabled only
+  // when the store's own movement rules would accept it (utils/savings/savingsGoalRules.ts).
   const parsedTarget = parseSupportedMoneyInput(targetAmount);
-  const canSave = name.trim().length > 0 && parsedTarget.ok && parsedTarget.value > 0;
+  const canSave =
+    name.trim().length > 0 &&
+    parsedTarget.ok &&
+    parsedTarget.value > 0 &&
+    (!hasDeadline || isValidSavingsDeadline(deadline));
   const parsedContribution = parseSupportedMoneyInput(contribution);
   const canContribute =
     parsedContribution.ok &&
     parsedContribution.value > 0 &&
-    supportedSumOrNull(goal.savedAmount, parsedContribution.value) !== null;
+    savingsMovementsAllowed(allGoals, () => contributionMovements(goal.id, parsedContribution.value));
 
   const parsedTransfer = parseSupportedMoneyInput(transferAmount);
-  const validTransferAmount =
-    parsedTransfer.ok &&
-    parsedTransfer.value > 0 &&
-    parsedTransfer.value <= goal.savedAmount &&
-    supportedSumOrNull(goal.savedAmount, negateMinorUnits(parsedTransfer.value)) !== null;
-  const transferGoal = otherGoals.find((g) => g.id === transferTarget);
+  const transferValue = parsedTransfer.ok && parsedTransfer.value > 0 ? parsedTransfer.value : null;
   const canTransfer =
-    transferGoal !== undefined &&
-    validTransferAmount &&
-    supportedSumOrNull(transferGoal.savedAmount, parsedTransfer.value) !== null;
-  const canWithdraw = validTransferAmount;
+    transferValue !== null &&
+    transferTarget !== null &&
+    savingsMovementsAllowed(allGoals, () => transferMovements(goal.id, transferTarget, transferValue));
+  const canWithdraw =
+    transferValue !== null &&
+    savingsMovementsAllowed(allGoals, () => contributionMovements(goal.id, negateMinorUnits(transferValue)));
 
   const estimatedMonths = estimateMonthsToGoal(goal, allHistory);
   const requiredMonthly = requiredMonthlyAmount(goal);
+  const monthsLeft = monthsUntilDeadline(goal);
+  // A passed deadline is stated as a fact; it never becomes "one month left".
+  const overdue = isDeadlineOverdue(goal);
   const isBehindPace =
     requiredMonthly !== null &&
     estimatedMonths !== null &&
     estimatedMonths > 0 &&
-    (() => {
-      const now = new Date();
-      const deadlineDate = goal.deadline ? new Date(goal.deadline) : null;
-      if (!deadlineDate) return false;
-      const monthsUntilDeadline = Math.max(
-        1,
-        (deadlineDate.getFullYear() - now.getFullYear()) * 12 +
-          (deadlineDate.getMonth() - now.getMonth()),
-      );
-      return estimatedMonths > monthsUntilDeadline;
-    })();
+    monthsLeft !== null &&
+    estimatedMonths > monthsLeft;
 
   const save = () => {
     if (!parsedTarget.ok) return;
@@ -184,7 +187,7 @@ export default function SavingsGoalDetailScreen() {
                 size={20}
                 tintColor={textMuted}
               />
-              <Text style={{ color: textMuted }}>{t("warranties.edit")}</Text>
+              <Text style={{ color: textMuted }}>{t("savings.edit")}</Text>
             </Pressable>
           ),
         }}
@@ -198,7 +201,7 @@ export default function SavingsGoalDetailScreen() {
         </Text>
       </Card>
 
-      {(estimatedMonths !== null || requiredMonthly !== null) && (
+      {(estimatedMonths !== null || requiredMonthly !== null || overdue) && (
         <Card
           style={[
             styles.paceCard,
@@ -243,6 +246,17 @@ export default function SavingsGoalDetailScreen() {
             >
               {t("savings.paceRequired", {
                 amount: formatDkk(monthlyRateForDisplay(requiredMonthly), locale),
+              })}
+            </Text>
+          )}
+          {overdue && goal.deadline && (
+            <Text style={styles.paceLine}>
+              {t("savings.paceDeadlinePassed", {
+                date: new Intl.DateTimeFormat(locale, {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }).format(parseIsoDate(goal.deadline)),
               })}
             </Text>
           )}
@@ -363,6 +377,7 @@ export default function SavingsGoalDetailScreen() {
                     sharedStyles.input,
                     { borderColor, backgroundColor: surface },
                   ]}
+                  accessibilityLabel={t("savings.namePlaceholder")}
                   value={name}
                   onChangeText={setName}
                 />
@@ -371,6 +386,7 @@ export default function SavingsGoalDetailScreen() {
                     sharedStyles.input,
                     { borderColor, backgroundColor: surface },
                   ]}
+                  accessibilityLabel={t("savings.targetPlaceholder")}
                   keyboardType="decimal-pad"
                   value={targetAmount}
                   onChangeText={setTargetAmount}
@@ -379,6 +395,7 @@ export default function SavingsGoalDetailScreen() {
                 <View style={sharedStyles.chipRow}>
                   <Chip
                     label={t("savings.setDeadlineToggle")}
+                    accessibilityLabel={t("savings.setDeadlineToggle")}
                     active={hasDeadline}
                     onPress={() => setHasDeadline(!hasDeadline)}
                   />

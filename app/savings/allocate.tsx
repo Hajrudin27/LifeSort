@@ -18,11 +18,12 @@ import {
   ZERO_MINOR_UNITS,
   type MinorUnits,
 } from "@/core/money/minorUnits";
-import { parseSupportedMoneyInput, supportedSumOrNull } from "@/core/money/supportedMoney";
+import { parseSupportedMoneyInput } from "@/core/money/supportedMoney";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { useIncomeStore } from "@/store/useIncomeStore";
 import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
+import { allocationMovements, savingsMovementsAllowed } from "@/utils/savings/savingsGoalRules";
 import { getMonthKey } from "@/utils/shared/monthKey";
 
 export default function AllocateSavingsScreen() {
@@ -49,24 +50,27 @@ export default function AllocateSavingsScreen() {
 
   const [amounts, setAmounts] = useState<Record<string, string>>({});
 
-  // APP-040: an empty field counts as zero; any other text must parse exactly to
-  // supported money, and the goal's resulting balance must be supported too.
-  // Malformed or unsupported input blocks confirmation instead of being read leniently.
+  // APP-040: an empty field (or 0) allocates nothing; any other text must parse
+  // exactly to supported money. APP-043: a negative amount is invalid rather than
+  // silently lowering the total, and the store's own allocation rules (resulting
+  // balances included) decide whether the rest can be confirmed.
   const parsedAmounts = goals.map((g) => {
     const text = amounts[g.id] ?? "";
-    return { goal: g, id: g.id, parsed: text.trim().length === 0 ? null : parseSupportedMoneyInput(text) };
+    return { id: g.id, parsed: text.trim().length === 0 ? null : parseSupportedMoneyInput(text) };
   });
   const hasInvalidAmount = parsedAmounts.some(
-    (a) =>
-      a.parsed !== null &&
-      (!a.parsed.ok || (a.parsed.value > 0 && supportedSumOrNull(a.goal.savedAmount, a.parsed.value) === null)),
+    (a) => a.parsed !== null && (!a.parsed.ok || a.parsed.value < 0),
   );
-  const enteredAmounts: { id: string; amount: MinorUnits }[] = parsedAmounts.flatMap((a) =>
-    a.parsed?.ok ? [{ id: a.id, amount: a.parsed.value }] : [],
+  const allocations: { id: string; amount: MinorUnits }[] = parsedAmounts.flatMap((a) =>
+    a.parsed?.ok && a.parsed.value > ZERO_MINOR_UNITS ? [{ id: a.id, amount: a.parsed.value }] : [],
   );
-  const allocatedTotal = sumMinorUnits(enteredAmounts.map((a) => a.amount));
+  const allocatedTotal = sumMinorUnits(allocations.map((a) => a.amount));
   const remaining = subtractMinorUnits(available, allocatedTotal);
-  const canConfirm = !hasInvalidAmount && allocatedTotal > 0 && remaining >= 0;
+  const canConfirm =
+    !hasInvalidAmount &&
+    allocations.length > 0 &&
+    remaining >= 0 &&
+    savingsMovementsAllowed(goals, () => allocationMovements(allocations));
 
   const distributeEqually = () => {
     if (goals.length === 0 || available <= 0) return;
@@ -82,7 +86,6 @@ export default function AllocateSavingsScreen() {
 
   const confirm = () => {
     if (!canConfirm) return;
-    const allocations = enteredAmounts.filter((a) => a.amount > ZERO_MINOR_UNITS);
     distributeContributions(allocations);
     router.back();
   };
@@ -138,6 +141,7 @@ export default function AllocateSavingsScreen() {
             <Text style={styles.goalName}>{item.name}</Text>
             <TextInput
               style={[styles.input, { borderColor, backgroundColor: surface }]}
+              accessibilityLabel={t("savings.a11y.allocationAmount", { name: item.name })}
               placeholder="0"
               placeholderTextColor={borderColor}
               keyboardType="decimal-pad"

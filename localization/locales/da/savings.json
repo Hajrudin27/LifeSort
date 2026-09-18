@@ -37,6 +37,8 @@
   },
   "historyLabel": "Udvikling over tid",
   "noHistory": "Ingen indbetalinger endnu",
+  "historySummary_one": "1 bevægelse den {{from}}: samlet {{net}} (lagt ind {{added}}, taget ud {{takenOut}})",
+  "historySummary_other": "{{count}} bevægelser fra {{from}} til {{to}}: samlet {{net}} (lagt ind {{added}}, taget ud {{takenOut}})",
   "category": {
     "general": "Generelt",
     "emergency": "Nødopsparing",
@@ -59,6 +61,7 @@
   "paceEstimate": "Ved dit nuværende tempo når du målet om ca. {{months}} måneder.",
   "paceReached": "Målet er allerede nået!",
   "paceRequired": "For at nå din deadline skal du spare {{amount}} om måneden.",
+  "paceDeadlinePassed": "Deadlinen var {{date}}.",
   "setDeadlineToggle": "Sæt en deadline",
   "deadlineLabel": "Deadline",
   "distributeEqually": "Fordel ligeligt",
@@ -73,6 +76,7 @@
   "archiveConfirmTitle": "Arkivér mål?",
   "archiveConfirmMessage": "Målet skjules fra din aktive liste, men historikken bevares.",
   "a11y": {
-    "addGoal": "Tilføj sparemål"
+    "addExtraSavings": "Tilføj til opsparing",
+    "allocationAmount": "Beløb til {{name}}"
   }
 }

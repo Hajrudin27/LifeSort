@@ -37,6 +37,8 @@
   },
   "historyLabel": "Progress over time",
   "noHistory": "No contributions yet",
+  "historySummary_one": "1 movement on {{from}}: net {{net}} (added {{added}}, taken out {{takenOut}})",
+  "historySummary_other": "{{count}} movements from {{from}} to {{to}}: net {{net}} (added {{added}}, taken out {{takenOut}})",
   "category": {
     "general": "General",
     "emergency": "Emergency fund",
@@ -53,12 +55,13 @@
   "initialAmountLabel": "Have you already saved anything?",
   "initialAmountPlaceholder": "0",
   "initialAmountHint": "Optional — enter this if you already have money set aside for this goal.",
-  "addExtraTitle": "Tilføj til opsparing",
-  "addExtraHint": "Beløbet lægges til \"Til rådighed\", så du kan fordele det til dine mål.",
+  "addExtraTitle": "Add to savings",
+  "addExtraHint": "The amount is added to \"Available\" so you can allocate it to your goals.",
   "paceTitle": "Pace",
   "paceEstimate": "At your current pace, you'll reach this goal in about {{months}} months.",
   "paceReached": "Goal already reached!",
   "paceRequired": "To meet your deadline, you need to save {{amount}} per month.",
+  "paceDeadlinePassed": "The deadline was {{date}}.",
   "setDeadlineToggle": "Set a deadline",
   "deadlineLabel": "Deadline",
   "distributeEqually": "Distribute equally",
@@ -73,6 +76,7 @@
   "archiveConfirmTitle": "Archive goal?",
   "archiveConfirmMessage": "The goal will be hidden from your active list, but its history is kept.",
   "a11y": {
-    "addGoal": "Add savings goal"
+    "addExtraSavings": "Add to savings",
+    "allocationAmount": "Amount for {{name}}"
   }
 }

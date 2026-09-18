@@ -64,7 +64,7 @@ it exposes, and what a shoulder-surfer would learn.
 
 | Module | Shown | Sensitivity | Review |
 | --- | --- | --- | --- |
-| `economy` | Money left this month; percent towards savings | `financial` | An amount and a percentage. No merchant, no category, no transaction. The amount alone reveals rough income — enough to want the masking in APP-013, not enough to identify a purchase. |
+| `economy` | Money left this month; percent towards savings. Without this month's income, "—" and a prompt to add it (APP-045) | `financial` | An amount and a percentage. No merchant, no category, no transaction. The amount alone reveals rough income — enough to want the masking in APP-013, not enough to identify a purchase. |
 | `food` | Money left in the week's food budget | `financial` | An amount only. Nothing about what was bought or where. |
 | `travel` | Days until the next trip, **and the trip's name** | `personal` | The only card carrying free user content. "Bryllupsrejse til Paris" on a lock-screen-adjacent surface tells a bystander where you will be and when. It was already shown before this story; the change is that it is now classified, so APP-013 can mask it. **The strongest candidate for masking by default.** |
 | `cycle` | Cycle day, days until next period | `health` | Special category data on a shared screen. No symptoms, no notes, no flow — those stay in the module. Even so, "Cycle day 12" identifies a menstrual cycle to anyone who glances at the phone. Already gated on the module being enabled; APP-013 must give it a masked mode, and APP-073 already governs the matching notification. |
@@ -196,6 +196,16 @@ in `loading` until the cards come back.
 
 `useHomeSnapshots` never clears what it has before new results arrive, so
 pull-to-refresh leaves the current cards in place rather than flashing empty.
+
+### One instant per collection (APP-045)
+
+Each collection passes one instant to every provider, so the Economy and Food
+cards agree on the current Europe/Copenhagen period. The Economy card prepares
+this month's recurring costs before computing, and shows "—" rather than a
+balance when the month has no income. Cards are snapshots: data that arrives
+after a collection, such as the startup fetch, appears on the next one (mount,
+module or flag change, pull-to-refresh). See
+[app-045-budget-periods.md](./app-045-budget-periods.md).
 
 ## What Home still reads directly
 

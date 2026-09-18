@@ -9,9 +9,9 @@ import IconGlowCircle from "@/components/IconGlowCircle";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useHomeBackTitle } from "@/hooks/useHomeBackTitle";
+import { budgetPeriodForInstant, isoWeekdayOf } from "@/core/dates/budgetPeriod";
+import { foodBudgetFacts, previousFoodWeekKey } from "@/features/food/budgetReadModel";
 import { useFoodStore } from "@/store/useFoodStore";
-import { getISOWeekKey, getPreviousWeekKey, getWeeksInMonth } from "@/utils/food/foodWeek";
-import { getMonthKey } from "@/utils/shared/monthKey";
 
 export default function FoodScreen() {
   const { t } = useTranslation();
@@ -36,18 +36,15 @@ export default function FoodScreen() {
   const [purchaseAmount, setPurchaseAmount] = useState("");
   const [dismissedReuse, setDismissedReuse] = useState(false);
 
-  const now = new Date();
-  const monthKey = getMonthKey(now);
-  const weekKey = getISOWeekKey(now);
-  const monthlyBudget = monthlyBudgetByMonth[monthKey] ?? null;
-  const weeksInMonth = getWeeksInMonth(monthKey).length;
-  const weeklyBudget = monthlyBudget !== null ? monthlyBudget / weeksInMonth : null;
+  // APP-045: the Copenhagen period, and the Food facts every surface shares.
+  const period = budgetPeriodForInstant(new Date());
+  const weekKey = period.weekKey;
+  const facts = foodBudgetFacts({ period, monthlyBudgetByMonth, purchases });
+  const monthlyBudget = facts.hasBudget ? facts.monthlyBudget : null;
+  const weeklyBudget = facts.hasBudget ? facts.weeklyBudget : null;
+  const spentThisWeek = facts.spentThisWeek;
 
-  const spentThisWeek = purchases
-    .filter((p) => getISOWeekKey(new Date(p.date)) === weekKey)
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const remaining = weeklyBudget !== null ? weeklyBudget - spentThisWeek : null;
+  const remaining = facts.hasBudget ? facts.remaining : null;
   const isOverBudget = remaining !== null && remaining < 0;
 
   const canLogPurchase = !isNaN(parseFloat(purchaseAmount)) && parseFloat(purchaseAmount) > 0;
@@ -57,8 +54,8 @@ export default function FoodScreen() {
     setPurchaseAmount("");
   };
 
-  const isSunday = now.getDay() === 0;
-  const previousWeekKey = getPreviousWeekKey(now);
+  const isSunday = isoWeekdayOf(period) === 7;
+  const previousWeekKey = previousFoodWeekKey(period);
   const previousWeekSlots = savedPlans[previousWeekKey] ?? [];
   const hasPreviousPlan = previousWeekSlots.some((s) => s.recipeId !== null);
   const hasCurrentPlan = (savedPlans[weekKey] ?? []).length > 0;

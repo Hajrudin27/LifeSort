@@ -5,6 +5,7 @@ import Card from '@/components/Card';
 import { Text, useThemeColor } from '@/components/Themed';
 import TrendLineChart from '@/components/TrendLineChart';
 import { sharedStyles } from '@/constants/sharedStyles';
+import { budgetPeriodForInstant } from '@/core/dates/budgetPeriod';
 import { formatDkk, moneyLocaleFor } from '@/core/money/format';
 import { ZERO_MINOR_UNITS } from '@/core/money/minorUnits';
 import { useExpensesStore } from '@/store/useExpensesStore';
@@ -24,9 +25,11 @@ export default function EconomyInsightsScreen() {
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
   const savingsHistory = useSavingsGoalsStore((s) => s.history);
 
-  const expenseTrend = getExpenseTrend(expenses, MONTHS_BACK, locale);
-  const incomeTrend = getIncomeTrend(incomeByMonth, MONTHS_BACK, locale);
-  const savingsTrend = getSavingsTrend(savingsHistory, MONTHS_BACK, locale);
+  // APP-045: the trends end at the current Copenhagen budget month.
+  const { monthKey } = budgetPeriodForInstant(new Date());
+  const expenseTrend = getExpenseTrend(expenses, MONTHS_BACK, locale, monthKey);
+  const incomeTrend = getIncomeTrend(incomeByMonth, MONTHS_BACK, locale, monthKey);
+  const savingsTrend = getSavingsTrend(savingsHistory, MONTHS_BACK, locale, monthKey);
 
   const currentExpense = expenseTrend[expenseTrend.length - 1]?.value ?? ZERO_MINOR_UNITS;
   const currentIncome = incomeTrend[incomeTrend.length - 1]?.value ?? ZERO_MINOR_UNITS;

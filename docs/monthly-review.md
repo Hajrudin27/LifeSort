@@ -60,6 +60,12 @@ own history view — consistent with masking health on Home by default
 move a record between months. Tests cover a year boundary, a February, and both
 sides of the Copenhagen DST change.
 
+APP-045: text comparison is right for calendar dates, not for timestamps. Food
+purchases are timestamps, so the Food provider places each one by its
+Europe/Copenhagen date (`core/dates/budgetPeriod.ts`): 00:30 on 1 September in
+Copenhagen is `…-08-31T22:30Z` and counts in September. The requested month
+itself is unchanged, and so are the other modules.
+
 ## No AI here
 
 The acceptance criteria allow AI phrasing as optional. There is none, and there

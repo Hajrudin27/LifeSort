@@ -7,15 +7,16 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 import { useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 import { useFoodStore } from "@/store/useFoodStore";
-import { getMonthKey } from "@/utils/shared/monthKey";
 
 export default function FoodBudgetScreen() {
   const { t } = useTranslation();
   const borderColor = useThemeColor({}, "border");
   const surface = useThemeColor({}, "surface");
 
-  const monthKey = getMonthKey(new Date());
+  // APP-045: the budget is read and saved for the current Copenhagen month.
+  const monthKey = budgetPeriodForInstant(new Date()).monthKey;
   const monthlyBudgetByMonth = useFoodStore((s) => s.monthlyBudgetByMonth);
   const setMonthlyBudget = useFoodStore((s) => s.setMonthlyBudget);
 

@@ -53,8 +53,8 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-it('formats Economy MinorUnits once and keeps Food major units untouched', () => {
-  act(() => { tree = TestRenderer.create(<EconomyScreen />); });
+it('formats Economy MinorUnits once and keeps Food major units untouched', async () => {
+  await act(async () => { tree = TestRenderer.create(<EconomyScreen />); });
   const text = renderedText();
 
   // Economy: 123 450 øre spent → 1.234,50 kr.; balance 10.000,00 − 1.234,50 = 8.765,50 kr.
@@ -71,13 +71,13 @@ it('formats Economy MinorUnits once and keeps Food major units untouched', () =>
   expect(text).not.toContain('25.000 kr.');
 });
 
-it('renders an unsupported derived total of supported expenses exactly instead of throwing', () => {
+it('renders an unsupported derived total of supported expenses exactly instead of throwing', async () => {
   const month = getMonthKey(new Date());
   const expense = (id: string, amount: number) => ({ id, seriesId: id, isRecurring: false, recurrenceFrequency: null, recurrenceAnchorDay: null, name: 'Synthetic', amount: minorUnits(amount), category: 'other', nextPaymentDate: `${month}-10`, attachments: [], createdAt: `${month}-10T00:00:00.000Z` });
   useExpensesStore.setState({ expenses: [expense('big-1', 2 ** 33 * 100), expense('big-2', 2 ** 33 * 100 - 1)] });
   useIncomeStore.setState({ incomeByMonth: {} });
 
-  act(() => { tree = TestRenderer.create(<EconomyScreen />); });
+  await act(async () => { tree = TestRenderer.create(<EconomyScreen />); });
   // 8 589 934 592,00 + 8 589 934 591,99 = 17 179 869 183,99 kr. — a display-only total.
   expect(renderedText()).toContain('17.179.869.183,99 kr.');
 });

@@ -55,6 +55,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0034](./0034-economy-money-is-integer-minor-units-on-the-client-and-numeric-on-the-server.md) | Economy money is integer minor units on the client and numeric on the server | Accepted | 2026-09-17 | APP-040 |
 | [0035](./0035-manual-recurrence-is-an-explicit-frequency-and-bank-candidates-only-suggest.md) | Manual recurrence is an explicit frequency, and bank candidates only suggest | Accepted | 2026-09-17 | APP-042 |
 | [0036](./0036-savings-balances-change-only-through-validated-movements.md) | Savings balances change only through validated movements | Accepted | 2026-09-18 | APP-043 |
+| [0037](./0037-budget-periods-are-copenhagen-calendar-periods.md) | Budget periods are Copenhagen calendar periods, independent of the device | Accepted | 2026-09-18 | APP-045 |
 
 ## When an ADR is required
 

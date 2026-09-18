@@ -5,11 +5,12 @@ import { FlatList } from "react-native";
 import Card from "@/components/Card";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 import { useFoodStore } from "@/store/useFoodStore";
-import { todayIso } from "@/utils/shared/localDate";
 
+/** APP-045: offers are Danish campaigns, valid on Copenhagen calendar dates. */
 function todayStr() {
-  return todayIso();
+  return budgetPeriodForInstant(new Date()).dateKey;
 }
 
 export default function OffersScreen() {

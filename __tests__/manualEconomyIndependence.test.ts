@@ -111,7 +111,8 @@ describe('APP-041 manual Economy flow with no bank, no session and no server', (
   it('create, edit, delete, income and savings all work and feed Home and the monthly review', async () => {
     const from = jest.spyOn(supabase, 'from');
     // Before any data: consumers initialise without a bank source or connection state.
-    expect(plain((await economyHomeSnapshot())?.value)).toBe('0 kr.');
+    // APP-045: with no income registered, Home shows no balance rather than 0 kr.
+    expect(plain((await economyHomeSnapshot())?.value)).toBe('—');
     expect(await economyMonthlyReview(MONTH)).toEqual([]);
 
     const id = useExpensesStore.getState().addExpense(input);

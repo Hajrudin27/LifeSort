@@ -48,6 +48,7 @@
   "allDoneToday": "Alt klaret for i dag 🎉",
   "moneySnapshotLabel": "Denne måned",
   "moneySnapshotHelper": "Til rådighed efter udgifter",
+  "moneySnapshotMissingIncome": "Tilføj månedens indkomst for at se, hvad der er tilbage",
   "foodSnapshotLabel": "Mad denne uge",
   "foodSnapshotHelper": "Tilbage af ugens budget",
   "foodSnapshotMissing": "Sæt et budget for at se resten",

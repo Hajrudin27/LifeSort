@@ -6,7 +6,7 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useFoodStore } from "@/store/useFoodStore";
-import { getISOWeekKey } from "@/utils/food/foodWeek";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 import { groupMatchesByStore, matchRecipeIngredients } from "@/utils/food/recipeMatching";
 
 export default function RecipeDetailScreen() {
@@ -29,7 +29,8 @@ export default function RecipeDetailScreen() {
     );
   }
 
-  const weekKey = getISOWeekKey(new Date());
+  // APP-045: offers of the current Copenhagen week.
+  const weekKey = budgetPeriodForInstant(new Date()).weekKey;
   const weekOffers = allOffers.filter((o) => o.weekKey === weekKey);
   const matches = matchRecipeIngredients(recipe.ingredients, weekOffers);
   const storeGroups = groupMatchesByStore(matches);

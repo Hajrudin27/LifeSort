@@ -19,7 +19,8 @@ import { getCategoryIconName } from "@/utils/expense/expenseCategoryIcon";
 import { getCategoryLabel } from "@/utils/expense/expenseCategoryLabel";
 import { categoryTotalForMonth, totalForMonth } from "@/utils/expense/expenseStats";
 import { daysUntil } from "@/utils/shared/dateDays";
-import { addMonths, formatMonthLabel, getMonthKey } from "@/utils/shared/monthKey";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
+import { addMonths, formatMonthLabel, getMonthKey, monthKeyToDate } from "@/utils/shared/monthKey";
 
 const SPIKE_THRESHOLD = 1.3;
 const UPCOMING_WINDOW_DAYS = 7;
@@ -35,7 +36,9 @@ export default function ExpensesScreen() {
   const danger = useThemeColor({}, "danger");
   const locale = moneyLocaleFor(i18n.language);
 
-  const [selectedMonth, setSelectedMonth] = useState(() => new Date());
+  // Opens on the current Copenhagen budget month (APP-045); browsing from there is
+  // plain month arithmetic.
+  const [selectedMonth, setSelectedMonth] = useState(() => monthKeyToDate(budgetPeriodForInstant(new Date()).monthKey));
   const monthKey = getMonthKey(selectedMonth);
   const rollForwardMonth = useExpensesStore((s) => s.rollForwardMonth);
 

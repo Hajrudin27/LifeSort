@@ -25,7 +25,7 @@ import { useExpensesStore } from "@/store/useExpensesStore";
 import { useIncomeStore } from "@/store/useIncomeStore";
 import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
 import { getIconSymbolName } from "@/utils/savings/savingsGoalIcon";
-import { getMonthKey } from "@/utils/shared/monthKey";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 
 export default function SavingsGoalsScreen() {
   const { t, i18n } = useTranslation();
@@ -45,7 +45,8 @@ export default function SavingsGoalsScreen() {
   const backgroundColor = useThemeColor({}, "background");
 
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
-  const currentMonthKey = getMonthKey(new Date());
+  // APP-045: the current Copenhagen budget month. The funding formula is unchanged.
+  const currentMonthKey = budgetPeriodForInstant(new Date()).monthKey;
   const totals = economyTotalsForMonth(expenses, incomeByMonth, currentMonthKey);
   const totalSaved = sumMinorUnits(goals.map((g) => g.savedAmount));
   const totalTarget = sumMinorUnits(goals.map((g) => g.targetAmount));

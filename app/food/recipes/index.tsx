@@ -10,7 +10,7 @@ import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
 import { useFoodStore } from "@/store/useFoodStore";
 import { MealType } from "@/types/food";
-import { getISOWeekKey } from "@/utils/food/foodWeek";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 import { matchRecipeIngredients } from "@/utils/food/recipeMatching";
 
 const TABS: (MealType | "all")[] = ["all", "breakfast", "lunch", "dinner"];
@@ -21,7 +21,8 @@ export default function RecipesScreen() {
 
   const recipes = useFoodStore((s) => s.recipes);
   const allOffers = useFoodStore((s) => s.offers);
-  const weekKey = getISOWeekKey(new Date());
+  // APP-045: offers of the current Copenhagen week.
+  const weekKey = budgetPeriodForInstant(new Date()).weekKey;
   const weekOffers = allOffers.filter((o) => o.weekKey === weekKey);
 
   const [tab, setTab] = useState<MealType | "all">("all");

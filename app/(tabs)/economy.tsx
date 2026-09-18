@@ -1,4 +1,6 @@
+import { usePreparedEconomyMonth } from "@/features/economy/currentPeriod";
 import { economyTotalsForMonth } from "@/features/economy/monthlyTotals";
+import { foodBudgetFacts } from "@/features/food/budgetReadModel";
 import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useState } from "react";
@@ -20,6 +22,7 @@ import SectionHeader from "@/components/SectionHeader";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useBrandTints } from "@/hooks/useBrandTints";
 import { useModuleTints } from "@/hooks/useModuleTints";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 import { formatDkk, moneyLocaleFor } from "@/core/money/format";
 import { sumMinorUnits, type MinorUnits } from "@/core/money/minorUnits";
 import { useExpensesStore } from "@/store/useExpensesStore";
@@ -28,10 +31,8 @@ import { useIncomeStore } from "@/store/useIncomeStore";
 import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
 import { useTripsStore } from "@/store/useTripsStore";
 import { useWarrantiesStore } from "@/store/useWarrantiesStore";
-import { getISOWeekKey, getWeeksInMonth } from "@/utils/food/foodWeek";
 import { categoryTotalForMonth } from "@/utils/expense/expenseStats";
 import { daysUntil } from "@/utils/shared/dateDays";
-import { getMonthKey } from "@/utils/shared/monthKey";
 
 export default function EconomyScreen() {
   const { t, i18n } = useTranslation();
@@ -47,7 +48,14 @@ export default function EconomyScreen() {
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
   const [chartSize, setChartSize] = useState(0);
 
-  const currentMonthKey = getMonthKey(new Date());
+  // APP-045: the Copenhagen period, resolved on each render because this tab stays
+  // mounted for the whole session, and this month's recurring costs prepared once
+  // the stores are loaded (and again if the Expenses change). Until the Expenses
+  // on screen have been prepared, the month's spending, balance and chart are
+  // not shown: they could still lack a due recurring cost.
+  const period = budgetPeriodForInstant(new Date());
+  const currentMonthKey = period.monthKey;
+  const monthPrepared = usePreparedEconomyMonth(currentMonthKey);
   const totals = economyTotalsForMonth(allExpenses, incomeByMonth, currentMonthKey);
   const netIncome = totals.hasIncome ? totals.settledIncome : null;
   const monthExpenses = allExpenses.filter(
@@ -90,16 +98,11 @@ export default function EconomyScreen() {
 
   const foodMonthlyBudgetByMonth = useFoodStore((s) => s.monthlyBudgetByMonth);
   const foodPurchases = useFoodStore((s) => s.purchases);
-  const foodMonthKey = getMonthKey(new Date());
-  const foodWeekKey = getISOWeekKey(new Date());
-  const foodMonthlyBudget = foodMonthlyBudgetByMonth[foodMonthKey] ?? null;
-  const foodWeeklyBudget =
-    foodMonthlyBudget !== null
-      ? foodMonthlyBudget / getWeeksInMonth(foodMonthKey).length
-      : null;
-  const foodSpentThisWeek = foodPurchases
-    .filter((p) => getISOWeekKey(new Date(p.date)) === foodWeekKey)
-    .reduce((sum, p) => sum + p.amount, 0);
+  // The Food module's own read model, for the same period: this card cannot
+  // disagree with the Food overview, and Economy knows no Food date rule.
+  const food = foodBudgetFacts({ period, monthlyBudgetByMonth: foodMonthlyBudgetByMonth, purchases: foodPurchases });
+  const foodWeeklyBudget = food.hasBudget ? food.weeklyBudget : null;
+  const foodSpentThisWeek = food.spentThisWeek;
   const foodProgress =
     foodWeeklyBudget !== null && foodWeeklyBudget > 0
       ? foodSpentThisWeek / foodWeeklyBudget
@@ -132,9 +135,9 @@ export default function EconomyScreen() {
     {
       key: "expenses",
       title: t("economy.expenses"),
-      subtitle: t("economy.expensesSubtitle", {
-        amount: formatEconomy(monthTotal),
-      }),
+      subtitle: monthPrepared
+        ? t("economy.expensesSubtitle", { amount: formatEconomy(monthTotal) })
+        : t("economy.preparingMonth"),
       icon: { ios: "creditcard.fill", android: "credit_card", web: "credit_card" },
       route: "/expenses" as const,
       tone: brand.glowPrimary,
@@ -227,13 +230,21 @@ export default function EconomyScreen() {
           <View style={styles.heroStats}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{t("economy.monthSpendLabel")}</Text>
-              <Text style={styles.heroStatValue}>{formatEconomy(monthTotal)}</Text>
+              <Text
+                style={styles.heroStatValue}
+                accessibilityLabel={monthPrepared ? undefined : t("economy.preparingMonth")}
+              >
+                {monthPrepared ? formatEconomy(monthTotal) : "…"}
+              </Text>
             </View>
             <View style={styles.heroDivider} />
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{t("economy.balanceLabel")}</Text>
-              <Text style={styles.heroStatValue}>
-                {monthBalance !== null ? formatEconomy(monthBalance) : t("economy.noIncome")}
+              <Text
+                style={styles.heroStatValue}
+                accessibilityLabel={monthPrepared ? undefined : t("economy.preparingMonth")}
+              >
+                {!monthPrepared ? "…" : monthBalance !== null ? formatEconomy(monthBalance) : t("economy.noIncome")}
               </Text>
             </View>
           </View>
@@ -288,7 +299,7 @@ export default function EconomyScreen() {
                   style={[styles.modulePreview, { backgroundColor: surfaceMuted, borderColor }]}
                   onLayout={module.visual === "pie" ? (e) => setChartSize(e.nativeEvent.layout.width) : undefined}
                 >
-                  {module.visual === "pie" && chartSize > 0 && netIncome !== null && netIncome > 0 ? (
+                  {module.visual === "pie" && monthPrepared && chartSize > 0 && netIncome !== null && netIncome > 0 ? (
                     <ExpensePieChart
                       netIncome={netIncome}
                       categoryTotals={categoryTotals}

@@ -63,8 +63,8 @@ it('APP-039 consumers use identity reconciliation rather than independent raw su
   const repeated = useExpensesStore.getState().expenses;
   expect(totalForMonth(repeated, MONTH)).toBe(50_000);
   expect(categoryTotalForMonth(repeated, MONTH, 'other')).toBe(50_000);
-  expect(getExpenseTrend(repeated, 1, 'da-DK')[0].value).toBe(50_000);
-  expect(getIncomeTrend(useIncomeStore.getState().incomeByMonth, 1, 'da-DK')[0].value).toBe(200_000);
+  expect(getExpenseTrend(repeated, 1, 'da-DK', MONTH)[0].value).toBe(50_000);
+  expect(getIncomeTrend(useIncomeStore.getState().incomeByMonth, 1, 'da-DK', MONTH)[0].value).toBe(200_000);
 });
 
 it('APP-040 upgrades the historical v0 incomeByMonth envelope once through the real store hydration', async () => {
@@ -107,7 +107,9 @@ it('APP-040 displays a derived total of supported amounts that is not itself sup
   expect(isSupportedMoney(spending)).toBe(false);
   expect(isSupportedMoney(totals().balance)).toBe(false);
 
-  // Home (balance = −spending, no income) and the monthly review format it exactly instead of throwing.
+  // Home and the monthly review format it exactly instead of throwing. APP-045: Home
+  // shows a balance only for a known income, so a registered 0 kr. makes it −spending.
+  useIncomeStore.getState().setIncomeForMonth(MONTH, m(0));
   expect(await homeValue()).toBe('-17.179.869.183,99 kr.');
   expect(await reviewParams('review.economySpent')).toEqual({ amount: '17.179.869.183,99 kr.', count: 2 });
   // Nothing derived was persisted: the stored expenses are the two supported inputs.

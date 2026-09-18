@@ -24,7 +24,7 @@ import { useExpensesStore } from "@/store/useExpensesStore";
 import { useIncomeStore } from "@/store/useIncomeStore";
 import { useSavingsGoalsStore } from "@/store/useSavingsGoalsStore";
 import { allocationMovements, savingsMovementsAllowed } from "@/utils/savings/savingsGoalRules";
-import { getMonthKey } from "@/utils/shared/monthKey";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 
 export default function AllocateSavingsScreen() {
   const { t, i18n } = useTranslation();
@@ -36,7 +36,8 @@ export default function AllocateSavingsScreen() {
   const danger = useThemeColor({}, "danger");
 
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
-  const currentMonthKey = getMonthKey(new Date());
+  // APP-045: the current Copenhagen budget month. The funding formula is unchanged.
+  const currentMonthKey = budgetPeriodForInstant(new Date()).monthKey;
   const expenses = useExpensesStore((s) => s.expenses);
   const goals = useSavingsGoalsStore((s) => s.goals);
   const extraSavings = useSavingsGoalsStore((s) => s.extraSavings);

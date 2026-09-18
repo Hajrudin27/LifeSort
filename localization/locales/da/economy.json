@@ -15,6 +15,7 @@
   "incomeLabel": "Indkomst",
   "incomeHelper": "Tryk for at justere månedens indkomst.",
   "noIncome": "Ikke sat",
+  "preparingMonth": "Henter månedens tal …",
   "savingsProgressLabel": "Opsparing",
   "savingsProgressHelper": "{{count}} aktive mål",
   "dashboardEyebrow": "Kontrolpanel",

@@ -9,3 +9,13 @@ export function getMonthKey(date: Date): string {
   export function formatMonthLabel(date: Date, locale: string): string {
     return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(date);
   }
+
+  /**
+   * A 'YYYY-MM' key's first day as a local Date, for month navigation and labels.
+   * Built from the key's own fields, so no device timezone can move it into
+   * another month (APP-045).
+   */
+  export function monthKeyToDate(monthKey: string): Date {
+    const [year, month] = monthKey.split('-').map(Number);
+    return new Date(year, month - 1, 1);
+  }

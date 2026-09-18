@@ -15,6 +15,7 @@
   "incomeLabel": "Income",
   "incomeHelper": "Tap to adjust this month's income.",
   "noIncome": "Not set",
+  "preparingMonth": "Loading this month's figures…",
   "savingsProgressLabel": "Savings",
   "savingsProgressHelper": "{{count}} active goals",
   "dashboardEyebrow": "Dashboard",

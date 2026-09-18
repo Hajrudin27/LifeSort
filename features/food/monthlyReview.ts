@@ -1,13 +1,18 @@
-import { isInMonth, type MonthlyFact } from '@/core/modules/monthlyReview';
+import type { MonthlyFact } from '@/core/modules/monthlyReview';
 import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useFoodStore } from '@/store/useFoodStore';
+
+import { foodPurchasePeriod } from './budgetReadModel';
 
 /** Madbudgettets kendsgerninger. Budgettet nævnes kun, hvis brugeren har sat et. */
 export async function foodMonthlyReview(monthKey: string): Promise<MonthlyFact[]> {
   await whenStoresHydrated([useFoodStore]);
 
   const state = useFoodStore.getState();
-  const purchases = state.purchases.filter((purchase) => isInMonth(purchase.date, monthKey));
+  // APP-045: et køb er et tidsstempel og hører til den måned, det lå i i
+  // København — ikke den, teksten starter med i UTC. Den ønskede måned bestemmes
+  // stadig af kalderen.
+  const purchases = state.purchases.filter((purchase) => foodPurchasePeriod(purchase)?.monthKey === monthKey);
   if (purchases.length === 0) return [];
 
   const spent = purchases.reduce((sum, purchase) => sum + purchase.amount, 0);

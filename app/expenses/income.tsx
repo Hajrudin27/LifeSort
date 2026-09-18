@@ -11,7 +11,8 @@ import { minorUnitsToInputText } from "@/core/money/decimal";
 import { parseSupportedMoneyInput } from "@/core/money/supportedMoney";
 import { decimalSeparatorFor, moneyLocaleFor } from "@/core/money/format";
 import { useIncomeStore } from "@/store/useIncomeStore";
-import { formatMonthLabel, getMonthKey } from "@/utils/shared/monthKey";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
+import { formatMonthLabel, monthKeyToDate } from "@/utils/shared/monthKey";
 import { Stack, useLocalSearchParams } from "expo-router";
 
 export default function IncomeScreen() {
@@ -20,8 +21,11 @@ export default function IncomeScreen() {
   const borderColor = useThemeColor({}, "border");
   const surface = useThemeColor({}, "surface");
 
-  const monthKey = month ?? getMonthKey(new Date());
-  const monthDate = new Date(`${monthKey}-01`);
+  // APP-045: without an explicit month, the current Copenhagen budget month.
+  const monthKey = month ?? budgetPeriodForInstant(new Date()).monthKey;
+  // From the key's own fields: "YYYY-MM-01" parses as UTC and would title the
+  // previous month on a device west of Greenwich.
+  const monthDate = monthKeyToDate(monthKey);
   const locale = moneyLocaleFor(i18n.language);
 
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);

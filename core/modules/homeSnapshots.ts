@@ -19,7 +19,8 @@ import { type HomeSnapshot, MODULE_IDS, type ModuleId } from './moduleRegistry';
  * udefra af skallen, som er stedet hvor tingene sættes sammen.
  */
 
-export type HomeSnapshotProvider = () => Promise<HomeSnapshot | null>;
+/** `now` is the instant the card describes; a provider called without it uses the current one. */
+export type HomeSnapshotProvider = (now?: Date) => Promise<HomeSnapshot | null>;
 export type HomeSnapshotProviders = Partial<Record<ModuleId, HomeSnapshotProvider>>;
 
 export type HomeSnapshotsResult = {
@@ -42,6 +43,8 @@ export function useHomeSnapshots(providers: HomeSnapshotProviders): HomeSnapshot
     let cancelled = false;
 
     const collect = async () => {
+      // Ét øjeblik for alle kort, så de er enige om, hvilken periode der er nu (APP-045).
+      const now = new Date();
       const wanted = MODULE_IDS.filter((moduleId) => {
         if (!providers[moduleId]) return false;
         // Brugerens fravalg skjuler kortet; en kill switch gør det samme. To
@@ -53,7 +56,7 @@ export function useHomeSnapshots(providers: HomeSnapshotProviders): HomeSnapshot
       const results = await Promise.all(
         wanted.map(async (moduleId) => {
           try {
-            return await providers[moduleId]!();
+            return await providers[moduleId]!(now);
           } catch {
             // Ét modul der fejler, må ikke tømme hele Home. Kortet udebliver,
             // resten står.

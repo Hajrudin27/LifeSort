@@ -21,13 +21,21 @@ them.
 
 | Primitive | Canonical today | Copies | Consequence of the drift | Migration owned by |
 | --- | --- | --- | --- | --- |
-| `LocalDate` | ✅ `utils/shared/localDate.ts` | 1 partial | One week calculation bypasses the DST-safe helpers | APP-045 |
+| `LocalDate` | ✅ `utils/shared/localDate.ts`, periods in `core/dates` (APP-045) | none | Resolved: one ISO-week algorithm, one Copenhagen budget period | APP-045 |
 | `Money` | ✅ `core/money` (APP-040, Economy) | Food and Travel still format and persist major units | Economy is fixed; Food/Travel keep their own renderings until their stories | APP-040 (Economy) |
 | `EntityId` | ❌ none | 2 generators, 16 files | The weaker one can collide inside a single millisecond | **APP-030** |
 | `Reminder` | ❌ none | 4 modules | One reminder type only works by accident | **APP-080** |
 | `AttachmentRef` | ⚠️ `types/attachment.ts` | 1 divergent copy | Trip attachments never reach the server at all | **APP-058** |
 
 ## 1. `LocalDate` — canonical exists
+
+> **APP-045 update.** Week and month boundaries now live in
+> `core/dates/budgetPeriod.ts`, beside `localDate`, as planned below. They cover
+> Europe/Copenhagen budget periods, one ISO-week algorithm and ISO weeks in a
+> month. `utils/food/foodWeek.ts` keeps only its weekday labels, and Food and
+> Economy consume the core service. The rest of this section is the original
+> APP-008 audit. See [app-045-budget-periods.md](./app-045-budget-periods.md) and
+> [ADR-0037](./adr/0037-budget-periods-are-copenhagen-calendar-periods.md).
 
 **Canonical:** `utils/shared/localDate.ts` — `'YYYY-MM-DD'` calendar maths that
 neither timezone nor DST can shift. It exists because both bugs had already

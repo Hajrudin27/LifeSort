@@ -1,23 +1,27 @@
+import { budgetPeriodForInstant } from '@/core/dates/budgetPeriod';
 import type { HomeSnapshot } from '@/core/modules/moduleRegistry';
 import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useFoodStore } from '@/store/useFoodStore';
-import { getISOWeekKey, getWeeksInMonth } from '@/utils/food/foodWeek';
-import { getMonthKey } from '@/utils/shared/monthKey';
 
-/** Mad-modulets kort til Home (APP-011): hvad er der tilbage af ugens budget. */
-export async function foodHomeSnapshot(): Promise<HomeSnapshot | null> {
+import { foodBudgetFacts } from './budgetReadModel';
+
+/**
+ * Mad-modulets kort til Home (APP-011): hvad er der tilbage af ugens budget.
+ * APP-045: samme uge og samme tal som Mad-oversigten for samme øjeblik.
+ */
+export async function foodHomeSnapshot(now: Date = new Date()): Promise<HomeSnapshot | null> {
   await whenStoresHydrated([useFoodStore]);
 
-  const now = new Date();
-  const monthKey = getMonthKey(now);
-  const weekKey = getISOWeekKey(now);
-
   const state = useFoodStore.getState();
-  const monthlyBudget = state.monthlyBudgetByMonth[monthKey] ?? null;
+  const facts = foodBudgetFacts({
+    period: budgetPeriodForInstant(now),
+    monthlyBudgetByMonth: state.monthlyBudgetByMonth,
+    purchases: state.purchases,
+  });
 
   // Uden et budget er der ingen rest at vise. Kortet siger det i stedet for at
   // vise et opdigtet nul.
-  if (monthlyBudget === null) {
+  if (!facts.hasBudget) {
     return {
       moduleId: 'food',
       titleKey: 'home.foodSnapshotLabel',
@@ -29,18 +33,12 @@ export async function foodHomeSnapshot(): Promise<HomeSnapshot | null> {
     };
   }
 
-  const weeklyBudget = monthlyBudget / getWeeksInMonth(monthKey).length;
-  const spentThisWeek = state.purchases
-    .filter((purchase) => getISOWeekKey(new Date(purchase.date)) === weekKey)
-    .reduce((sum, purchase) => sum + purchase.amount, 0);
-  const remaining = weeklyBudget - spentThisWeek;
-
   return {
     moduleId: 'food',
     titleKey: 'home.foodSnapshotLabel',
-    value: `${remaining.toFixed(0)} kr.`,
+    value: `${facts.remaining.toFixed(0)} kr.`,
     helperKey: 'home.foodSnapshotHelper',
-    priority: remaining < 0 ? 'important' : 'normal',
+    priority: facts.remaining < 0 ? 'important' : 'normal',
     sensitivity: 'financial',
     route: '/food',
   };

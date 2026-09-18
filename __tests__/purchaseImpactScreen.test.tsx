@@ -86,6 +86,16 @@ async function open(element: React.ReactElement = <PurchaseImpactScreen />) {
   await act(async () => { tree?.unmount(); tree = TestRenderer.create(element); });
   await settle();
 }
+/** Like `open`, and records the visible texts of every commit, the first one included. */
+async function openRecordingCommits(element: React.ReactElement = <PurchaseImpactScreen />): Promise<string[][]> {
+  const commits: string[][] = [];
+  await act(async () => { tree?.unmount(); tree = TestRenderer.create(<></>); });
+  await act(async () => {
+    tree!.update(<React.Profiler id="commits" onRender={() => { commits.push(texts()); }}>{element}</React.Profiler>);
+  });
+  await settle();
+  return commits;
+}
 const type = (value: string) => act(() => { tree!.root.findByType(TextInput).props.onChangeText(value); });
 /** The pressable control whose own text is `label`, as the user would tap it. */
 const control = (label: string) => tree!.root.findAll((node) =>
@@ -152,7 +162,7 @@ describe('APP-044 the current plan', () => {
     await open();
     await type('1000');
     expect(texts()).toContain('Ud fra din nuværende plan har du 13.000 kr. tilbage i denne måned efter købet.');
-    act(() => { useExpensesStore.setState({ expenses: [oneTime('rent', 6_000), oneTime('dentist', 2_000)] }); });
+    await act(async () => { useExpensesStore.setState({ expenses: [oneTime('rent', 6_000), oneTime('dentist', 2_000)] }); });
     expect(texts()).toContain('12.000 kr.');
     expect(texts()).toContain('Ud fra din nuværende plan har du 11.000 kr. tilbage i denne måned efter købet.');
   });
@@ -196,7 +206,7 @@ describe('APP-044 the result', () => {
       'Din nuværende plan har 1.000 kr. tilbage i denne måned. Efter købet vil den være 500 kr. under nul.',
     ]));
 
-    act(() => { useExpensesStore.setState({ expenses: [oneTime('rent', 20_500)] }); });
+    await act(async () => { useExpensesStore.setState({ expenses: [oneTime('rent', 20_500)] }); });
     type('500');
     expect(texts()).toEqual(expect.arrayContaining([
       '-500 kr.', 'Over månedens plan', '-1.000 kr.',
@@ -319,10 +329,10 @@ describe('APP-044 includes this month\'s recurring costs through APP-042', () =>
 
   it('materializes a recurring series that arrives after the first pass, on the same open screen', async () => {
     setPlan(20_000, [oneTime('groceries', 1_500)]);
-    await open();
+    const commits = await openRecordingCommits();
     type('1000');
-    expect(texts()).toContain('18.500 kr.');
-    expect(texts()).toContain('Ud fra din nuværende plan har du 17.500 kr. tilbage i denne måned efter købet.');
+    const withoutRent = ['18.500 kr.', 'Ud fra din nuværende plan har du 17.500 kr. tilbage i denne måned efter købet.'];
+    expect(texts()).toEqual(expect.arrayContaining(withoutRent));
 
     // The startup fetch is not awaited before routes render. It finishes now,
     // with an August rent series this device has not seen before.
@@ -331,8 +341,15 @@ describe('APP-044 includes this month\'s recurring costs through APP-042', () =>
       name: 'Synthetic rent', amount: 8000, category: 'bill', next_payment_date: '2026-08-01', created_at: '2026-08-01T00:00:00.000Z',
     }];
     mockWrites.length = 0;
+    commits.length = 0;
     await act(async () => { await useExpensesStore.getState().fetchFromSupabase(); });
     await settle();
+
+    // Re-preparation: the render that first sees the fetched Expenses shows no
+    // plan and no result, and no commit shows the plan or result without the rent.
+    expect(commits[0]).toContain(t('economy.affordability.loading'));
+    expect(commits[0]).not.toContain(t('economy.affordability.resultTitle'));
+    expect(commits.map((commit) => commit.filter((text) => withoutRent.includes(text)))).toEqual(commits.map(() => []));
 
     expect(septemberOf('rent')).toEqual([expect.objectContaining({
       nextPaymentDate: '2026-09-01', amount: kr(8_000), recurrenceFrequency: 'monthly', recurrenceAnchorDay: 1,
@@ -345,8 +362,12 @@ describe('APP-044 includes this month\'s recurring costs through APP-042', () =>
     ]);
 
     // Later renders, evaluations and store updates add nothing: the same remote
-    // snapshot again still yields a new Expenses array.
+    // snapshot again still yields a new Expenses array. Typing runs no pass.
+    const materialize = jest.spyOn(useExpensesStore.getState(), 'rollForwardMonth');
     for (const value of ['2000', '1', '']) type(value);
+    await settle();
+    expect(materialize).not.toHaveBeenCalled();
+    materialize.mockRestore();
     act(() => { useIncomeStore.setState({ incomeByMonth: { [MONTH]: kr(21_000) } }); });
     await act(async () => { await useExpensesStore.getState().fetchFromSupabase(); });
     await settle();

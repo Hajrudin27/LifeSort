@@ -1,5 +1,5 @@
+import { budgetPeriodForInstant } from '@/core/dates/budgetPeriod';
 import { GlobalOffer, GlobalStandardPrice } from '@/types/food';
-import { todayIso } from '@/utils/shared/localDate';
 
 function normalize(text: string): string {
   return text.trim().toLowerCase();
@@ -40,7 +40,8 @@ export function findBestGlobalPrice(
 ): PriceMatch | null {
   if (selectedStores.length === 0) return null;
 
-  const today = todayIso();
+  // APP-045: offers are Danish campaigns, valid on Copenhagen calendar dates.
+  const today = budgetPeriodForInstant(new Date()).dateKey;
   const activeOffers = globalOffers.filter((o) => isOfferActive(o, today));
 
   const offerMatches = matchByName(ingredientName, activeOffers, selectedStores).map((o) => ({

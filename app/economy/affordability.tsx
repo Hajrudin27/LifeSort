@@ -1,24 +1,25 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, TextInput } from "react-native";
 
 import Card from "@/components/Card";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 import { formatDkk, moneyLocaleFor } from "@/core/money/format";
 import { absMinorUnits, MoneyError, type MinorUnits } from "@/core/money/minorUnits";
-import { whenStoresHydrated } from "@/core/storage/storeHydration";
 import {
   evaluatePurchaseImpact,
   purchaseAmountFromInput,
   type PurchaseImpact,
 } from "@/features/economy/affordability";
+import { usePreparedEconomyMonth } from "@/features/economy/currentPeriod";
 import { economyTotalsForMonth } from "@/features/economy/monthlyTotals";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useExpensesStore } from "@/store/useExpensesStore";
 import { useIncomeStore } from "@/store/useIncomeStore";
-import { formatMonthLabel, getMonthKey } from "@/utils/shared/monthKey";
+import { formatMonthLabel, monthKeyToDate } from "@/utils/shared/monthKey";
 
 /** Shown in full, always: APP-044 requires the assumptions to be visible. */
 const ASSUMPTIONS = [
@@ -41,7 +42,7 @@ const STATUS_KEYS = {
  * APP-044 "Har jeg råd?" (docs/app-044-purchase-impact.md): a what-if on the
  * current plan. The purchase lives in this screen's state only; it is never
  * saved, synced or sent anywhere. The screen's only write is the inherited
- * APP-042 materialization below, which is the user's schedule, not the purchase.
+ * APP-042 materialization (usePreparedEconomyMonth), which is the user's schedule, not the purchase.
  */
 export default function PurchaseImpactScreen() {
   const { t, i18n } = useTranslation();
@@ -56,35 +57,18 @@ export default function PurchaseImpactScreen() {
   const warning = useThemeColor({}, "warning");
   const accentTints = useAccentTints();
 
-  // One month per visit, so the plan, its label and the materialized month
-  // always agree. Same current-month rule as the Economy tab; period and
-  // timezone semantics belong to APP-045.
-  const [today] = useState(() => new Date());
-  const monthKey = getMonthKey(today);
+  // One month per visit, so the plan, its label and the prepared month always
+  // agree. APP-045: the Copenhagen month, the same rule as the Economy tab.
+  const [monthKey] = useState(() => budgetPeriodForInstant(new Date()).monthKey);
+
+  // No plan before the month is prepared: both stores read from disk (APP-014)
+  // and this month's recurring costs materialized (APP-042), again whenever the
+  // Expenses change. The typed amount is not a dependency, so typing never
+  // triggers a pass.
+  const planReady = usePreparedEconomyMonth(monthKey);
 
   const expenses = useExpensesStore((s) => s.expenses);
   const incomeByMonth = useIncomeStore((s) => s.incomeByMonth);
-
-  const [planReady, setPlanReady] = useState(false);
-  useEffect(() => {
-    let active = true;
-    // No plan before both stores are read from disk: an empty store would
-    // present "0 kr." as a fact (APP-014).
-    void whenStoresHydrated([useExpensesStore, useIncomeStore]).then(() => {
-      if (!active) return;
-      // APP-042: a recurring cost due this month is an Expense only once the
-      // month is materialized, and the Economy tab never does that. This is the
-      // Expenses overview's own idempotent operation, for this month only. It
-      // runs again whenever the Expenses change, because the startup fetch is
-      // not awaited and can bring a series in later. The purchase is not a
-      // dependency: typing an amount never triggers it.
-      useExpensesStore.getState().rollForwardMonth(monthKey);
-      setPlanReady(true);
-    });
-    return () => {
-      active = false;
-    };
-  }, [monthKey, expenses]);
 
   // The canonical APP-039 totals, computed exactly as the Economy tab does.
   const plan = economyTotalsForMonth(expenses, incomeByMonth, monthKey);
@@ -163,7 +147,7 @@ export default function PurchaseImpactScreen() {
           <Text accessibilityRole="header" style={styles.cardTitle}>
             {t("economy.affordability.planTitle")}
           </Text>
-          <Text style={[styles.cardMeta, { color: textMuted }]}>{formatMonthLabel(today, locale)}</Text>
+          <Text style={[styles.cardMeta, { color: textMuted }]}>{formatMonthLabel(monthKeyToDate(monthKey), locale)}</Text>
         </View>
         {planReady ? (
           <>

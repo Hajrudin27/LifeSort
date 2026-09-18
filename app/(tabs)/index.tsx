@@ -37,7 +37,8 @@ import { isDateInCurrentWeek } from '@/utils/habit/habitWeek';
 import { daysUntilDue } from '@/utils/household/householdTaskSchedule';
 import { daysUntil } from '@/utils/shared/dateDays';
 import { getGreetingPeriod } from '@/utils/shared/greeting';
-import { getMonthKey } from '@/utils/shared/monthKey';
+import { budgetPeriodForInstant } from '@/core/dates/budgetPeriod';
+import { monthlyFoodBudget } from '@/features/food/budgetReadModel';
 import { toLocalIsoDate } from '@/utils/shared/localDate';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -63,7 +64,8 @@ export default function HomeScreen() {
   const locale = i18n.language === 'da' ? 'da-DK' : 'en-US';
 
   const now = new Date();
-  const monthKey = getMonthKey(now);
+  // APP-045: the budget month is Copenhagen's, like Economy's and Food's.
+  const budgetPeriod = budgetPeriodForInstant(now);
   const todayKey = toLocalIsoDate(now);
   const greetingPeriod = getGreetingPeriod(now);
   const dateLabel = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
@@ -159,7 +161,7 @@ export default function HomeScreen() {
   // Økonomi, mad og opsparing læses ikke længere her — modulerne leverer deres
   // egne kort (APP-011). Kun madbudgettets tilstedeværelse bruges stadig, af
   // "næste handling" nedenfor.
-  const foodMonthlyBudget = useFoodStore((s) => s.monthlyBudgetByMonth)[monthKey] ?? null;
+  const foodMonthlyBudget = monthlyFoodBudget(useFoodStore((s) => s.monthlyBudgetByMonth), budgetPeriod.monthKey);
 
   const trips = useTripsStore((s) => s.trips);
   const tripParticipants = useTripsStore((s) => s.participants);

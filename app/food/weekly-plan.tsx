@@ -13,9 +13,10 @@ import { useBrandTints } from "@/hooks/useBrandTints";
 import { useFoodStore } from "@/store/useFoodStore";
 import { useToastStore } from "@/store/useToastStore";
 import { MealType } from "@/types/food";
-import { getISOWeekKey, getWeekdayNames, getWeeksInMonth } from "@/utils/food/foodWeek";
+import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
+import { foodBudgetFacts } from "@/features/food/budgetReadModel";
+import { getWeekdayNames } from "@/utils/food/foodWeek";
 import { planWeek, WeekPlan } from "@/utils/food/mealPlanning";
-import { getMonthKey } from "@/utils/shared/monthKey";
 
 const MEAL_SLOTS: MealType[] = ["breakfast", "lunch", "dinner"];
 
@@ -40,16 +41,20 @@ export default function WeeklyPlanScreen() {
   const globalStandardPrices = useFoodStore((s) => s.globalStandardPrices);
   const pantryItems = useFoodStore((s) => s.pantryItems);
   const monthlyBudgetByMonth = useFoodStore((s) => s.monthlyBudgetByMonth);
+  const purchases = useFoodStore((s) => s.purchases);
   const selectedStores = useFoodStore((s) => s.selectedStores);
   const shoppingItems = useFoodStore((s) => s.shoppingItems);
   const savedPlans = useFoodStore((s) => s.savedPlans);
   const addShoppingItem = useFoodStore((s) => s.addShoppingItem);
   const savePlan = useFoodStore((s) => s.savePlan);
 
-  const monthKey = getMonthKey(new Date());
-  const weekKey = getISOWeekKey(new Date());
-  const monthlyBudget = monthlyBudgetByMonth[monthKey] ?? null;
-  const weeklyBudget = monthlyBudget !== null ? monthlyBudget / getWeeksInMonth(monthKey).length : 0;
+  // APP-045: the Copenhagen week the plan is saved under, and the same Food
+  // facts as the Food overview. Without a budget the planner still gets 0.
+  const period = budgetPeriodForInstant(new Date());
+  const weekKey = period.weekKey;
+  const facts = foodBudgetFacts({ period, monthlyBudgetByMonth, purchases });
+  const monthlyBudget = facts.hasBudget ? facts.monthlyBudget : null;
+  const weeklyBudget = facts.hasBudget ? facts.weeklyBudget : 0;
   const savedPlanSlots = savedPlans[weekKey];
 
   const weekdayNames = getWeekdayNames(locale);

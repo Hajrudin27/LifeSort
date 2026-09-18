@@ -8,6 +8,17 @@ The user enters one amount and sees what spending it would do to this month's
 registered plan. The screen answers *"what happens to the plan?"*, never
 *"should I buy this?"*.
 
+> **APP-045 update.** The current month is now the Europe/Copenhagen month from
+> `core/dates/budgetPeriod.ts`, still resolved once per visit. Its preparation
+> moved into the shared `usePreparedEconomyMonth` (`features/economy/currentPeriod.ts`),
+> which the Economy tab and Home's Economy card also use: same `rollForwardMonth`,
+> same re-run when the Expenses change, and typing still triggers nothing. The
+> "screen-triggered materialization" limit below is resolved for those surfaces.
+> The plan is ready only while the Expenses on screen are the snapshot that was
+> prepared, so a late Expenses update shows the loading line, not a stale plan
+> or result, until it too has been prepared.
+> See [app-045-budget-periods.md](./app-045-budget-periods.md).
+
 ## The current plan
 
 **The current plan is the current month's canonical Economy totals:**

@@ -48,6 +48,7 @@
   "allDoneToday": "All done for today 🎉",
   "moneySnapshotLabel": "This month",
   "moneySnapshotHelper": "Available after expenses",
+  "moneySnapshotMissingIncome": "Add this month's income to see what's left",
   "foodSnapshotLabel": "Food this week",
   "foodSnapshotHelper": "Left from weekly budget",
   "foodSnapshotMissing": "Set a budget to see remaining",

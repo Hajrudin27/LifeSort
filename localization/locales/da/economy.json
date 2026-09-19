@@ -76,5 +76,32 @@
     "a11y": {
       "amount": "Købets beløb i kroner"
     }
+  },
+  "insights": {
+    "changeTitle": "Ændring i udgifter",
+    "loading": "Henter tallene …",
+    "monthSpending": "Udgifter i {{month}}",
+    "direction": {
+      "higher": "{{amount}} højere end i {{month}}",
+      "lower": "{{amount}} lavere end i {{month}}",
+      "unchanged": "Uændret fra {{month}}"
+    },
+    "expenseCount_one": "{{count}} registreret udgiftspost i {{month}}",
+    "expenseCount_other": "{{count}} registrerede udgiftsposter i {{month}}",
+    "noRegisteredSpending": "Ingen registrerede udgifter i {{previous}} eller {{latest}}.",
+    "cannotCalculate": "LifeSort kan ikke beregne ændringen for disse måneder.",
+    "basisTitle": "Datagrundlag",
+    "comparisonLabel": "Sammenligning",
+    "comparisonValue": "{{previous}} → {{latest}}",
+    "sourceLabel": "Kilde",
+    "sourceRegistered": "Registrerede økonomidata i LifeSort",
+    "syncLabel": "Synkronisering",
+    "syncNotAvailable": "Ikke tilgængelig endnu",
+    "notes": {
+      "completedMonths": "Hele kalendermåneder i dansk tid. Den igangværende måned, {{month}}, indgår ikke.",
+      "registered": "Tallene bygger på de udgifter, der er registreret for de to måneder.",
+      "sync": "LifeSort kan endnu ikke vise, hvornår dine økonomidata sidst blev synkroniseret."
+    },
+    "currentMonthExpenses": "{{amount}} registreret for {{month}} (indeværende måned)"
   }
 }

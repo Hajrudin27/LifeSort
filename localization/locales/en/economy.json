@@ -76,5 +76,32 @@
     "a11y": {
       "amount": "Purchase amount in kroner"
     }
+  },
+  "insights": {
+    "changeTitle": "Change in spending",
+    "loading": "Loading the figures…",
+    "monthSpending": "Spending in {{month}}",
+    "direction": {
+      "higher": "{{amount}} higher than in {{month}}",
+      "lower": "{{amount}} lower than in {{month}}",
+      "unchanged": "Unchanged from {{month}}"
+    },
+    "expenseCount_one": "{{count}} registered expense entry in {{month}}",
+    "expenseCount_other": "{{count}} registered expense entries in {{month}}",
+    "noRegisteredSpending": "No registered spending in {{previous}} or {{latest}}.",
+    "cannotCalculate": "LifeSort can't calculate the change for these months.",
+    "basisTitle": "Data basis",
+    "comparisonLabel": "Comparison",
+    "comparisonValue": "{{previous}} → {{latest}}",
+    "sourceLabel": "Source",
+    "sourceRegistered": "Registered Economy data in LifeSort",
+    "syncLabel": "Sync freshness",
+    "syncNotAvailable": "Not available yet",
+    "notes": {
+      "completedMonths": "Whole calendar months in Danish time. The current month, {{month}}, is not included.",
+      "registered": "The figures are based on the expenses registered for these two months.",
+      "sync": "LifeSort can't yet show when your Economy data was last synced."
+    },
+    "currentMonthExpenses": "{{amount}} registered for {{month}} (current month)"
   }
 }

@@ -140,6 +140,7 @@ no result. Once ready, both screens are unchanged.
 | Economy tab | `usePreparedEconomyMonth` |
 | Home Economy card | `prepareEconomyMonth`, before the card is computed |
 | APP-044 | `usePreparedEconomyMonth`; no plan until prepared |
+| Insights (APP-046) | `usePreparedEconomyMonth`; no current expense point or spending change until prepared ([app-046](./app-046-explainable-insights.md)) |
 | Expenses overview (browsing) | its own `rollForwardMonth(selectedMonth)`, as before |
 
 What a preparation pass writes is unchanged APP-042 behaviour: zustand `persist`

@@ -11,7 +11,8 @@ import type { Expense } from '@/types/expense';
  * A recurring cost due this month is an Expense only once APP-042's
  * `rollForwardMonth` has materialized the month, so the current total must not
  * depend on which screen the user happened to open first. The Economy tab,
- * Home's Economy card and APP-044 prepare through here. The totals themselves
+ * Home's Economy card, APP-044 and the Insights screen (APP-046) prepare
+ * through here. The totals themselves
  * stay the pure APP-039 read model, and historical month browsing (the Expenses
  * overview) keeps its own call.
  *

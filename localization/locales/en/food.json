@@ -49,7 +49,13 @@
     "proteinShort": "protein",
     "carbsShort": "carbs",
     "fatShort": "fat",
-    "ingredientAmountPlaceholder": "Amount (e.g. 100 g)",
+    "ingredientQuantityPlaceholder": "Amount",
+    "ingredientQuantityHint": "Enter an amount above 0, e.g. 100 or 1.5",
+    "units": {
+      "g": "g",
+      "ml": "ml",
+      "piece": "pcs"
+    },
     "standardPricesLabel": "Standard prices",
     "standardPricesEmpty": "No standard prices yet",
     "weeklyPlanLabel": "Weekly meal plan",
@@ -116,6 +122,11 @@
     "a11y": {
         "logPurchase": "Log purchase",
         "removeIngredient": "Remove ingredient",
-        "removeShoppingItem": "Remove {{item}} from the shopping list"
+        "removeShoppingItem": "Remove {{item}} from the shopping list",
+        "units": {
+            "g": "Grams",
+            "ml": "Millilitres",
+            "piece": "Pieces"
+        }
     }
 }

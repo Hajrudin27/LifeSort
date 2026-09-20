@@ -4,11 +4,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { getSeedRecipesForLanguage } from '@/data/seedRecipes';
+import {
+  decodeCompatibleRecipeIngredients,
+  encodeRecipeIngredient,
+  IngredientError,
+  type NewRecipeIngredient,
+} from '@/core/food/ingredients';
+import { getSeedRecipesForLanguage, refreshSeedRecipes } from '@/data/seedRecipes';
 import { supabase } from '@/lib/supabase';
 import { trackSync, reportSyncFailure } from '@/store/useSyncStatusStore';
 import i18n from '@/localization/i18n';
-import { GlobalOffer, GlobalStandardPrice, GroceryOffer, GroceryPurchase, MealType, PantryItem, Recipe, RecipeIngredient, SavedPlanSlot, ShoppingListItem, StandardPrice } from '@/types/food';
+import { GlobalOffer, GlobalStandardPrice, GroceryOffer, GroceryPurchase, MealType, PantryItem, Recipe, SavedPlanSlot, ShoppingListItem, StandardPrice } from '@/types/food';
 
 async function getUserId(): Promise<string | null> {
   const { data: userData } = await supabase.auth.getUser();
@@ -59,7 +65,7 @@ interface FoodState {
   addRecipe: (input: {
     name: string;
     mealType: MealType;
-    ingredients: RecipeIngredient[];
+    ingredients: NewRecipeIngredient[];
     minutes?: number;
     instructions?: string;
     calories?: number;
@@ -100,13 +106,26 @@ function offerToRow(userId: string, o: GroceryOffer) {
 function standardPriceToRow(userId: string, s: StandardPrice) {
   return { id: s.id, user_id: userId, product_name: s.productName, store: s.store, price: s.price };
 }
+/**
+ * APP-047: a new recipe carries only current-contract ingredients. Every one is
+ * validated (throwing IngredientError) before any state or server write; a
+ * `legacy` ingredient only ever comes from data written before APP-047.
+ */
+function newRecipeIngredients(ingredients: readonly NewRecipeIngredient[]): NewRecipeIngredient[] {
+  return ingredients.map((ingredient) => {
+    const encoded = encodeRecipeIngredient(ingredient);
+    if (encoded.kind === 'legacy') throw new IngredientError('ingredient_invalid');
+    return encoded;
+  });
+}
+
 function recipeToRow(userId: string, r: Recipe) {
   return {
     id: r.id,
     user_id: userId,
     name: r.name,
     meal_type: r.mealType,
-    ingredients: r.ingredients,
+    ingredients: r.ingredients.map(encodeRecipeIngredient),
     minutes: r.minutes ?? null,
     instructions: r.instructions ?? null,
     calories: r.calories ?? null,
@@ -230,13 +249,17 @@ export const useFoodStore = create<FoodState>()(
       },
 
       addRecipe: (input) => {
-        const newRecipe: Recipe = { id: newEntityId(), tags: [], ...input };
+        const newRecipe: Recipe = { id: newEntityId(), tags: [], ...input, ingredients: newRecipeIngredients(input.ingredients) };
         set((state) => ({ recipes: [...state.recipes, newRecipe] }));
         getUserId().then((userId) => {
           if (userId) supabase.from('food_recipes').upsert(recipeToRow(userId, newRecipe)).then(logIfError('addRecipe'));
         });
       },
-      updateRecipe: (id, updates) => {
+      updateRecipe: (id, rawUpdates) => {
+        // An edit may keep a recipe's legacy ingredients, but nothing invalid gets in.
+        const updates = rawUpdates.ingredients
+          ? { ...rawUpdates, ingredients: rawUpdates.ingredients.map(encodeRecipeIngredient) }
+          : rawUpdates;
         set((state) => ({
           recipes: state.recipes.map((r) => (r.id === id ? { ...r, ...updates } : r)),
         }));
@@ -259,13 +282,7 @@ export const useFoodStore = create<FoodState>()(
       },
 
       reseedRecipesForLanguage: (language) =>
-        set((state) => {
-          const seedList = getSeedRecipesForLanguage(language);
-          const seedMap = new Map(seedList.map((r) => [r.id, r]));
-          return {
-            recipes: state.recipes.map((r) => (r.id.startsWith('seed-') && seedMap.has(r.id) ? seedMap.get(r.id)! : r)),
-          };
-        }),
+        set((state) => ({ recipes: refreshSeedRecipes(state.recipes, getSeedRecipesForLanguage(language)) })),
 
       selectedStores: [],
       toggleStoreSelection: (store) => {
@@ -328,6 +345,7 @@ export const useFoodStore = create<FoodState>()(
         if (globalPricesResult.error) reportSyncFailure('food', 'global prices', globalPricesResult.error);
         if (globalOffersResult.error) reportSyncFailure('food', 'global offers', globalOffersResult.error);
 
+        let skippedRecipeRows = 0;
         set((state) => {
           const next: Partial<FoodState> = {};
 
@@ -386,13 +404,22 @@ export const useFoodStore = create<FoodState>()(
 
           if (!recipesResult.error && recipesResult.data) {
             const existingIds = new Set(state.recipes.map((r) => r.id));
-            const fetched: Recipe[] = recipesResult.data
-              .filter((row) => !existingIds.has(row.id))
-              .map((row) => ({
+            const fetched: Recipe[] = [];
+            for (const row of recipesResult.data) {
+              if (existingIds.has(row.id)) continue;
+              // APP-047: ingredients are validated, never cast. A row in neither the
+              // current nor the pre-APP-047 shape is skipped, not guessed at; the
+              // server copy is left untouched.
+              const ingredients = decodeCompatibleRecipeIngredients(row.ingredients);
+              if (!ingredients) {
+                skippedRecipeRows += 1;
+                continue;
+              }
+              fetched.push({
                 id: row.id,
                 name: row.name,
                 mealType: row.meal_type as MealType,
-                ingredients: row.ingredients ?? [],
+                ingredients,
                 minutes: row.minutes ?? undefined,
                 instructions: row.instructions ?? undefined,
                 calories: row.calories ?? undefined,
@@ -400,7 +427,8 @@ export const useFoodStore = create<FoodState>()(
                 carbs: row.carbs ?? undefined,
                 fat: row.fat ?? undefined,
                 tags: row.tags ?? [],
-              }));
+              });
+            }
             next.recipes = [...state.recipes, ...fetched];
           }
 
@@ -453,16 +481,22 @@ export const useFoodStore = create<FoodState>()(
 
           return next;
         });
+        // Privacy-safe: a fixed code, never the row or its ingredient text.
+        if (skippedRecipeRows > 0) reportSyncFailure('food', 'recipes', new IngredientError('ingredient_invalid'));
       },
     }),
     {
       name: 'lifesort-food-v2',
       storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
+      // APP-047 v1: typed recipe ingredients (core/storage/migrations/foodIngredients.ts).
+      version: 1,
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        if (state.recipes.length === 0) {
-          state.recipes = getSeedRecipesForLanguage(i18n.language);
-        }
+        const seeds = getSeedRecipesForLanguage(i18n.language);
+        // Persisted seed recipes are a cache of the bundled ones (profile D). A
+        // refresh gives copies written before APP-047 — which the migration kept
+        // as legacy ingredients — their families back, without inferring any.
+        state.recipes = state.recipes.length === 0 ? seeds : refreshSeedRecipes(state.recipes, seeds);
       },
     }
   )

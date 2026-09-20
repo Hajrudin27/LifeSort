@@ -3,12 +3,13 @@ import type { StateStorage } from 'zustand/middleware';
 import { PERSISTENCE_SURFACES, getPersistenceSurface } from '@/core/storage/dataProfileRegistry';
 import { LocalMigrationError, migrateLocalStore, type LocalMigrationDefinition } from './harness';
 import { incomeMoneyMigration, savingsGoalsMoneyMigration } from './economyMoney';
+import { foodIngredientsMigration } from './foodIngredients';
 import { homeLayoutMigration } from './homeLayout';
 import { outboxMigration } from './outbox';
 
 /** Zustand stores whose hydration reads run their versioned definition directly. */
 const ZUSTAND_VERSIONED_DEFINITIONS: readonly LocalMigrationDefinition[] = [
-  homeLayoutMigration, incomeMoneyMigration, savingsGoalsMoneyMigration,
+  homeLayoutMigration, incomeMoneyMigration, savingsGoalsMoneyMigration, foodIngredientsMigration,
 ];
 
 /** Implementations, not another inventory: inclusion and versions come from governance. */

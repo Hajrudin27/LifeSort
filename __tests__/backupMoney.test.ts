@@ -47,8 +47,9 @@ function v1Economy() {
 const backup = (version: number, data: Record<string, unknown>) => JSON.stringify({ version, exportedAt: '2026-09-01T00:00:00.000Z', data });
 
 describe('APP-040 backup parsing', () => {
-  it('writes format 3', () => {
-    expect(BACKUP_VERSION).toBe(3);
+  it('writes format 4', () => {
+    // APP-047 moved exports from 3 to 4 (typed recipe ingredients); see backupRecipeIngredients.test.ts.
+    expect(BACKUP_VERSION).toBe(4);
   });
 
   it('format 1: converts every Economy money field exactly once and leaves other modules unchanged', () => {
@@ -108,7 +109,7 @@ describe('APP-040 backup parsing', () => {
     ['format 1 parseFloat-collapsed third decimal (20000000000000.001)', 1, { income: { incomeByMonth: { '2026-09': parseFloat('20000000000000.001') } } }, 'invalid_money'],
     ['format 1 high-magnitude third decimal', 1, { income: { incomeByMonth: { '2026-09': 5_000_000_000.001 } } }, 'invalid_money'],
     ['non-object expense entry', 2, { expenses: { expenses: [42] } }, 'invalid_format'],
-    ['future format', 4, { income: { incomeByMonth: {} } }, 'unsupported_version'],
+    ['future format', 5, { income: { incomeByMonth: {} } }, 'unsupported_version'],
     // APP-042 recurrence: a pre-3 file without a usable isRecurring, and a format 3 file
     // whose pair contradicts itself, both fail before any store is touched.
     ['pre-3 expense without isRecurring', 2, { expenses: { expenses: [{ id: 'e1', amount: 1_250 }] } }, 'invalid_format'],
@@ -295,14 +296,14 @@ describe('APP-040 backup restore and export through the real stores', () => {
     expect(useSavingsGoalsStore.getState()).toMatchObject({ extraSavings: 1_010, history: [{ amount: 30_000 }, { amount: -4_975 }] });
   });
 
-  it('exports format 3 from canonical state, and re-importing it does not double-scale', async () => {
+  it('exports the current format from canonical state, and re-importing it does not double-scale', async () => {
     mockFileContent = backup(1, v1Economy());
     await importBackup();
     const canonical = JSON.stringify([useExpensesStore.getState().expenses, useIncomeStore.getState().incomeByMonth, useSavingsGoalsStore.getState().goals, useSavingsGoalsStore.getState().history, useSavingsGoalsStore.getState().extraSavings]);
 
     await exportBackup();
     const exported = JSON.parse(mockWritten);
-    expect(exported.version).toBe(3);
+    expect(exported.version).toBe(4);
     expect(exported.data.expenses.expenses[0].amount).toBe(1_250);
     expect(exported.data.income.incomeByMonth['2026-09']).toBe(3_200_075);
     expect(exported.data.savingsGoals.extraSavings).toBe(1_010);

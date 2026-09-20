@@ -575,9 +575,10 @@ describe('APP-043 persistence: the local schema is unchanged (still v1)', () => 
   });
 });
 
-describe('APP-043 backup: format unchanged (3), Savings round-trips exactly', () => {
+// APP-043 needed no format change. The current format is 4 since APP-047 (recipe ingredients only).
+describe('APP-043 backup: no Savings format change, Savings round-trips exactly', () => {
   it('exports and re-imports goals with deadlines, overfunding, archive state and signed history', async () => {
-    expect(BACKUP_VERSION).toBe(3);
+    expect(BACKUP_VERSION).toBe(4);
     const a = store().addGoal({ name: 'A', targetAmount: m(1_000), icon: 'car', deadline: '2020-02-29' });
     const b = store().addGoal({ name: 'B', targetAmount: m(500_000), icon: 'home' });
     store().addContribution(a, m(2_500));
@@ -589,7 +590,7 @@ describe('APP-043 backup: format unchanged (3), Savings round-trips exactly', ()
 
     await exportBackup();
     const exported = JSON.parse(mockWritten);
-    expect(exported.version).toBe(3);
+    expect(exported.version).toBe(4);
     expect(exported.data.savingsGoals.goals.map((g: SavingsGoal) => [g.id, g.savedAmount, g.deadline])).toEqual([[a, 1_500, '2020-02-29'], [b, 600, undefined]]);
 
     useSavingsGoalsStore.setState({ goals: [], history: [], extraSavings: m(0) });

@@ -20,14 +20,16 @@ export function cheapestOffer(offers: GroceryOffer[]): GroceryOffer | null {
 
 export interface IngredientMatch {
   ingredientName: string;
-  amount: string;
+  ingredient: RecipeIngredient;
   offer: GroceryOffer | null;
 }
 
+// Offers are still matched on the ingredient's display name, as before APP-047.
+// Family-aware offer matching belongs to APP-053 and must not be bridged here.
 export function matchRecipeIngredients(ingredients: RecipeIngredient[], weekOffers: GroceryOffer[]): IngredientMatch[] {
   return ingredients.map((ing) => ({
     ingredientName: ing.name,
-    amount: ing.amount,
+    ingredient: ing,
     offer: cheapestOffer(findMatchingOffers(ing.name, weekOffers)),
   }));
 }

@@ -42,7 +42,7 @@ on logout. APP-038 adds delayed-write invalidation around this existing cleanup.
 | `lifesort-income-v2` | A | AsyncStorage / Z1 (APP-040; was Z0) | incomeByMonth map in DKK MinorUnits | 49c4355 through c73bf68 Z0 major-unit floats; APP-040 v0→v1 | `store/useIncomeStore.ts` | versioned; core/storage/migrations/economyMoney.ts | User sweep |
 | `lifesort-savings-goals` | A | AsyncStorage / Z1 (APP-040; was Z0) | goals[]; history[]; extraSavings; money in DKK MinorUnits | 49c4355 through c73bf68 Z0 major-unit floats; APP-040 v0→v1 | `store/useSavingsGoalsStore.ts` | versioned; core/storage/migrations/economyMoney.ts | User sweep |
 | `lifesort-categories` | A | AsyncStorage / Z0 | categories[] including built-ins | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useCategoriesStore.ts` | external; store/useCategoriesStore.ts | User sweep |
-| `lifesort-food-v2` | A,D | AsyncStorage / Z0 | monthlyBudgetByMonth, purchases[], pantryItems[], shoppingItems[], offers[], recipes[], standardPrices[], globalStandardPrices[], globalOffers[], savedPlans, selectedStores[] | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useFoodStore.ts` | external; store/useFoodStore.ts | User sweep |
+| `lifesort-food-v2` | A,D | AsyncStorage / Z1 (APP-047; was Z0) | monthlyBudgetByMonth, purchases[], pantryItems[], shoppingItems[], offers[], recipes[] (typed ingredients), standardPrices[], globalStandardPrices[], globalOffers[], savedPlans, selectedStores[] | 49c4355 through 5c85adc Z0 with the same state keys; every ingredient those builds created is `{name, amount}` strings, and cached Supabase rows may also hold the APP-047 contract; APP-047 v0→v1 keeps the former verbatim as `legacy` and validates the latter (see [app-047-ingredient-families.md](./app-047-ingredient-families.md)) | `store/useFoodStore.ts` | versioned; core/storage/migrations/foodIngredients.ts | User sweep |
 | `lifesort-household` | A | AsyncStorage / Z0 | tasks[]; shoppingItems[]; movingItems[] | 49c4355 pre-rotation tasks; f00dd0d adds assignedTo/rotates with existing hydration defaults | `store/useHouseholdStore.ts` | external; store/useHouseholdStore.ts | User sweep |
 | `lifesort-life-goals` | A | AsyncStorage / Z0 | goals[] | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useLifeGoalsStore.ts` | external; store/useLifeGoalsStore.ts | User sweep |
 | `lifesort-habits` | A | AsyncStorage / Z0 | habits[] (including logs) | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useHabitsStore.ts` | external; store/useHabitsStore.ts | User sweep |
@@ -75,7 +75,7 @@ v1-to-v2 feature migration or fixture was added.
 | secure-store:lifesort-document-cache-key | `lifesort-document-cache-key`, SecureStore | B | Base64 AES key bytes since 0746c50 | `core/storage/documentCacheStorage.ts` | Immutable/no-schema key material | Key-epoch-aware deletion on logout |
 | filesystem:document-directory/attachments | `documentDirectory/attachments/*`, filesystem | B | `LSATTACH` binary header + version 1 + IV/tag metadata + AES-GCM bytes in `.lsenc`; legacy plaintext files pre-0746c50 | `documentCacheStorage` on metadata migration/view/cache use | External specialized migration, encrypted pending-cleanup records | Parent attachment cleanup / persistent cache clear on logout |
 | filesystem:cache-directory/lifesort-decrypted-attachments | `cacheDirectory/lifesort-decrypted-attachments/*`, filesystem | B | Temporary plaintext interoperability copies, never canonical persisted schema | `documentCacheStorage` viewer/share/upload | Cleanup-only, not migration staging | Viewer/temp lifecycle and logout |
-| filesystem:document-directory/lifesort-backup-json | `documentDirectory/lifesort-backup-<date>.json`, filesystem | B | `{version:1,exportedAt,data}` since 49c4355; `version:2` since APP-040 (Economy money in MinorUnits); `version:3` since APP-042 (explicit expense recurrence cadence and day anchor); user-triggered archive | `utils/shared/dataBackup.ts` / `backupValidation.ts`; never startup hydrated | External export/import contract; APP-097 | Existing logout does not sweep these exports; unchanged audit finding |
+| filesystem:document-directory/lifesort-backup-json | `documentDirectory/lifesort-backup-<date>.json`, filesystem | B | `{version:1,exportedAt,data}` since 49c4355; `version:2` since APP-040 (Economy money in MinorUnits); `version:3` since APP-042 (explicit expense recurrence cadence and day anchor); `version:4` since APP-047 (typed recipe ingredients); user-triggered archive | `utils/shared/dataBackup.ts` / `backupValidation.ts`; never startup hydrated | External export/import contract; APP-097 | Existing logout does not sweep these exports; unchanged audit finding |
 
 Remote Supabase tables/auth/buckets remain server persistence, not locally
 hydrated keys. Cached remote data appears only within the local rows above.
@@ -95,7 +95,8 @@ persistence inventory; no migration work was added to them.
   generic single-write/multi-key transaction. APP-038 only guards unsupported
   inner schemas and tests preservation; no new plaintext staging exists.
 - Household: hydration fills assignedTo/rotates defaults and seeds moving items.
-  Food hydration seeds recipes for the existing language. Expense hydration
+  Food hydration seeds recipes for the existing language and, since APP-047,
+  refreshes persisted seed copies from the bundle (removed seeds stay removed). Expense hydration
   deduplicates IDs and adds missing attachment arrays; warranty hydration adds
   attachment arrays. These remain feature-owned compatibility callbacks.
 - Home/Settings/EnabledModules/Review callbacks previously marked hydration
@@ -124,6 +125,7 @@ persistence inventory; no migration work was added to them.
 | `expenses/22bbf3a-inner-v1.json` | Expenses | 22bbf3a, the APP-040 build | Inner Zustand 1 of the envelope: øre amounts, no recurrence fields | Inner Zustand 2 (APP-042 cadence and day anchor) | Synthetic amounts and attachment references |
 | `income/c73bf68-v0.json` | Income | c73bf68 | Zustand 0, major-unit floats | Zustand 1 (APP-040) | Synthetic amounts |
 | `savings-goals/c73bf68-v0.json` | Savings | c73bf68 | Zustand 0, major-unit floats | Zustand 1 (APP-040) | Synthetic goals and history |
+| `food/5c85adc-v0.json` | Food | 5c85adc, the last pre-APP-047 build | Zustand 0, `{name, amount}` ingredients: two seed copies, a user recipe, a fetched recipe | Zustand 1 (APP-047 typed ingredients, all `legacy`) | Synthetic recipes, prices and plans; seed text is bundled app content |
 
 All files are under `__tests__/fixtures/local-migrations`, containing raw UTF-8
 serialized JSON rather than parsed fixtures. The manifest records sensitivity,

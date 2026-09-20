@@ -62,6 +62,12 @@ with APP-045: `core/dates/budgetPeriod.ts` derives Europe/Copenhagen budget
 periods and ISO weeks; the older calendar helpers still sit in `utils/shared/`.) Creating empty folders for them now would be architecture
 theatre.
 
+`core/food/ingredients.ts` (APP-047) is a deliberate C2 exception of the same
+kind as `core/economy/recurrence.ts` (APP-042): a domain contract that the local
+migration and the backup parser — both core — must validate. It depends on
+nothing, and Food's other rules (substitutions, matching, planning) stay in the
+module. See [ADR-0038](./adr/0038-ingredient-identity-is-a-locale-independent-family-id.md).
+
 ## The rules
 
 | # | Rule | Enforced |

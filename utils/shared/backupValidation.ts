@@ -15,6 +15,7 @@ import {
   parseIsoDate,
   repairLegacyOccurrenceDate,
 } from '@/core/economy/recurrence';
+import { decodeCompatibleRecipeIngredients, decodeRecipeIngredients } from '@/core/food/ingredients';
 import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { supportedMoney } from '@/core/money/supportedMoney';
@@ -27,9 +28,11 @@ import { supportedMoney } from '@/core/money/supportedMoney';
  *  3 — APP-042: udgifter bærer `recurrenceFrequency` og `recurrenceAnchorDay`
  *      eksplicit. Ældre filer kender kun `isRecurring`, som i alle udgivne
  *      versioner betød "hver måned" på datoens dag.
- * Nye eksporter skriver altid 3. Øvrige moduler er semantisk uændrede.
+ *  4 — APP-047: opskrifternes ingredienser følger ingredienskontrakten
+ *      (`core/food/ingredients.ts`). Ældre filer kender kun `{ name, amount }`.
+ * Nye eksporter skriver altid 4. Øvrige moduler er semantisk uændrede.
  */
-export const BACKUP_VERSION = 3;
+export const BACKUP_VERSION = 4;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString';
 
@@ -220,6 +223,36 @@ function canonicalExpenseRecurrence(
   return { ok: true, value: { ...partial, expenses: canonical } };
 }
 
+/**
+ * APP-047: gendannede opskrifter skal opfylde samme ingredienskontrakt som
+ * formular, store, lokale data og server.
+ *
+ * FORMAT 1–3 er skrevet af versioner før APP-047. Deres egne ingredienser er
+ * `{ name, amount }` (to strenge), som bevares ordret som `legacy` — ingen familie
+ * og ingen mængde udledes af teksten. De kan også indeholde opskrifter, de har
+ * hentet fra serveren uændret efter en nyere version skrev dem; en sådan
+ * ingrediens beholdes kun, hvis den opfylder den nuværende kontrakt.
+ *
+ * FORMAT 4 er kanonisk og normaliseres IKKE: hver ingrediens skal allerede opfylde
+ * kontrakten. Alt andet afviser hele importen frem for at blive gættet.
+ */
+function canonicalRecipeIngredients(
+  partial: Record<string, unknown>,
+  version: number,
+): { ok: true; value: Record<string, unknown> } | { ok: false; error: BackupParseError } {
+  const recipes = partial.recipes;
+  if (recipes === undefined) return { ok: true, value: partial };
+  const decode = version < 4 ? decodeCompatibleRecipeIngredients : decodeRecipeIngredients;
+  const canonical: Record<string, unknown>[] = [];
+  for (const recipe of recipes as unknown[]) {
+    if (!isPlainObject(recipe)) return { ok: false, error: 'invalid_format' };
+    const ingredients = decode(recipe.ingredients);
+    if (!ingredients) return { ok: false, error: 'invalid_format' };
+    canonical.push({ ...recipe, ingredients });
+  }
+  return { ok: true, value: { ...partial, recipes: canonical } };
+}
+
 // `__proto__` er den nøgle der kan ændre et objekts prototype gennem Object.assign.
 // De to øvrige kan ikke det, men har ingen plads i data og fjernes for en sikkerheds skyld.
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -270,6 +303,12 @@ export function parseBackupFile(content: string): BackupParseResult {
     if (Object.keys(partial).length === 0) continue;
     const canonical = canonicalEconomyMoney(storeKey, partial, version);
     if (!canonical.ok) return canonical;
+    if (storeKey === 'food') {
+      const food = canonicalRecipeIngredients(canonical.value, version);
+      if (!food.ok) return food;
+      data[storeKey] = food.value;
+      continue;
+    }
     if (storeKey !== 'expenses') {
       data[storeKey] = canonical.value;
       continue;

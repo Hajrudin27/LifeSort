@@ -33,6 +33,7 @@ import OffersScreen from '@/app/food/offers';
 import RecipesScreen from '@/app/food/recipes/index';
 import WeeklyPlanScreen from '@/app/food/weekly-plan';
 import { budgetPeriodForCalendarDate, budgetPeriodForInstant } from '@/core/dates/budgetPeriod';
+import { unlinkedIngredient } from '@/core/food/ingredients';
 import { foodBudgetFacts, previousFoodWeekKey } from '@/features/food/budgetReadModel';
 import { foodHomeSnapshot } from '@/features/food/homeSnapshot';
 import { foodMonthlyReview } from '@/features/food/monthlyReview';
@@ -179,7 +180,7 @@ describe('APP-045 weekly plan and current offers use the Copenhagen week and dat
   });
 
   it("matches recipes against this Copenhagen week's offers only", async () => {
-    const recipe = { id: 'r1', name: 'Synthetic pasta', mealType: 'dinner' as const, ingredients: [{ name: 'pasta', amount: '500 g' }] };
+    const recipe = { id: 'r1', name: 'Synthetic pasta', mealType: 'dinner' as const, ingredients: [unlinkedIngredient('pasta', 500, 'g')] };
     const offer = (weekKey: string) => ({ id: `o-${weekKey}`, productName: 'Pasta', price: 10, store: 'Netto', weekKey, source: 'manual' as const });
     useFoodStore.setState({ recipes: [recipe], offers: [offer('2026-W22')] });
     await render(<RecipesScreen />);

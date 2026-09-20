@@ -7,10 +7,12 @@ import Card from "@/components/Card";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useFoodStore } from "@/store/useFoodStore";
 import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
+import { formatIngredientAmount } from "@/utils/food/ingredientFormat";
 import { groupMatchesByStore, matchRecipeIngredients } from "@/utils/food/recipeMatching";
 
 export default function RecipeDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === "da" ? "da-DK" : "en-US";
   const { id } = useLocalSearchParams<{ id: string }>();
   const backgroundColor = useThemeColor({}, "background");
   const textMuted = useThemeColor({}, "textMuted");
@@ -95,17 +97,20 @@ export default function RecipeDetailScreen() {
       )}
 
       <Text style={styles.sectionLabel}>{t("food.ingredientsLabel")}</Text>
-      {matches.map((m, i) => (
-        <Card key={i} style={styles.ingredientRow}>
-          <View>
-            <Text style={styles.ingredientName}>{m.ingredientName}</Text>
-            {m.amount ? <Text style={[styles.ingredientAmount, { color: textMuted }]}>{m.amount}</Text> : null}
-          </View>
-          <Text style={[styles.matchInfo, { color: m.offer ? success : textMuted }, m.offer && { fontWeight: "700" }]}>
-            {m.offer ? t("food.onSaleAt", { store: m.offer.store, price: m.offer.price.toFixed(2) }) : t("food.notOnSale")}
-          </Text>
-        </Card>
-      ))}
+      {matches.map((m, i) => {
+        const amount = formatIngredientAmount(m.ingredient, locale, (unit) => t(`food.units.${unit}`));
+        return (
+          <Card key={i} style={styles.ingredientRow}>
+            <View>
+              <Text style={styles.ingredientName}>{m.ingredientName}</Text>
+              {amount ? <Text style={[styles.ingredientAmount, { color: textMuted }]}>{amount}</Text> : null}
+            </View>
+            <Text style={[styles.matchInfo, { color: m.offer ? success : textMuted }, m.offer && { fontWeight: "700" }]}>
+              {m.offer ? t("food.onSaleAt", { store: m.offer.store, price: m.offer.price.toFixed(2) }) : t("food.notOnSale")}
+            </Text>
+          </Card>
+        );
+      })}
 
       {storeGroups.length > 0 && (
         <>

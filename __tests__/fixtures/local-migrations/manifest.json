@@ -97,5 +97,16 @@
     "serialization": "raw JSON bytes",
     "synthetic": true,
     "sensitivity": "A,B (inner payload of the AES-GCM envelope after APP-040; synthetic øre amounts and attachment references)"
+  },
+  {
+    "file": "food/5c85adc-v0.json",
+    "storeId": "async-storage:lifesort-food-v2",
+    "storageKey": "lifesort-food-v2",
+    "sourceCommit": "5c85adc",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A/D (seed recipe copies and synthetic user recipes, prices and plans)"
   }
 ]

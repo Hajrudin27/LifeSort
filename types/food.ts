@@ -1,3 +1,8 @@
+import type { RecipeIngredient } from '@/core/food/ingredients';
+
+// APP-047: the ingredient contract (family identity, structured quantity) lives in core.
+export type { NewRecipeIngredient, RecipeIngredient } from '@/core/food/ingredients';
+
 export interface GroceryPurchase {
   id: string;
   amount: number;
@@ -28,11 +33,6 @@ export interface GroceryOffer {
 }
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner';
-
-export interface RecipeIngredient {
-  name: string;
-  amount: string;
-}
 
 export interface Recipe {
   id: string;

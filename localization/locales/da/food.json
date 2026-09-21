@@ -129,6 +129,15 @@
             "piece": "Stykker"
         }
     },
+    "planBudget": {
+        "no_budget": "Intet madbudget er sat; planlægningen har ingen budgetgrænse.",
+        "already_over": "Ugens allokering er allerede overskredet med {{remaining}}. En ny planlægning tilføjer ingen ulåste måltider.",
+        "price_unavailable": "{{remaining}} er tilbage denne uge; planen har ingen brugbar prisdelsum at sammenligne med.",
+        "current_within": "Estimat med aktuelle prisoplysninger: {{subtotal}} mod {{remaining}} tilbage denne uge. Den endelige pris er ikke bekræftet.",
+        "current_above": "Estimat med aktuelle prisoplysninger: {{subtotal}} overstiger de {{remaining}}, der er tilbage denne uge.",
+        "partial_within": "Ufuldstændig delsum for kendte priser: {{subtotal}} mod {{remaining}} tilbage denne uge. Budgetoverholdelse er ikke bekræftet.",
+        "partial_above": "Ufuldstændig delsum for kendte priser: {{subtotal}} overstiger allerede de {{remaining}}, der er tilbage denne uge."
+    },
     "priceEvidence": {
         "current": "Aktuel kampagne",
         "stale": "Udløbet kampagne",

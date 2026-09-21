@@ -129,6 +129,15 @@
             "piece": "Pieces"
         }
     },
+    "planBudget": {
+        "no_budget": "No Food budget set; planning has no budget limit.",
+        "already_over": "Already {{remaining}} over this week's allocation. Regenerating adds no unlocked meals.",
+        "price_unavailable": "{{remaining}} remains this week; the plan has no usable price subtotal to compare.",
+        "current_within": "Current-price estimate {{subtotal}} versus {{remaining}} remaining this week; this does not confirm the final cost.",
+        "current_above": "Current-price estimate {{subtotal}} exceeds the {{remaining}} remaining this week.",
+        "partial_within": "Incomplete known-price subtotal {{subtotal}} versus {{remaining}} remaining this week; budget fit is unconfirmed.",
+        "partial_above": "Incomplete known-price subtotal {{subtotal}} already exceeds the {{remaining}} remaining this week."
+    },
     "priceEvidence": {
         "current": "Current campaign",
         "stale": "Expired campaign",

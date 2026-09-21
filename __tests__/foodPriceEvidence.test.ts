@@ -123,6 +123,20 @@ describe('APP-048 aggregate propagation and planning regression', () => {
     const renamed = { ...recipe, ingredients: [familyIngredient('egg', 'Unmatched display name', 2, 'piece')] };
     expect(planWeek([renamed], [offer], [], ['Netto'], [], 20, {}, reference).estimate).toMatchObject({ status: 'unavailable', missing: 1, knownSubtotal: null });
   });
+  it('limits new meals by remaining allocation while keeping missing and negative budgets distinct', () => {
+    const costly = { ...offer, offerPrice: 600 };
+    const withFullAllocation = planWeek([recipe], [costly], [], ['Netto'], [], 800, {}, reference);
+    const afterPurchase = planWeek([recipe], [costly], [], ['Netto'], [], 500, {}, reference);
+    const noBudget = planWeek([recipe], [costly], [], ['Netto'], [], null, {}, reference);
+    const overBudget = planWeek([recipe], [costly], [], ['Netto'], [], -100, {}, reference);
+    expect(withFullAllocation.slots.filter((slot) => slot.recipe)).toHaveLength(3);
+    expect(afterPurchase.slots.every((slot) => slot.recipe === null)).toBe(true);
+    expect(noBudget.slots.filter((slot) => slot.recipe)).toHaveLength(3);
+    expect(overBudget.slots.every((slot) => slot.recipe === null)).toBe(true);
+    const locked = planWeek([recipe], [costly], [], ['Netto'], [], -100, { '0-dinner': recipe.id }, reference);
+    expect(locked.slots.filter((slot) => slot.recipe)).toHaveLength(1);
+    expect(locked.estimate).toMatchObject({ status: 'current', knownSubtotal: 600 });
+  });
   it.each(['da', 'en'])('presents factual source, scope, dates and aggregate uncertainty in %s', async (language) => {
     const i18n = createInstance();
     await i18n.init({ lng: language, resources: { da: { translation: { food: da } }, en: { translation: { food: en } } } });

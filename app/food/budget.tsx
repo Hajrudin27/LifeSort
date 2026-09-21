@@ -22,7 +22,7 @@ export default function FoodBudgetScreen() {
 
   const [amount, setAmount] = useState(monthlyBudgetByMonth[monthKey]?.toString() ?? "");
 
-  const canSave = !isNaN(parseFloat(amount)) && parseFloat(amount) > 0;
+  const canSave = !isNaN(parseFloat(amount)) && parseFloat(amount) >= 0;
 
   const save = () => {
     setMonthlyBudget(monthKey, parseFloat(amount));

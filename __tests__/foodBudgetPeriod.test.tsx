@@ -35,6 +35,7 @@ import WeeklyPlanScreen from '@/app/food/weekly-plan';
 import { budgetPeriodForCalendarDate, budgetPeriodForInstant } from '@/core/dates/budgetPeriod';
 import { unlinkedIngredient } from '@/core/food/ingredients';
 import { foodBudgetFacts, previousFoodWeekKey } from '@/features/food/budgetReadModel';
+import { assessFoodPlanBudget } from '@/features/food/planBudgetAssessment';
 import { foodHomeSnapshot } from '@/features/food/homeSnapshot';
 import { foodMonthlyReview } from '@/features/food/monthlyReview';
 import { useExpensesStore } from '@/store/useExpensesStore';
@@ -42,6 +43,7 @@ import { useFoodStore } from '@/store/useFoodStore';
 import { useIncomeStore } from '@/store/useIncomeStore';
 import type { GroceryPurchase } from '@/types/food';
 import { findBestGlobalPrice } from '@/utils/food/priceLookup';
+import { offerEvidence, summarizePrices, unavailablePrice } from '@/utils/food/priceEvidence';
 
 /** Sunday 31 May 2026 in UTC; Monday 1 June 2026, 00:30, in Copenhagen. */
 const T = '2026-05-31T22:30:00.000Z';
@@ -260,5 +262,87 @@ describe('APP-048 campaign rollover while open', () => {
     } finally {
       timer.mockRestore();
     }
+  });
+});
+
+describe('APP-049 one Food budget and the remaining weekly planning envelope', () => {
+  it('keeps four-week, five-week, and ISO week-year allocation in the existing Food contract', () => {
+    const read = (date: string, monthly: number) => foodBudgetFacts({
+      period: budgetPeriodForCalendarDate(date)!, monthlyBudgetByMonth: { [date.slice(0, 7)]: monthly }, purchases: [],
+    });
+    expect(read('2027-02-10', 1000)).toMatchObject({ hasBudget: true, weeklyBudget: 250, remaining: 250 });
+    expect(read('2026-09-10', 4000)).toMatchObject({ hasBudget: true, weeklyBudget: 800, remaining: 800 });
+    expect(read('2027-01-01', 1000)).toMatchObject({ weekKey: '2026-W53', weeklyBudget: 200, remaining: 200 });
+  });
+
+  it('distinguishes no budget, explicit zero, and an already overspent week', () => {
+    const noBudget = facts([], {});
+    const zeroBudget = facts([], { '2026-06': 0 });
+    const overspent = facts([{ id: 'p', amount: 650, date: T }]);
+    expect(noBudget).toMatchObject({ hasBudget: false });
+    expect(assessFoodPlanBudget(noBudget, summarizePrices([]))).toEqual({ status: 'no_budget' });
+    expect(zeroBudget).toMatchObject({ hasBudget: true, weeklyBudget: 0, remaining: 0 });
+    expect(assessFoodPlanBudget(zeroBudget, summarizePrices([]))).toEqual({ status: 'current_within', remaining: 0, knownSubtotal: 0 });
+    expect(overspent).toMatchObject({ weeklyBudget: 600, spentThisWeek: 650, remaining: -50 });
+    expect(assessFoodPlanBudget(overspent, summarizePrices([unavailablePrice()]))).toEqual({ status: 'already_over', remaining: -50 });
+  });
+
+  it('compares current evidence with remaining allocation and never confirms a partial estimate', () => {
+    const current = offerEvidence({ id: 'o', productName: 'Pasta', store: 'Netto', offerPrice: 400, validFrom: '2026-06-01', validTo: '2026-06-01' }, new Date(T));
+    const remaining = facts(); // 600 allocated - 150 purchased = 450
+    expect(assessFoodPlanBudget(remaining, summarizePrices([current]))).toEqual({ status: 'current_within', remaining: 450, knownSubtotal: 400 });
+    expect(assessFoodPlanBudget(remaining, summarizePrices([current, unavailablePrice()]))).toEqual({ status: 'partial_within', remaining: 450, knownSubtotal: 400 });
+    expect(assessFoodPlanBudget(remaining, summarizePrices([unavailablePrice()]))).toEqual({ status: 'price_unavailable', remaining: 450 });
+    const moreSpent = facts([{ id: 'p', amount: 300, date: T }]);
+    expect(assessFoodPlanBudget(moreSpent, summarizePrices([current]))).toEqual({ status: 'current_above', remaining: 300, knownSubtotal: 400 });
+    expect(assessFoodPlanBudget(moreSpent, summarizePrices([current, unavailablePrice()]))).toEqual({ status: 'partial_above', remaining: 300, knownSubtotal: 400 });
+  });
+
+  it.each(['da', 'en'])('keeps Food, weekly plan, Home and Economy in agreement as Food facts change in %s', async (language) => {
+    await i18n.changeLanguage(language);
+    const recipe = { id: 'food-budget-recipe', name: 'Synthetic pasta', mealType: 'dinner' as const, ingredients: [unlinkedIngredient('pasta', 100, 'g')] };
+    const price = { id: 'catalogue-offer', productName: 'pasta', store: 'Netto', offerPrice: 400, validFrom: '2026-06-01', validTo: '2026-06-01' };
+    useFoodStore.setState({ recipes: [recipe], globalOffers: [price], selectedStores: ['Netto'], pantryItems: [] });
+    // An Economy category budget, even one called groceries, is not Food's budget.
+    useExpensesStore.setState({ categoryBudgets: { groceries: 1 as never } });
+
+    await render(<WeeklyPlanScreen />);
+    expect(texts()).toContain('600 kr.');
+    expect(texts()).toContain(t('food.weeklyRemaining', { amount: '450' }));
+    const generate = tree!.root.findAllByProps({ label: t('food.generatePlan') })[0]
+      .findAllByProps({ accessibilityRole: 'button' }).find((node) => typeof node.props.onPress === 'function')!;
+    await act(async () => { generate.props.onPress(); });
+    expect(texts().join('\n')).toContain(language === 'da' ? 'Estimat med aktuelle prisoplysninger:' : 'Current-price estimate');
+    expect(await foodHomeSnapshot(new Date(T))).toMatchObject({ value: '450 kr.' });
+
+    await act(async () => { useFoodStore.setState({ monthlyBudgetByMonth: { '2026-06': 4000 } }); });
+    expect(texts()).toContain('800 kr.');
+    expect(texts()).toContain(t('food.weeklyRemaining', { amount: '650' }));
+    expect(await foodHomeSnapshot(new Date(T))).toMatchObject({ value: '650 kr.' });
+    await render(<FoodScreen />);
+    expect(texts()).toEqual(expect.arrayContaining(['150 / 800 kr.', t('food.weeklyRemaining', { amount: '650' })]));
+    await render(<EconomyScreen />);
+    const foodCurrency = new Intl.NumberFormat(language === 'da' ? 'da-DK' : 'en-US', {
+      style: 'currency', currency: 'DKK', maximumFractionDigits: 0,
+    });
+    expect(texts()).toContain(t('economy.foodSubtitle', { amount: foodCurrency.format(150), budget: foodCurrency.format(800) }));
+
+    await act(async () => { useFoodStore.setState({ purchases: [...PURCHASES, { id: 'new', amount: 300, date: T }] }); });
+    expect(texts()).toContain(t('economy.foodSubtitle', { amount: foodCurrency.format(450), budget: foodCurrency.format(800) }));
+    expect(await foodHomeSnapshot(new Date(T))).toMatchObject({ value: '350 kr.' });
+    await render(<WeeklyPlanScreen />);
+    expect(texts()).toContain(t('food.weeklyRemaining', { amount: '350' }));
+    expect(texts()).toContain('800 kr.');
+    expect(texts().join('\n')).toContain(language === 'da' ? 'overstiger de' : 'exceeds the');
+  });
+
+  it('lets the Food budget form persist an explicit zero rather than treating it as missing', async () => {
+    await render(<FoodBudgetScreen />);
+    await act(async () => { tree!.root.findByType(TextInput).props.onChangeText('0'); });
+    const button = tree!.root.findAllByProps({ label: t('food.save') })[0];
+    const pressable = button.findAllByProps({ accessibilityRole: 'button' }).find((node) => typeof node.props.onPress === 'function')!;
+    expect(pressable.props.accessibilityState?.disabled).not.toBe(true);
+    await act(async () => { pressable.props.onPress(); });
+    expect(useFoodStore.getState().monthlyBudgetByMonth['2026-06']).toBe(0);
   });
 });

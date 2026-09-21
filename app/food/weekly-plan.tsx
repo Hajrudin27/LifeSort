@@ -17,6 +17,7 @@ import { useToastStore } from "@/store/useToastStore";
 import { MealType } from "@/types/food";
 import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 import { foodBudgetFacts } from "@/features/food/budgetReadModel";
+import { assessFoodPlanBudget } from "@/features/food/planBudgetAssessment";
 import { getWeekdayNames } from "@/utils/food/foodWeek";
 import { planWeek, pricePlan, WeekPlan } from "@/utils/food/mealPlanning";
 
@@ -49,14 +50,13 @@ export default function WeeklyPlanScreen() {
   const addShoppingItem = useFoodStore((s) => s.addShoppingItem);
   const savePlan = useFoodStore((s) => s.savePlan);
 
-  // APP-045: the Copenhagen week the plan is saved under, and the same Food
-  // facts as the Food overview. Without a budget the planner still gets 0.
+  // APP-045: the Copenhagen week and the same Food facts as the overview.
   const reference = useFoodPriceReference();
   const period = budgetPeriodForInstant(reference);
   const weekKey = period.weekKey;
   const facts = foodBudgetFacts({ period, monthlyBudgetByMonth, purchases });
   const monthlyBudget = facts.hasBudget ? facts.monthlyBudget : null;
-  const weeklyBudget = facts.hasBudget ? facts.weeklyBudget : 0;
+  const planningBudget = facts.hasBudget ? facts.remaining : null;
   const savedPlanSlots = savedPlans[weekKey];
 
   const weekdayNames = getWeekdayNames(locale);
@@ -66,6 +66,14 @@ export default function WeeklyPlanScreen() {
   const [chosenPlan, setPlan] = useState<WeekPlan | null>(null);
 
   const plan = useMemo(() => chosenPlan ? pricePlan(chosenPlan.slots, globalOffers, globalStandardPrices, selectedStores, pantryItems, reference) : null, [chosenPlan, globalOffers, globalStandardPrices, selectedStores, pantryItems, reference]);
+  const budgetAssessment = plan ? assessFoodPlanBudget(facts, plan.estimate) : null;
+  const budgetAmount = (value: number) => new Intl.NumberFormat(locale, { style: "currency", currency: "DKK" }).format(value);
+  const assessmentText = budgetAssessment
+    ? t(`food.planBudget.${budgetAssessment.status}`, {
+        remaining: "remaining" in budgetAssessment ? budgetAmount(Math.abs(budgetAssessment.remaining)) : "",
+        subtotal: "knownSubtotal" in budgetAssessment ? budgetAmount(budgetAssessment.knownSubtotal) : "",
+      })
+    : null;
 
   const slotKey = (day: number, mealType: MealType) => `${day}-${mealType}`;
   const lockedCount = Object.keys(locked).length;
@@ -102,10 +110,10 @@ export default function WeeklyPlanScreen() {
       if (slot.recipeId) restoredLocks[slotKey(slot.day, slot.mealType)] = slot.recipeId;
     }
     if (Object.keys(restoredLocks).length === 0) return;
-    const restoredPlan = planWeek(recipes, globalOffers, globalStandardPrices, selectedStores, pantryItems, weeklyBudget, restoredLocks);
+    const restoredPlan = planWeek(recipes, globalOffers, globalStandardPrices, selectedStores, pantryItems, planningBudget, restoredLocks, reference);
     setLocked(restoredLocks);
     setPlan(restoredPlan);
-  }, [globalOffers, globalStandardPrices, pantryItems, plan, prefillLocks, recipes, savedPlanSlots, selectedStores, weeklyBudget]);
+  }, [globalOffers, globalStandardPrices, pantryItems, plan, prefillLocks, recipes, savedPlanSlots, selectedStores, planningBudget, reference]);
 
   const openPicker = (day: number, mealType: MealType, mode: "lock" | "swap") => {
     setPickerMode(mode);
@@ -125,7 +133,7 @@ export default function WeeklyPlanScreen() {
       }
       rebuiltLocks[key] = recipeId;
 
-      const newPlan = planWeek(recipes, globalOffers, globalStandardPrices, selectedStores, pantryItems, weeklyBudget, rebuiltLocks);
+      const newPlan = planWeek(recipes, globalOffers, globalStandardPrices, selectedStores, pantryItems, planningBudget, rebuiltLocks, reference);
       setPlan(newPlan);
       setLocked(rebuiltLocks);
       savePlan(weekKey, newPlan.slots.map((s) => ({ day: s.day, mealType: s.mealType, recipeId: s.recipe?.id ?? null })));
@@ -144,7 +152,7 @@ export default function WeeklyPlanScreen() {
   };
 
   const generate = () => {
-    const newPlan = planWeek(recipes, globalOffers, globalStandardPrices, selectedStores, pantryItems, weeklyBudget, locked);
+    const newPlan = planWeek(recipes, globalOffers, globalStandardPrices, selectedStores, pantryItems, planningBudget, locked, reference);
     setPlan(newPlan);
     savePlan(weekKey, newPlan.slots.map((s) => ({ day: s.day, mealType: s.mealType, recipeId: s.recipe?.id ?? null })));
     showToast(t("food.planGeneratedToast"));
@@ -179,7 +187,7 @@ export default function WeeklyPlanScreen() {
         </View>
         <View style={[styles.statCard, { backgroundColor: surface, borderColor }]}>
           <SymbolView name={{ ios: "banknote.fill", android: "payments", web: "payments" }} size={17} tintColor={brand.glowSecondary} />
-          <Text style={styles.statValue}>{weeklyBudget.toFixed(0)} kr.</Text>
+          <Text style={styles.statValue}>{facts.hasBudget ? `${facts.weeklyBudget.toFixed(0)} kr.` : t("food.noBudgetSet")}</Text>
           <Text style={[styles.statLabel, { color: textMuted }]}>{t("food.weeklyBudgetShort")}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: surface, borderColor }]}>
@@ -188,6 +196,14 @@ export default function WeeklyPlanScreen() {
           <Text style={[styles.statLabel, { color: textMuted }]}>{t("food.shoppingShort")}</Text>
         </View>
       </View>
+
+      <Text style={{ color: facts.hasBudget && facts.remaining < 0 ? warning : textMuted }}>
+        {facts.hasBudget
+          ? facts.remaining < 0
+            ? t("food.weeklyOverBudget", { amount: Math.abs(facts.remaining).toFixed(0) })
+            : t("food.weeklyRemaining", { amount: facts.remaining.toFixed(0) })
+          : t("food.planBudget.no_budget")}
+      </Text>
 
       <View style={styles.actionGrid}>
         <Pressable accessibilityRole="button" style={[styles.actionCard, { backgroundColor: surface, borderColor }]} onPress={() => router.push("/food/select-stores")}>
@@ -282,6 +298,11 @@ export default function WeeklyPlanScreen() {
           </Card>
 
           <Text style={{ color: textMuted }}>{t("food.priceEvidence.planningLimit")}</Text>
+          {budgetAssessment?.status !== "no_budget" && assessmentText && (
+            <Text style={{ color: budgetAssessment?.status === "already_over" || budgetAssessment?.status.endsWith("above") ? warning : textMuted }}>
+              {assessmentText}
+            </Text>
+          )}
 
           <View style={styles.sectionHeader}>
             <View>

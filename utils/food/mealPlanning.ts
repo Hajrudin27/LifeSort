@@ -115,7 +115,8 @@ export function planWeek(
   globalStandardPrices: GlobalStandardPrice[],
   selectedStores: string[],
   pantryItems: PantryItem[],
-  weeklyBudget: number,
+  /** Remaining weekly Food allocation; null means no budget was set. */
+  remainingWeeklyBudget: number | null,
   lockedSlots: Record<string, string> = {},
   reference: Date = new Date()
 ): WeekPlan {
@@ -151,7 +152,7 @@ export function planWeek(
       let best: { recipe: Recipe; cost: number } | null = null;
       for (const candidate of candidates) {
         const cost = marginalPrice(candidate, purchased, pantryItems, globalOffers, globalStandardPrices, selectedStores, reference);
-        if (runningTotal + cost > weeklyBudget) continue;
+        if (remainingWeeklyBudget !== null && runningTotal + cost > remainingWeeklyBudget) continue;
         if (!best || cost < best.cost) best = { recipe: candidate, cost };
       }
 

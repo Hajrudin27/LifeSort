@@ -26,6 +26,7 @@ jest.mock('@/lib/supabase', () => {
 
 import { IngredientError, familyIngredient, unlinkedIngredient, type NewRecipeIngredient } from '@/core/food/ingredients';
 import { useFoodStore } from '@/store/useFoodStore';
+import { planWeek } from '@/utils/food/mealPlanning';
 
 const flush = async () => { for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setTimeout(resolve, 0)); };
 const recipeWrites = () => mockWrites.filter((write) => write.table === 'food_recipes').map((write) => write.payload as Row);
@@ -134,5 +135,26 @@ describe('APP-048 real store catalogue boundary', () => {
     expect(useFoodStore.getState().globalStandardPrices).toEqual([{ id: priceId, productName: 'Synthetic eggs', store: 'Netto', price: 15 }]);
     expect(useFoodStore.getState().globalOffers).toEqual([{ id: offerId, productName: 'Synthetic eggs', store: 'Netto', offerPrice: 10, validFrom: '2026-09-21', validTo: '2026-09-27' }]);
     expect(mockWrites).toEqual([]);
+  });
+});
+
+describe('APP-049 Food writes remain in Food', () => {
+  it('writes each budget, purchase, saved plan and shopping action once, never to Economy', async () => {
+    mockWrites.length = 0;
+    const food = useFoodStore.getState();
+    food.setMonthlyBudget('2026-09', 4000);
+    food.addPurchase(300, '2026-09-21T10:00:00Z');
+    const plan = planWeek([], [], [], [], [], 500, {}, new Date('2026-09-21T10:00:00Z'));
+    expect(plan.slots).toHaveLength(21);
+    expect(mockWrites).toEqual([]); // generation is pure
+    food.savePlan('2026-W39', plan.slots.map((slot) => ({ day: slot.day, mealType: slot.mealType, recipeId: null })));
+    food.addShoppingItem('Synthetic pasta');
+    await flush();
+    expect(mockWrites.map(({ table }) => table)).toEqual([
+      'food_monthly_budget', 'food_purchases', 'food_saved_plans', 'food_shopping_items',
+    ]);
+    expect(mockWrites.find(({ table }) => table === 'food_monthly_budget')?.payload).toMatchObject({ month_key: '2026-09', amount: 4000 });
+    expect(mockWrites.find(({ table }) => table === 'food_purchases')?.payload).toMatchObject({ amount: 300 });
+    expect(mockWrites.some(({ table }) => table === 'expenses' || table === 'expense_category_budgets')).toBe(false);
   });
 });

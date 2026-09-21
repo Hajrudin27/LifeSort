@@ -52,6 +52,11 @@ function quantityText(quantity: number, locale: string): string {
   return `${quantityFormatter(locale, mantissaDecimals).format(Number(mantissa))}e${exponentText}`;
 }
 
+/** Shared APP-047 quantity display, without implying ingredient identity. */
+export function formatIngredientQuantity(quantity: number, unit: IngredientUnit, locale: string, unitLabel: (unit: IngredientUnit) => string): string {
+  return `${quantityText(quantity, locale)} ${unitLabel(unit)}`;
+}
+
 /**
  * APP-047: an ingredient's amount as display text. A structured quantity renders
  * in the locale with its unit's label ("1,5 stk", "200 g"). A legacy amount is
@@ -63,5 +68,5 @@ export function formatIngredientAmount(
   unitLabel: (unit: IngredientUnit) => string,
 ): string {
   if (ingredient.kind === 'legacy') return ingredient.amount;
-  return `${quantityText(ingredient.quantity, locale)} ${unitLabel(ingredient.unit)}`;
+  return formatIngredientQuantity(ingredient.quantity, ingredient.unit, locale, unitLabel);
 }

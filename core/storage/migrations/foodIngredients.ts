@@ -1,4 +1,5 @@
 import { decodeCompatibleRecipeIngredients, decodeRecipeIngredients } from '@/core/food/ingredients';
+import { decodePantryItems } from '@/core/food/pantry';
 import type { LocalMigrationDefinition } from './harness';
 
 /**
@@ -17,6 +18,10 @@ import type { LocalMigrationDefinition } from './harness';
  * it validates against the current contract. Every other state field, recipe
  * field, key and array position is copied as-is. Any other shape throws, so the
  * harness writes nothing and the bytes are preserved.
+ *
+ * APP-050 adds v1 → v2 in the same Food-store definition: old Pantry quantity
+ * text is copied verbatim to legacyQuantityText. No amount, unit, date or
+ * ingredient family is inferred. Malformed Pantry state fails before any write.
  */
 
 type Json = Record<string, unknown>;
@@ -33,7 +38,7 @@ function foodState(v: unknown, version: number): Json | null {
   return Object.keys(v.state).every((key) => FOOD_STATE.includes(key)) ? v.state : null;
 }
 
-/** Only recipe ingredients change shape; the rest of the state keeps its existing owner. */
+/** Validate the APP-047 recipe part of each Food-store version. */
 function knownFood(v: unknown, version: number, ingredients: (value: unknown) => unknown[] | null): boolean {
   const state = foodState(v, version);
   return !!state && Array.isArray(state.recipes) &&
@@ -49,7 +54,7 @@ export const foodIngredientsMigration: LocalMigrationDefinition = {
   storeId: 'async-storage:lifesort-food-v2',
   // "-v2" is part of the key name, not a schema version.
   storageKey: 'lifesort-food-v2',
-  currentVersion: 1,
+  currentVersion: 2,
   detectVersion,
   steps: {
     0: (v) => {
@@ -68,6 +73,21 @@ export const foodIngredientsMigration: LocalMigrationDefinition = {
         version: 1,
       };
     },
+    1: (v) => {
+      if (!knownFood(v, 1, decodeRecipeIngredients)) throw new Error('unknown-legacy-shape');
+      const current = v as Json;
+      const state = current.state as Json;
+      const pantry = decodePantryItems(state.pantryItems, true);
+      if (pantry === null) throw new Error('unknown-legacy-pantry-shape');
+      return {
+        ...current,
+        state: { ...state, pantryItems: pantry },
+        version: 2,
+      };
+    },
   },
-  validateCurrent: (v) => knownFood(v, 1, decodeRecipeIngredients),
+  validateCurrent: (v) => {
+    const state = foodState(v, 2);
+    return knownFood(v, 2, decodeRecipeIngredients) && decodePantryItems(state?.pantryItems) !== null;
+  },
 };

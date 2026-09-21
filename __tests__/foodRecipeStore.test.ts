@@ -8,13 +8,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 type Row = Record<string, unknown>;
 const mockSelects: { table: string; columns: string }[] = [];
 const mockWrites: { table: string; payload: unknown }[] = [];
+const mockDeletes: string[] = [];
 const mockRemote: Record<string, Row[]> = {};
 
 jest.mock('@/lib/supabase', () => {
   const from = (table: string) => {
     const chain: Record<string, unknown> = {};
     Object.assign(chain, {
-      select: (columns: string) => { mockSelects.push({ table, columns }); return chain; }, eq: () => chain, delete: () => chain,
+      select: (columns: string) => { mockSelects.push({ table, columns }); return chain; }, eq: () => chain, delete: () => { mockDeletes.push(table); return chain; },
       then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
         Promise.resolve({ data: mockRemote[table] ?? [], error: null }).then(resolve, reject),
       upsert: (payload: unknown) => { mockWrites.push({ table, payload }); return Promise.resolve({ error: null }); },
@@ -41,7 +42,89 @@ beforeEach(async () => {
   useFoodStore.setState({ recipes: useFoodStore.getState().recipes.filter((recipe) => recipe.id.startsWith('seed-')) });
   await flush();
   mockWrites.length = 0;
+  mockDeletes.length = 0;
+  useFoodStore.setState({ pantryItems: [] });
   for (const key of Object.keys(mockRemote)) delete mockRemote[key];
+});
+
+describe('APP-050 pantry store boundary', () => {
+  it('validates before mutation, edits the same row, clears optionals and still deletes', async () => {
+    const food = useFoodStore.getState();
+    const before = food.pantryItems;
+    for (const input of [
+      { name: 'Bad', quantity: 1 }, { name: 'Bad', unit: 'g' },
+      { name: 'Bad', quantity: 0, unit: 'g' }, { name: 'Bad', quantity: Infinity, unit: 'g' },
+      { name: 'Bad', quantity: 1, unit: 'kg' }, { name: 'Bad', expiryDate: '2026-02-30' },
+      { name: 'Bad', legacyQuantityText: '500 g' },
+    ]) expect(() => food.addPantryItem(input as never)).toThrow('pantry_invalid');
+    await flush();
+    expect(useFoodStore.getState().pantryItems).toBe(before);
+    expect(mockWrites).toEqual([]);
+
+    food.addPantryItem({ name: 'Synthetic milk', quantity: 1.5, unit: 'ml', purchasedDate: '2026-09-01', expiryDate: '2026-09-30' });
+    const created = useFoodStore.getState().pantryItems[0];
+    expect(created).toMatchObject({ name: 'Synthetic milk', quantity: 1.5, unit: 'ml', purchasedDate: '2026-09-01' });
+    expect(created).not.toHaveProperty('openedDate');
+    await flush();
+    expect(mockWrites).toEqual([{ table: 'food_pantry_items', payload: expect.objectContaining({
+      id: created.id, quantity: null, structured_quantity: 1.5, structured_unit: 'ml', purchased_date: '2026-09-01', opened_date: null,
+    }) }]);
+
+    expect(() => food.updatePantryItem(created.id, { name: 'Wrong', quantity: 2 })).toThrow('pantry_invalid');
+    expect(useFoodStore.getState().pantryItems[0]).toEqual(created);
+    food.updatePantryItem(created.id, { name: 'Synthetic milk, edited', openedDate: '2026-09-10' });
+    const updated = useFoodStore.getState().pantryItems[0];
+    expect(updated).toEqual({ id: created.id, addedAt: created.addedAt, name: 'Synthetic milk, edited', openedDate: '2026-09-10' });
+    await flush();
+    expect(mockWrites).toHaveLength(2);
+    expect(mockWrites[1]).toEqual({ table: 'food_pantry_items', payload: expect.objectContaining({
+      id: created.id, added_at: created.addedAt, structured_quantity: null, structured_unit: null,
+      purchased_date: null, opened_date: '2026-09-10', expiry_date: null,
+    }) });
+    expect(mockDeletes).toEqual([]);
+    food.removePantryItem(created.id);
+    await flush();
+    expect(useFoodStore.getState().pantryItems).toEqual([]);
+    expect(mockDeletes).toEqual(['food_pantry_items']);
+  });
+
+  it('keeps legacy text on a named edit only when requested and never parses it', async () => {
+    const old = { id: 'old-pantry', name: 'Æg', legacyQuantityText: '500 g', addedAt: '2026-09-01T08:00:00.000Z' };
+    useFoodStore.setState({ pantryItems: [old] });
+    useFoodStore.getState().updatePantryItem(old.id, { name: 'Eggs' }, true);
+    expect(useFoodStore.getState().pantryItems[0]).toEqual({ ...old, name: 'Eggs' });
+    useFoodStore.getState().updatePantryItem(old.id, { name: 'Eggs', quantity: 2, unit: 'piece' });
+    expect(useFoodStore.getState().pantryItems[0]).toEqual({ id: old.id, name: 'Eggs', quantity: 2, unit: 'piece', addedAt: old.addedAt });
+    await flush();
+    expect(mockWrites.map((write) => (write.payload as Row).quantity)).toEqual(['500 g', null]);
+  });
+
+  it('rejects a whole malformed remote pantry result while preserving local items', async () => {
+    const local = { id: 'local-pantry', name: 'Local', addedAt: '2026-09-01T08:00:00.000Z' };
+    useFoodStore.setState({ pantryItems: [local] });
+    const good = { id: 'good', name: 'Oats', added_at: local.addedAt, quantity: null, structured_quantity: 2,
+      structured_unit: 'g', purchased_date: null, opened_date: null, expiry_date: null };
+    mockRemote.food_pantry_items = [good, { ...good, id: 'bad', expiry_date: '2026-02-30' }];
+    await useFoodStore.getState().fetchFromSupabase();
+    expect(useFoodStore.getState().pantryItems).toEqual([local]);
+    mockRemote.food_pantry_items = [good];
+    await useFoodStore.getState().fetchFromSupabase();
+    expect(useFoodStore.getState().pantryItems).toEqual([local, { id: 'good', name: 'Oats', addedAt: local.addedAt, quantity: 2, unit: 'g' }]);
+    expect(mockSelects.find((item) => item.table === 'food_pantry_items')?.columns).toContain('structured_quantity');
+  });
+
+  it('does not consume Pantry from planning, saving, or a shopping-list action', async () => {
+    const item = { id: 'p', name: 'Synthetic oats', quantity: 2, unit: 'piece' as const, addedAt: '2026-09-01T08:00:00.000Z' };
+    useFoodStore.setState({ pantryItems: [item] });
+    const plan = planWeek([], [], [], [], [item], null, {}, new Date('2026-09-21T10:00:00Z'));
+    useFoodStore.getState().savePlan('2026-W39', plan.slots.map((slot) => ({ day: slot.day, mealType: slot.mealType, recipeId: null })));
+    useFoodStore.getState().addShoppingItem('Synthetic oats');
+    const shoppingId = useFoodStore.getState().shoppingItems.at(-1)!.id;
+    useFoodStore.getState().toggleShoppingItem(shoppingId);
+    await flush();
+    expect(useFoodStore.getState().pantryItems).toEqual([item]);
+    expect(mockWrites.map((write) => write.table)).toEqual(['food_saved_plans', 'food_shopping_items', 'food_shopping_items']);
+  });
 });
 
 describe('APP-047 creating a recipe', () => {
@@ -53,7 +136,7 @@ describe('APP-047 creating a recipe', () => {
     await flush();
     expect(recipeWrites()).toEqual([expect.objectContaining({ id: recipe.id, ingredients })]);
     const persisted = JSON.parse((await AsyncStorage.getItem('lifesort-food-v2'))!);
-    expect(persisted.version).toBe(1);
+    expect(persisted.version).toBe(2);
     expect(persisted.state.recipes.find((r: Row) => r.id === recipe.id).ingredients).toEqual(ingredients);
   });
 

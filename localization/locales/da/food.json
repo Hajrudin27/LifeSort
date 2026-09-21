@@ -33,6 +33,18 @@
     "pantryNamePlaceholder": "Navn (fx Mælk)",
     "pantryQuantityPlaceholder": "Mængde (valgfrit)",
     "pantryExpiryLabel": "Udløbsdato",
+    "pantryEdit": "Rediger vare",
+    "pantryEditItem": "Rediger {{name}}",
+    "pantryDeleteItem": "Slet {{name}}",
+    "pantryLegacyQuantity": "Tidligere angivet mængde: {{quantity}}",
+    "pantryClear": "Ryd",
+    "pantryDateHint": "ÅÅÅÅ-MM-DD (valgfrit)",
+    "pantryClearDate": "Ryd {{field}}",
+    "pantryDates": {
+      "purchasedDate": "Købsdato",
+      "openedDate": "Åbningsdato",
+      "expiryDate": "Udløbsdato"
+    },
     "expiresIn": "Udløber om {{days}} dage",
     "expired": "Udløbet",
     "shoppingListLabel": "Indkøbsliste",

@@ -120,6 +120,9 @@ describe('APP-048 aggregate propagation and planning regression', () => {
     expect(plan.shoppingList).toEqual([]);
     expect(plan.pantryCovered).toEqual([{ ingredientName: 'Eggs', source: 'pantry' }]);
     expect(plan.estimate.knownSubtotal).toBe(0);
+    const structuredPantry = [{ ...pantry[0], quantity: 1, unit: 'piece' as const, expiryDate: '2026-09-22' }];
+    expect(planWeek([recipe], [], [], [], structuredPantry, 20, {}, reference).pantryCovered).toEqual(plan.pantryCovered);
+    expect(structuredPantry[0].quantity).toBe(1); // Planning does not consume stock or use quantity as coverage.
     const renamed = { ...recipe, ingredients: [familyIngredient('egg', 'Unmatched display name', 2, 'piece')] };
     expect(planWeek([renamed], [offer], [], ['Netto'], [], 20, {}, reference).estimate).toMatchObject({ status: 'unavailable', missing: 1, knownSubtotal: null });
   });

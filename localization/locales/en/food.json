@@ -33,6 +33,18 @@
     "pantryNamePlaceholder": "Name (e.g. Milk)",
     "pantryQuantityPlaceholder": "Quantity (optional)",
     "pantryExpiryLabel": "Expiry date",
+    "pantryEdit": "Edit item",
+    "pantryEditItem": "Edit {{name}}",
+    "pantryDeleteItem": "Delete {{name}}",
+    "pantryLegacyQuantity": "Previously entered quantity: {{quantity}}",
+    "pantryClear": "Clear",
+    "pantryDateHint": "YYYY-MM-DD (optional)",
+    "pantryClearDate": "Clear {{field}}",
+    "pantryDates": {
+      "purchasedDate": "Purchase date",
+      "openedDate": "Opened date",
+      "expiryDate": "Expiry date"
+    },
     "expiresIn": "Expires in {{days}} days",
     "expired": "Expired",
     "shoppingListLabel": "Shopping list",

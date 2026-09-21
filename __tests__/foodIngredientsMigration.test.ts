@@ -40,7 +40,7 @@ function memory(initial: string | null) {
   };
 }
 
-describe('APP-047 Food v0 → v1 (5c85adc fixture)', () => {
+describe('APP-047/050 Food v0 → v2 (5c85adc fixture)', () => {
   it('wraps every ingredient verbatim as legacy and changes nothing else', async () => {
     const before: Json = JSON.parse(raw);
     const storage = memory(raw);
@@ -48,7 +48,7 @@ describe('APP-047 Food v0 → v1 (5c85adc fixture)', () => {
     expect(storage.setItem).toHaveBeenCalledTimes(1);
     const after: Json = JSON.parse(storage.bytes()!);
 
-    expect(after.version).toBe(1);
+    expect(after.version).toBe(2);
     after.state.recipes.forEach((recipe: Json, index: number) => {
       const original = before.state.recipes[index];
       expect(recipe.ingredients).toEqual(original.ingredients.map((i: Json) => ({ kind: 'legacy', name: i.name, amount: i.amount })));
@@ -56,7 +56,10 @@ describe('APP-047 Food v0 → v1 (5c85adc fixture)', () => {
       expect({ ...recipe, ingredients: null }).toEqual({ ...original, ingredients: null });
       expect(Object.keys(recipe)).toEqual(Object.keys(original));
     });
-    expect({ ...after.state, recipes: null }).toEqual({ ...before.state, recipes: null });
+    expect(after.state.pantryItems).toEqual(before.state.pantryItems.map((item: Json) => ({
+      id: item.id, name: item.name, addedAt: item.addedAt, legacyQuantityText: item.quantity,
+    })));
+    expect({ ...after.state, recipes: null, pantryItems: null }).toEqual({ ...before.state, recipes: null, pantryItems: null });
     expect(Object.keys(after.state)).toEqual(Object.keys(before.state));
   });
 
@@ -76,7 +79,7 @@ describe('APP-047 Food v0 → v1 (5c85adc fixture)', () => {
       { kind: 'legacy', name: 'Salt', amount: '' },
       { name: 'Peber', amount: 'efter smag' },
     ];
-    const bytes = JSON.stringify({ state: { recipes: [{ id: 'r', name: 'Synthetic', mealType: 'dinner', ingredients: cached }] }, version: 0 });
+    const bytes = JSON.stringify({ state: { recipes: [{ id: 'r', name: 'Synthetic', mealType: 'dinner', ingredients: cached }], pantryItems: [] }, version: 0 });
     const storage = memory(bytes);
     await migrateLocalStore(foodIngredientsMigration, storage);
     expect(JSON.parse(storage.bytes()!).state.recipes[0].ingredients).toEqual([
@@ -85,7 +88,7 @@ describe('APP-047 Food v0 → v1 (5c85adc fixture)', () => {
     ]);
   });
 
-  it('is a no-op for current v1 bytes', async () => {
+  it('is a no-op for current v2 bytes', async () => {
     const storage = memory(raw);
     await migrateLocalStore(foodIngredientsMigration, storage);
     const current = storage.bytes();
@@ -96,8 +99,8 @@ describe('APP-047 Food v0 → v1 (5c85adc fixture)', () => {
 });
 
 describe('APP-047 Food migration fails closed and keeps the bytes', () => {
-  const v0 = (recipes: unknown, extra: Json = {}) => JSON.stringify({ state: { recipes, ...extra }, version: 0 });
-  const v1 = (recipes: unknown) => JSON.stringify({ state: { recipes }, version: 1 });
+  const v0 = (recipes: unknown, extra: Json = {}) => JSON.stringify({ state: { recipes, pantryItems: [], ...extra }, version: 0 });
+  const v1 = (recipes: unknown) => JSON.stringify({ state: { recipes, pantryItems: [] }, version: 1 });
   const recipe = (ingredients: unknown) => ({ id: 'r', name: 'Synthetic', mealType: 'dinner', ingredients });
 
   it.each([
@@ -112,11 +115,11 @@ describe('APP-047 Food migration fails closed and keeps the bytes', () => {
     ['a v0 cached row with a display unit', v0([recipe([{ kind: 'unlinked', name: 'Salt', quantity: 1, unit: 'tsk' }])]), 'transform-failed'],
     ['an unknown state key', v0([], { recipesV2: [] }), 'transform-failed'],
     ['a versionless payload', JSON.stringify({ state: { recipes: [] } }), 'unknown-legacy-shape'],
-    ['a future version', JSON.stringify({ state: { recipes: [] }, version: 2 }), 'unsupported-newer-version'],
-    ['v1 with the pre-APP-047 shape', v1([recipe([{ name: 'Æg', amount: '3 stk' }])]), 'validation-failed'],
-    ['v1 with an unknown family', v1([recipe([{ kind: 'family', familyId: 'egg-large', name: 'Æg', quantity: 3, unit: 'piece' }])]), 'validation-failed'],
-    ['v1 with a display unit', v1([recipe([{ kind: 'unlinked', name: 'Salt', quantity: 1, unit: 'tsk' }])]), 'validation-failed'],
-    ['v1 with a zero quantity', v1([recipe([{ kind: 'unlinked', name: 'Salt', quantity: 0, unit: 'g' }])]), 'validation-failed'],
+    ['a future version', JSON.stringify({ state: { recipes: [] }, version: 3 }), 'unsupported-newer-version'],
+    ['v1 with the pre-APP-047 shape', v1([recipe([{ name: 'Æg', amount: '3 stk' }])]), 'transform-failed'],
+    ['v1 with an unknown family', v1([recipe([{ kind: 'family', familyId: 'egg-large', name: 'Æg', quantity: 3, unit: 'piece' }])]), 'transform-failed'],
+    ['v1 with a display unit', v1([recipe([{ kind: 'unlinked', name: 'Salt', quantity: 1, unit: 'tsk' }])]), 'transform-failed'],
+    ['v1 with a zero quantity', v1([recipe([{ kind: 'unlinked', name: 'Salt', quantity: 0, unit: 'g' }])]), 'transform-failed'],
   ])('%s → %s, no write', async (_name, bytes, code) => {
     const storage = memory(bytes);
     await expect(migrateLocalStore(foodIngredientsMigration, storage)).rejects.toMatchObject({ code });
@@ -138,7 +141,7 @@ describe('APP-047 Food hydration through the APP-038 runtime', () => {
   it('upgrades at boot, then hydration refreshes seed copies from the bundle and keeps user legacy data verbatim', async () => {
     await AsyncStorage.setItem(KEY, raw);
     await runLocalMigrations();
-    expect(JSON.parse((await AsyncStorage.getItem(KEY))!).version).toBe(1);
+    expect(JSON.parse((await AsyncStorage.getItem(KEY))!).version).toBe(2);
 
     await useFoodStore.persist.rehydrate();
     const { recipes, monthlyBudgetByMonth, savedPlans, selectedStores } = useFoodStore.getState();
@@ -163,7 +166,7 @@ describe('APP-047 Food hydration through the APP-038 runtime', () => {
     useFoodStore.setState({ selectedStores: ['Netto', 'Rema 1000'] });
     await flush();
     const stored: Json = JSON.parse((await AsyncStorage.getItem(KEY))!);
-    expect(stored.version).toBe(1);
+    expect(stored.version).toBe(2);
     expect(stored.state.recipes[0].ingredients[0]).toEqual({ kind: 'family', familyId: 'egg', name: 'Æg', quantity: 3, unit: 'piece' });
     expect(foodIngredientsMigration.validateCurrent(stored)).toBe(true);
 

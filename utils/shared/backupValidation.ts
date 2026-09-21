@@ -16,6 +16,7 @@ import {
   repairLegacyOccurrenceDate,
 } from '@/core/economy/recurrence';
 import { decodeCompatibleRecipeIngredients, decodeRecipeIngredients } from '@/core/food/ingredients';
+import { decodePantryItems } from '@/core/food/pantry';
 import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { supportedMoney } from '@/core/money/supportedMoney';
@@ -30,9 +31,11 @@ import { supportedMoney } from '@/core/money/supportedMoney';
  *      versioner betød "hver måned" på datoens dag.
  *  4 — APP-047: opskrifternes ingredienser følger ingredienskontrakten
  *      (`core/food/ingredients.ts`). Ældre filer kender kun `{ name, amount }`.
- * Nye eksporter skriver altid 4. Øvrige moduler er semantisk uændrede.
+ *  5 — APP-050: Pantry bærer valgfrie strukturerede mængder og eksplicitte datoer;
+ *      ældre fritekstmængder bevares ordret som legacyQuantityText.
+ * Nye eksporter skriver altid 5. Øvrige moduler er semantisk uændrede.
  */
-export const BACKUP_VERSION = 4;
+export const BACKUP_VERSION = 5;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString';
 
@@ -253,6 +256,16 @@ function canonicalRecipeIngredients(
   return { ok: true, value: { ...partial, recipes: canonical } };
 }
 
+function canonicalPantryItems(
+  partial: Record<string, unknown>,
+  version: number,
+): { ok: true; value: Record<string, unknown> } | { ok: false; error: BackupParseError } {
+  if (partial.pantryItems === undefined) return { ok: true, value: partial };
+  const items = decodePantryItems(partial.pantryItems, version < 5);
+  if (!items) return { ok: false, error: 'invalid_format' };
+  return { ok: true, value: { ...partial, pantryItems: items } };
+}
+
 // `__proto__` er den nøgle der kan ændre et objekts prototype gennem Object.assign.
 // De to øvrige kan ikke det, men har ingen plads i data og fjernes for en sikkerheds skyld.
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -306,7 +319,9 @@ export function parseBackupFile(content: string): BackupParseResult {
     if (storeKey === 'food') {
       const food = canonicalRecipeIngredients(canonical.value, version);
       if (!food.ok) return food;
-      data[storeKey] = food.value;
+      const pantry = canonicalPantryItems(food.value, version);
+      if (!pantry.ok) return pantry;
+      data[storeKey] = pantry.value;
       continue;
     }
     if (storeKey !== 'expenses') {

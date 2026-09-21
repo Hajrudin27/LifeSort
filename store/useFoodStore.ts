@@ -11,6 +11,7 @@ import {
   IngredientError,
   type NewRecipeIngredient,
 } from '@/core/food/ingredients';
+import { canonicalPantryEdit, decodePantryRow, type NewPantryItem } from '@/core/food/pantry';
 import { getSeedRecipesForLanguage, refreshSeedRecipes } from '@/data/seedRecipes';
 import { supabase } from '@/lib/supabase';
 import { trackSync, reportSyncFailure } from '@/store/useSyncStatusStore';
@@ -51,7 +52,8 @@ interface FoodState {
   addPurchase: (amount: number, date?: string) => void;
   removePurchase: (id: string) => void;
 
-  addPantryItem: (input: { name: string; quantity?: string; expiryDate?: string }) => void;
+  addPantryItem: (input: NewPantryItem) => void;
+  updatePantryItem: (id: string, input: NewPantryItem, keepLegacyQuantity?: boolean) => void;
   removePantryItem: (id: string) => void;
 
   addShoppingItem: (label: string) => void;
@@ -93,7 +95,11 @@ function pantryItemToRow(userId: string, p: PantryItem) {
     id: p.id,
     user_id: userId,
     name: p.name,
-    quantity: p.quantity ?? null,
+    quantity: p.legacyQuantityText ?? null,
+    structured_quantity: p.quantity ?? null,
+    structured_unit: p.unit ?? null,
+    purchased_date: p.purchasedDate ?? null,
+    opened_date: p.openedDate ?? null,
     expiry_date: p.expiryDate ?? null,
     added_at: p.addedAt,
   };
@@ -197,13 +203,25 @@ export const useFoodStore = create<FoodState>()(
       },
 
       addPantryItem: (input) => {
-        const newItem: PantryItem = { id: newEntityId(), addedAt: new Date().toISOString(), ...input };
+        const newItem = canonicalPantryEdit(null, input, false, newEntityId(), new Date().toISOString());
+        if (!newItem) throw new Error('pantry_invalid');
         set((state) => ({ pantryItems: [...state.pantryItems, newItem] }));
         getUserId().then((userId) => {
           if (userId) supabase.from('food_pantry_items').upsert(pantryItemToRow(userId, newItem)).then(logIfError('addPantryItem'));
         });
       },
+      updatePantryItem: (id, input, keepLegacyQuantity = false) => {
+        const current = get().pantryItems.find((item) => item.id === id);
+        if (!current) throw new Error('pantry_missing');
+        const updated = canonicalPantryEdit(current, input, keepLegacyQuantity);
+        if (!updated) throw new Error('pantry_invalid');
+        set((state) => ({ pantryItems: state.pantryItems.map((item) => item.id === id ? updated : item) }));
+        getUserId().then((userId) => {
+          if (userId) supabase.from('food_pantry_items').upsert(pantryItemToRow(userId, updated)).then(logIfError('updatePantryItem'));
+        });
+      },
       removePantryItem: (id) => {
+        if (!get().pantryItems.some((item) => item.id === id)) throw new Error('pantry_missing');
         set((state) => ({ pantryItems: state.pantryItems.filter((p) => p.id !== id) }));
         getUserId().then((userId) => {
           if (userId) supabase.from('food_pantry_items').delete().eq('user_id', userId).eq('id', id).then(logIfError('removePantryItem'));
@@ -322,7 +340,7 @@ export const useFoodStore = create<FoodState>()(
         ] = await Promise.all([
           supabase.from('food_monthly_budget').select('month_key, amount').eq('user_id', userId),
           supabase.from('food_purchases').select('id, amount, date').eq('user_id', userId),
-          supabase.from('food_pantry_items').select('id, name, quantity, expiry_date, added_at').eq('user_id', userId),
+          supabase.from('food_pantry_items').select('id, name, quantity, structured_quantity, structured_unit, purchased_date, opened_date, expiry_date, added_at').eq('user_id', userId),
           supabase.from('food_shopping_items').select('id, label, checked').eq('user_id', userId),
           supabase.from('food_offers').select('id, product_name, price, store, week_key, source').eq('user_id', userId),
           supabase.from('food_recipes').select('id, name, meal_type, ingredients, minutes, instructions, calories, protein, carbs, fat, tags').eq('user_id', userId),
@@ -347,6 +365,7 @@ export const useFoodStore = create<FoodState>()(
         if (globalOffersResult.error) reportSyncFailure('food', 'global offers', globalOffersResult.error);
 
         let skippedRecipeRows = 0;
+        let invalidPantryRows = false;
         set((state) => {
           const next: Partial<FoodState> = {};
 
@@ -368,16 +387,9 @@ export const useFoodStore = create<FoodState>()(
 
           if (!pantryResult.error && pantryResult.data) {
             const existingIds = new Set(state.pantryItems.map((p) => p.id));
-            const fetched: PantryItem[] = pantryResult.data
-              .filter((row) => !existingIds.has(row.id))
-              .map((row) => ({
-                id: row.id,
-                name: row.name,
-                quantity: row.quantity ?? undefined,
-                expiryDate: row.expiry_date ?? undefined,
-                addedAt: row.added_at,
-              }));
-            next.pantryItems = [...state.pantryItems, ...fetched];
+            const decoded = pantryResult.data.map(decodePantryRow);
+            if (decoded.some((item) => item === null)) invalidPantryRows = true;
+            else next.pantryItems = [...state.pantryItems, ...(decoded as PantryItem[]).filter((item) => !existingIds.has(item.id))];
           }
 
           if (!shoppingResult.error && shoppingResult.data) {
@@ -459,13 +471,14 @@ export const useFoodStore = create<FoodState>()(
         });
         // Privacy-safe: a fixed code, never the row or its ingredient text.
         if (skippedRecipeRows > 0) reportSyncFailure('food', 'recipes', new IngredientError('ingredient_invalid'));
+        if (invalidPantryRows) reportSyncFailure('food', 'pantry', new Error('pantry_invalid'));
       },
     }),
     {
       name: 'lifesort-food-v2',
       storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
-      // APP-047 v1: typed recipe ingredients (core/storage/migrations/foodIngredients.ts).
-      version: 1,
+      // APP-050 v2: typed pantry items; APP-047 recipes remain typed.
+      version: 2,
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         const seeds = getSeedRecipesForLanguage(i18n.language);

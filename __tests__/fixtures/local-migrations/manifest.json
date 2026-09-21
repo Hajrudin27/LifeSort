@@ -104,7 +104,7 @@
     "storageKey": "lifesort-food-v2",
     "sourceCommit": "5c85adc",
     "sourceVersion": 0,
-    "targetVersion": 1,
+    "targetVersion": 2,
     "serialization": "raw JSON bytes",
     "synthetic": true,
     "sensitivity": "A/D (seed recipe copies and synthetic user recipes, prices and plans)"

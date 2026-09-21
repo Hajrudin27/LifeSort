@@ -311,13 +311,19 @@ describe('APP-045 boundaries', () => {
       'app/food/index.tsx', 'app/food/budget.tsx', 'app/food/weekly-plan.tsx', 'app/food/offers.tsx',
       'app/food/recipes/index.tsx', 'app/food/recipes/[id].tsx',
       'features/economy/homeSnapshot.ts', 'features/food/homeSnapshot.ts', 'utils/food/priceLookup.ts',
+      'utils/food/priceEvidence.ts',
     ];
     const offenders = CURRENT_PERIOD_FILES.flatMap((file) => {
       const imports = importsOf(file);
       const hostLocal = imports.filter(({ from, names }) =>
         (from === '@/utils/shared/monthKey' && names.includes('getMonthKey')) ||
         (from === '@/utils/shared/localDate' && names.includes('todayIso')));
-      const usesCore = imports.some(({ from }) => from === '@/core/dates/budgetPeriod');
+      // APP-048: price consumers delegate campaign dates to one evidence function.
+      // Keep consumers in this gate and require that provider itself to use core.
+      const evidenceConsumer = ['app/food/offers.tsx', 'utils/food/priceLookup.ts'].includes(file);
+      const usesCore = evidenceConsumer
+        ? imports.some(({ from, names }) => from === '@/utils/food/priceEvidence' && names.includes('offerEvidence'))
+        : imports.some(({ from }) => from === '@/core/dates/budgetPeriod');
       return [...hostLocal.map(({ from }) => `${file} -> ${from}`), ...(usesCore ? [] : [`${file} -> (no core/dates)`])];
     });
     expect(offenders).toEqual([]);

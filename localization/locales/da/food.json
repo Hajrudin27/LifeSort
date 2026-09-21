@@ -12,7 +12,7 @@
     "ingredientsLabel": "Ingredienser",
     "ingredientPlaceholder": "Ingrediens",
     "addIngredient": "+ Tilføj ingrediens",
-    "matchedThisWeek": "{{matched}}/{{total}} på tilbud denne uge",
+    "matchedThisWeek": "{{matched}}/{{total}} ingredienser har registrerede tilbud denne uge · aktualitet ukendt",
     "onSaleAt": "På tilbud hos {{store}} · {{price}} kr.",
     "notOnSale": "Ikke på tilbud",
     "whereToBuyLabel": "Hvor du skal købe hvad",
@@ -128,5 +128,27 @@
             "ml": "Milliliter",
             "piece": "Stykker"
         }
+    },
+    "priceEvidence": {
+        "current": "Aktuel kampagne",
+        "stale": "Udløbet kampagne",
+        "upcoming": "Kampagnen er ikke startet",
+        "unknown": "Prisens aktualitet er ukendt",
+        "unavailable": "Pris mangler",
+        "offer": "Katalogtilbud",
+        "standard": "Standardpris",
+        "manual": "Manuelt registreret tilbud",
+        "ai_import": "Importeret tilbud",
+        "detail": "{{price}} · {{source}} · {{store}} · {{freshness}}",
+        "validity": "Kampagne: {{from}} til {{to}}",
+        "estimate_current": "Estimat med aktuelle prisoplysninger: {{amount}}",
+        "estimate_partial": "Delsum for kendte priser: {{amount}} — ufuldstændigt aktuelt estimat",
+        "estimate_unavailable": "Aktuelt estimat er ikke tilgængeligt",
+        "count_unknown": "Ukendt aktualitet: {{count}}",
+        "count_stale": "Udløbet: {{count}}",
+        "count_upcoming": "Ikke startet: {{count}}",
+        "count_missing": "Manglende pris: {{count}}",
+        "planMeals": "Planlagte måltider: {{count}}",
+        "planningLimit": "Priser matches på ingrediensnavne uden hensyn til pakkestørrelser eller mængder. Kampagner vurderes i dag, ikke for hver måltidsdato. En delsum bekræfter ikke, at planen holder dit budget."
     }
 }

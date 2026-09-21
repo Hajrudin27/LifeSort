@@ -217,3 +217,48 @@ describe('APP-045 the Food monthly review keeps its month and places purchases i
     expect(await spent('2026-08')).toEqual({ amount: '250', count: 1 });
   });
 });
+
+describe('APP-048 visible estimates', () => {
+  it.each(['da', 'en'])('keeps partial/unknown/stale states visible in %s and refreshes an existing plan', async (language) => {
+    await i18n.changeLanguage(language);
+    const recipe = { id: 'price-recipe', name: 'Synthetic meal', mealType: 'dinner' as const,
+      ingredients: [unlinkedIngredient('pasta', 100, 'g'), unlinkedIngredient('salt', 1, 'g')] };
+    const offer = { id: 'offer', productName: 'pasta', store: 'Netto', offerPrice: 5, validFrom: '2026-06-01', validTo: '2026-06-01' };
+    useFoodStore.setState({ recipes: [recipe], pantryItems: [], globalOffers: [offer], selectedStores: ['Netto'], savedPlans: { '2026-W23': [{ day: 0, mealType: 'dinner', recipeId: recipe.id }] } });
+    await render(<WeeklyPlanScreen />);
+    expect(texts().join('\n')).toContain(t('food.priceEvidence.count_missing', { count: 1 }));
+    expect(texts().join('\n')).toContain(t('food.priceEvidence.current'));
+    expect(texts().join('\n')).toContain('2026-06-01');
+    expect(texts().join('\n')).toContain(language === 'da' ? 'Delsum for kendte priser' : 'Known-price subtotal');
+
+    await act(async () => { useFoodStore.setState({ globalOffers: [{ ...offer, validFrom: '2026-05-01', validTo: '2026-05-31' }] }); });
+    expect(texts().join('\n')).toContain(t('food.priceEvidence.stale'));
+    expect(texts().join('\n')).toContain(t('food.priceEvidence.estimate_unavailable'));
+    expect(texts().join('\n')).not.toContain(t('food.priceEvidence.current'));
+
+    await act(async () => { useFoodStore.setState({ globalStandardPrices: [{ id: 's', productName: 'pasta', store: 'Netto', price: 12 }] }); });
+    expect(texts().join('\n')).toContain(t('food.priceEvidence.unknown'));
+    expect(texts().join('\n')).not.toContain('2026-05-31');
+  });
+});
+
+describe('APP-048 campaign rollover while open', () => {
+  it('stops displaying an expired offer without a catalogue update', async () => {
+    let refresh: (() => void) | undefined;
+    const timer = jest.spyOn(global, 'setInterval').mockImplementation(((callback: () => void) => {
+      refresh = callback;
+      return 1;
+    }) as typeof setInterval);
+    try {
+      useFoodStore.setState({ selectedStores: ['Netto'], globalOffers: [{ id: 'one-day', productName: 'Synthetic pasta', store: 'Netto', offerPrice: 5, validFrom: '2026-06-01', validTo: '2026-06-01' }] });
+      await render(<OffersScreen />);
+      expect(texts()).toContain('Synthetic pasta');
+      expect(refresh).toBeDefined();
+      jest.setSystemTime(new Date('2026-06-01T22:00:00Z'));
+      await act(async () => { refresh!(); });
+      expect(texts()).not.toContain('Synthetic pasta');
+    } finally {
+      timer.mockRestore();
+    }
+  });
+});

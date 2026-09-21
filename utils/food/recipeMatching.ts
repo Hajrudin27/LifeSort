@@ -1,3 +1,4 @@
+import { validPersonalOffer } from './priceEvidence';
 import { GroceryOffer, RecipeIngredient } from '@/types/food';
 
 function normalize(text: string): string {
@@ -7,7 +8,7 @@ function normalize(text: string): string {
 export function findMatchingOffers(ingredientName: string, offers: GroceryOffer[]): GroceryOffer[] {
   const norm = normalize(ingredientName);
   if (norm.length === 0) return [];
-  return offers.filter((o) => {
+  return offers.filter(validPersonalOffer).filter((o) => {
     const productNorm = normalize(o.productName);
     return productNorm.includes(norm) || norm.includes(productNorm);
   });

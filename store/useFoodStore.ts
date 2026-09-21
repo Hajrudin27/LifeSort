@@ -1,3 +1,4 @@
+import { GLOBAL_PRICE_SELECT, GLOBAL_OFFER_SELECT, decodeRows, decodeGlobalPrice, decodeGlobalOffer, decodePersonalPrice, decodePersonalOffer } from '@/utils/food/catalogueRead';
 import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -329,8 +330,8 @@ export const useFoodStore = create<FoodState>()(
           supabase.from('food_saved_plans').select('week_key, slots').eq('user_id', userId),
           supabase.from('food_selected_stores').select('store').eq('user_id', userId),
           // Globale, admin-styrede data — ingen user_id-filter, alle brugere ser samme data
-          supabase.from('global_standard_prices').select('id, product_name, store, price'),
-          supabase.from('global_offers').select('id, offer_price, valid_from, valid_to, standard_price:global_standard_prices(product_name, store)'),
+          supabase.from('global_standard_prices').select(GLOBAL_PRICE_SELECT),
+          supabase.from('global_offers').select(GLOBAL_OFFER_SELECT),
         ]);
 
         if (budgetResult.error) reportSyncFailure('food', 'budget', budgetResult.error);
@@ -389,16 +390,7 @@ export const useFoodStore = create<FoodState>()(
 
           if (!offersResult.error && offersResult.data) {
             const existingIds = new Set(state.offers.map((o) => o.id));
-            const fetched: GroceryOffer[] = offersResult.data
-              .filter((row) => !existingIds.has(row.id))
-              .map((row) => ({
-                id: row.id,
-                productName: row.product_name,
-                price: Number(row.price),
-                store: row.store,
-                weekKey: row.week_key,
-                source: (row.source as 'manual' | 'ai_import') ?? 'manual',
-              }));
+            const fetched = decodeRows(offersResult.data, decodePersonalOffer).filter((row) => !existingIds.has(row.id));
             next.offers = [...state.offers, ...fetched];
           }
 
@@ -434,9 +426,7 @@ export const useFoodStore = create<FoodState>()(
 
           if (!pricesResult.error && pricesResult.data) {
             const existingIds = new Set(state.standardPrices.map((s) => s.id));
-            const fetched: StandardPrice[] = pricesResult.data
-              .filter((row) => !existingIds.has(row.id))
-              .map((row) => ({ id: row.id, productName: row.product_name, store: row.store, price: Number(row.price) }));
+            const fetched = decodeRows(pricesResult.data, decodePersonalPrice).filter((row) => !existingIds.has(row.id));
             next.standardPrices = [...state.standardPrices, ...fetched];
           }
 
@@ -458,25 +448,11 @@ export const useFoodStore = create<FoodState>()(
           // de er admin-styrede, ikke brugerens egne, så det er korrekt at altid
           // vise den nyeste, sande tilstand fra databasen.
           if (!globalPricesResult.error && globalPricesResult.data) {
-            next.globalStandardPrices = globalPricesResult.data.map((row: any) => ({
-              id: row.id,
-              productName: row.product_name,
-              store: row.store,
-              price: Number(row.price),
-            }));
+            next.globalStandardPrices = decodeRows(globalPricesResult.data, decodeGlobalPrice);
           }
 
           if (!globalOffersResult.error && globalOffersResult.data) {
-            next.globalOffers = (globalOffersResult.data as any[])
-              .filter((row) => row.standard_price)
-              .map((row) => ({
-                id: row.id,
-                productName: row.standard_price.product_name,
-                store: row.standard_price.store,
-                offerPrice: Number(row.offer_price),
-                validFrom: row.valid_from,
-                validTo: row.valid_to,
-              }));
+            next.globalOffers = decodeRows(globalOffersResult.data, decodeGlobalOffer);
           }
 
           return next;

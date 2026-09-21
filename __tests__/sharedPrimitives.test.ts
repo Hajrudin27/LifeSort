@@ -41,8 +41,6 @@ const ATTACHMENT_TYPE_FILES = ['types/attachment.ts', 'types/trip.ts'];
  */
 const MONEY_FORMATTING_FILES = [
   'app/food/index.tsx',
-  'app/food/offers.tsx',
-  'app/food/recipes/[id].tsx',
   'app/food/weekly-plan.tsx',
   'app/travel/[id]/expenses/index.tsx',
   'app/travel/[id]/index.tsx',

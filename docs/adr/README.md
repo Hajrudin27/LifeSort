@@ -57,6 +57,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0036](./0036-savings-balances-change-only-through-validated-movements.md) | Savings balances change only through validated movements | Accepted | 2026-09-18 | APP-043 |
 | [0037](./0037-budget-periods-are-copenhagen-calendar-periods.md) | Budget periods are Copenhagen calendar periods, independent of the device | Accepted | 2026-09-18 | APP-045 |
 | [0038](./0038-ingredient-identity-is-a-locale-independent-family-id.md) | Ingredient identity is a locale-independent family ID, separate from display text and retailer products | Accepted | 2026-09-19 | APP-047 |
+| [0039](./0039-price-freshness-requires-temporal-provenance.md) | Price freshness requires authoritative temporal provenance | Accepted | 2026-09-21 | APP-048 |
 
 ## When an ADR is required
 

@@ -1,3 +1,4 @@
+import { summarizePrices, usablePrice, type PriceEvidence, type PriceEstimate } from './priceEvidence';
 import { GlobalOffer, GlobalStandardPrice, MealType, PantryItem, Recipe } from '@/types/food';
 import { findBestGlobalPrice } from '@/utils/food/priceLookup';
 
@@ -11,25 +12,22 @@ export interface PlannedSlot {
   locked: boolean;
 }
 
-export interface ShoppingListEntry {
-  ingredientName: string;
-  price: number | null;
-  store: string | null;
-  source: 'offer' | 'standard' | 'unknown' | 'pantry';
-}
+export type ShoppingListEntry = { ingredientName: string; evidence: PriceEvidence };
+export type PantryEntry = { ingredientName: string; source: 'pantry' };
+type PlanEntry = ShoppingListEntry | PantryEntry;
 
 export interface StoreTotal {
   store: string;
-  total: number;
+  estimate: PriceEstimate;
   items: ShoppingListEntry[];
 }
 
 export interface WeekPlan {
   slots: PlannedSlot[];
   shoppingList: ShoppingListEntry[];
-  pantryCovered: ShoppingListEntry[];
+  pantryCovered: PantryEntry[];
   storeTotals: StoreTotal[];
-  totalPrice: number;
+  estimate: PriceEstimate;
 }
 
 function slotKey(day: number, mealType: MealType): string {
@@ -50,46 +48,47 @@ function isInPantry(ingredientName: string, pantryItems: PantryItem[]): boolean 
 
 function marginalPrice(
   recipe: Recipe,
-  purchased: Map<string, ShoppingListEntry>,
+  purchased: Map<string, PlanEntry>,
   pantryItems: PantryItem[],
   globalOffers: GlobalOffer[],
   globalStandardPrices: GlobalStandardPrice[],
-  selectedStores: string[]
+  selectedStores: string[],
+  reference: Date
 ): number {
   let total = 0;
   for (const ing of recipe.ingredients) {
     const key = normalize(ing.name);
     if (purchased.has(key)) continue;
     if (isInPantry(ing.name, pantryItems)) continue;
-    const match = findBestGlobalPrice(ing.name, globalOffers, globalStandardPrices, selectedStores);
-    if (match) total += match.price;
+    const match = findBestGlobalPrice(ing.name, globalOffers, globalStandardPrices, selectedStores, reference);
+    const price = usablePrice(match);
+    if (price !== null) total += price; // Internal ranking uses a known subtotal, never a complete cost.
   }
   return total;
 }
 
 function recordIngredients(
   recipe: Recipe,
-  purchased: Map<string, ShoppingListEntry>,
+  purchased: Map<string, PlanEntry>,
   pantryItems: PantryItem[],
   globalOffers: GlobalOffer[],
   globalStandardPrices: GlobalStandardPrice[],
-  selectedStores: string[]
+  selectedStores: string[],
+  reference: Date
 ) {
   for (const ing of recipe.ingredients) {
     const key = normalize(ing.name);
     if (purchased.has(key)) continue;
 
     if (isInPantry(ing.name, pantryItems)) {
-      purchased.set(key, { ingredientName: ing.name, price: null, store: null, source: 'pantry' });
+      purchased.set(key, { ingredientName: ing.name, source: 'pantry' });
       continue;
     }
 
-    const match = findBestGlobalPrice(ing.name, globalOffers, globalStandardPrices, selectedStores);
+    const match = findBestGlobalPrice(ing.name, globalOffers, globalStandardPrices, selectedStores, reference);
     purchased.set(key, {
       ingredientName: ing.name,
-      price: match?.price ?? null,
-      store: match?.store ?? null,
-      source: match?.source ?? 'unknown',
+      evidence: match,
     });
   }
 }
@@ -97,14 +96,15 @@ function recordIngredients(
 export function groupShoppingListByStore(list: ShoppingListEntry[]): StoreTotal[] {
   const byStore = new Map<string, ShoppingListEntry[]>();
   for (const entry of list) {
-    if (!entry.store) continue;
-    const arr = byStore.get(entry.store) ?? [];
+    if (entry.evidence.source === 'unavailable') continue;
+    const store = entry.evidence.store;
+    const arr = byStore.get(store) ?? [];
     arr.push(entry);
-    byStore.set(entry.store, arr);
+    byStore.set(store, arr);
   }
   return Array.from(byStore.entries()).map(([store, items]) => ({
     store,
-    total: items.reduce((sum, i) => sum + (i.price ?? 0), 0),
+    estimate: summarizePrices(items.map((item) => item.evidence)),
     items,
   }));
 }
@@ -116,9 +116,10 @@ export function planWeek(
   selectedStores: string[],
   pantryItems: PantryItem[],
   weeklyBudget: number,
-  lockedSlots: Record<string, string> = {}
+  lockedSlots: Record<string, string> = {},
+  reference: Date = new Date()
 ): WeekPlan {
-  const purchased = new Map<string, ShoppingListEntry>();
+  const purchased = new Map<string, PlanEntry>();
   const usageCount = new Map<string, number>();
   const slots: PlannedSlot[] = [];
   let runningTotal = 0;
@@ -130,10 +131,10 @@ export function planWeek(
       const recipe = recipes.find((r) => r.id === lockedId);
       if (!recipe) continue;
 
-      const cost = marginalPrice(recipe, purchased, pantryItems, globalOffers, globalStandardPrices, selectedStores);
+      const cost = marginalPrice(recipe, purchased, pantryItems, globalOffers, globalStandardPrices, selectedStores, reference);
       runningTotal += cost;
       usageCount.set(recipe.id, (usageCount.get(recipe.id) ?? 0) + 1);
-      recordIngredients(recipe, purchased, pantryItems, globalOffers, globalStandardPrices, selectedStores);
+      recordIngredients(recipe, purchased, pantryItems, globalOffers, globalStandardPrices, selectedStores, reference);
       slots.push({ day, mealType, recipe, locked: true });
     }
   }
@@ -149,7 +150,7 @@ export function planWeek(
 
       let best: { recipe: Recipe; cost: number } | null = null;
       for (const candidate of candidates) {
-        const cost = marginalPrice(candidate, purchased, pantryItems, globalOffers, globalStandardPrices, selectedStores);
+        const cost = marginalPrice(candidate, purchased, pantryItems, globalOffers, globalStandardPrices, selectedStores, reference);
         if (runningTotal + cost > weeklyBudget) continue;
         if (!best || cost < best.cost) best = { recipe: candidate, cost };
       }
@@ -157,7 +158,7 @@ export function planWeek(
       if (best) {
         runningTotal += best.cost;
         usageCount.set(best.recipe.id, (usageCount.get(best.recipe.id) ?? 0) + 1);
-        recordIngredients(best.recipe, purchased, pantryItems, globalOffers, globalStandardPrices, selectedStores);
+        recordIngredients(best.recipe, purchased, pantryItems, globalOffers, globalStandardPrices, selectedStores, reference);
         slots.push({ day, mealType, recipe: best.recipe, locked: false });
       } else {
         slots.push({ day, mealType, recipe: null, locked: false });
@@ -167,15 +168,16 @@ export function planWeek(
 
   slots.sort((a, b) => a.day - b.day || MEAL_SLOTS.indexOf(a.mealType) - MEAL_SLOTS.indexOf(b.mealType));
 
-  const allEntries = Array.from(purchased.values());
-  const shoppingList = allEntries.filter((e) => e.source !== 'pantry');
-  const pantryCovered = allEntries.filter((e) => e.source === 'pantry');
-
-  return {
-    slots,
-    shoppingList,
-    pantryCovered,
-    storeTotals: groupShoppingListByStore(shoppingList),
-    totalPrice: runningTotal,
-  };
+  return pricePlan(slots, globalOffers, globalStandardPrices, selectedStores, pantryItems, reference);
+}
+/** Re-evaluate evidence without changing the user's chosen plan or empty slots. */
+export function pricePlan(slots: PlannedSlot[], offers: GlobalOffer[], standards: GlobalStandardPrice[], stores: string[], pantry: PantryItem[], reference: Date): WeekPlan {
+  const purchased = new Map<string, PlanEntry>();
+  for (const slot of slots) {
+    if (slot.recipe) recordIngredients(slot.recipe, purchased, pantry, offers, standards, stores, reference);
+  }
+  const entries = [...purchased.values()];
+  const shoppingList = entries.filter((entry): entry is ShoppingListEntry => 'evidence' in entry);
+  return { slots, shoppingList, pantryCovered: entries.filter((entry): entry is PantryEntry => 'source' in entry),
+    storeTotals: groupShoppingListByStore(shoppingList), estimate: summarizePrices(shoppingList.map((entry) => entry.evidence)) };
 }

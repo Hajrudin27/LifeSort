@@ -1,3 +1,5 @@
+import { formatPriceEvidence } from '@/utils/food/pricePresentation';
+import { personalOfferEvidence } from '@/utils/food/priceEvidence';
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, StyleSheet } from "react-native";
@@ -16,7 +18,6 @@ export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const backgroundColor = useThemeColor({}, "background");
   const textMuted = useThemeColor({}, "textMuted");
-  const success = useThemeColor({}, "success");
 
   const recipe = useFoodStore((s) => s.recipes.find((r) => r.id === id));
   const removeRecipe = useFoodStore((s) => s.removeRecipe);
@@ -105,8 +106,8 @@ export default function RecipeDetailScreen() {
               <Text style={styles.ingredientName}>{m.ingredientName}</Text>
               {amount ? <Text style={[styles.ingredientAmount, { color: textMuted }]}>{amount}</Text> : null}
             </View>
-            <Text style={[styles.matchInfo, { color: m.offer ? success : textMuted }, m.offer && { fontWeight: "700" }]}>
-              {m.offer ? t("food.onSaleAt", { store: m.offer.store, price: m.offer.price.toFixed(2) }) : t("food.notOnSale")}
+            <Text style={[styles.matchInfo, { color: textMuted }, m.offer && { fontWeight: "700" }]}>
+              {formatPriceEvidence(personalOfferEvidence(m.offer), t, locale)}
             </Text>
           </Card>
         );
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
   macroValue: { fontWeight: "800", fontSize: 15 },
   macroLabel: { fontSize: 11 },
   sectionLabel: { opacity: 0.6, fontSize: 13, marginTop: 8, fontWeight: "600" },
-  ingredientRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  ingredientRow: { gap: 6 },
   ingredientName: { fontWeight: "700" },
   ingredientAmount: { fontSize: 12, marginTop: 1 },
   matchInfo: { fontSize: 12 },

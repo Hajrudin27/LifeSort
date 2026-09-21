@@ -12,7 +12,7 @@
     "ingredientsLabel": "Ingredients",
     "ingredientPlaceholder": "Ingredient",
     "addIngredient": "+ Add ingredient",
-    "matchedThisWeek": "{{matched}}/{{total}} on sale this week",
+    "matchedThisWeek": "{{matched}}/{{total}} ingredients have recorded offers this week · freshness unknown",
     "onSaleAt": "On sale at {{store}} · {{price}} kr.",
     "notOnSale": "Not on sale",
     "whereToBuyLabel": "Where to buy what",
@@ -128,5 +128,27 @@
             "ml": "Millilitres",
             "piece": "Pieces"
         }
+    },
+    "priceEvidence": {
+        "current": "Current campaign",
+        "stale": "Expired campaign",
+        "upcoming": "Campaign not started",
+        "unknown": "Freshness unknown",
+        "unavailable": "Price unavailable",
+        "offer": "Catalogue offer",
+        "standard": "Standard price",
+        "manual": "Manually recorded offer",
+        "ai_import": "Imported offer",
+        "detail": "{{price}} · {{source}} · {{store}} · {{freshness}}",
+        "validity": "Campaign: {{from}} to {{to}}",
+        "estimate_current": "Estimate with current price evidence: {{amount}}",
+        "estimate_partial": "Known-price subtotal: {{amount}} — incomplete current estimate",
+        "estimate_unavailable": "Current estimate unavailable",
+        "count_unknown": "Unknown freshness: {{count}}",
+        "count_stale": "Expired: {{count}}",
+        "count_upcoming": "Not started: {{count}}",
+        "count_missing": "Missing price: {{count}}",
+        "planMeals": "Planned meals: {{count}}",
+        "planningLimit": "Prices match ingredient names and do not account for pack sizes or quantities. Campaign validity is assessed today, not for every meal date. A subtotal does not confirm that the plan fits your budget."
     }
 }

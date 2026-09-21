@@ -1,33 +1,27 @@
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { FlatList } from "react-native";
 
 import Card from "@/components/Card";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
-import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
+import { useFoodPriceReference } from "@/hooks/useFoodPriceReference";
+import { offerEvidence, validOfferEntry } from "@/utils/food/priceEvidence";
+import { formatPriceEvidence } from "@/utils/food/pricePresentation";
 import { useFoodStore } from "@/store/useFoodStore";
 
-/** APP-045: offers are Danish campaigns, valid on Copenhagen calendar dates. */
-function todayStr() {
-  return budgetPeriodForInstant(new Date()).dateKey;
-}
-
 export default function OffersScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const textMuted = useThemeColor({}, "textMuted");
-  const success = useThemeColor({}, "success");
 
   const globalOffers = useFoodStore((s) => s.globalOffers);
   const selectedStores = useFoodStore((s) => s.selectedStores);
 
-  const activeOffers = useMemo(() => {
-    const today = todayStr();
-    return globalOffers
-      .filter((o) => selectedStores.includes(o.store))
-      .filter((o) => o.validFrom <= today && o.validTo >= today)
-      .sort((a, b) => a.productName.localeCompare(b.productName, "da"));
-  }, [globalOffers, selectedStores]);
+  const reference = useFoodPriceReference();
+  const activeOffers = globalOffers.filter(validOfferEntry)
+    .filter((offer) => selectedStores.includes(offer.store))
+    .map((offer) => ({ ...offer, evidence: offerEvidence(offer, reference) }))
+    .filter((offer) => offer.evidence.freshness === 'current')
+    .sort((a, b) => a.productName.localeCompare(b.productName, i18n.language));
 
   return (
     <View style={sharedStyles.formContainer}>
@@ -45,12 +39,11 @@ export default function OffersScreen() {
           </Card>
         }
         renderItem={({ item }) => (
-          <Card style={sharedStyles.rowBetween}>
+          <Card style={{ gap: 6 }}>
             <View style={styles.rowText}>
               <Text style={styles.name}>{item.productName}</Text>
-              <Text style={[styles.meta, { color: textMuted }]}>{item.store}</Text>
+              <Text style={[styles.meta, { color: textMuted }]}>{formatPriceEvidence(item.evidence, t, i18n.language)}</Text>
             </View>
-            <Text style={[styles.price, { color: success }]}>{item.offerPrice.toFixed(2)} kr.</Text>
           </Card>
         )}
       />
@@ -63,5 +56,4 @@ const styles = {
   rowText: { flex: 1 },
   name: { fontWeight: "700" as const },
   meta: { fontSize: 13 },
-  price: { fontWeight: "700" as const },
 };

@@ -1,3 +1,5 @@
+import { useFoodPriceReference } from '@/hooks/useFoodPriceReference';
+import { formatPriceEstimate, formatPriceEvidence } from '@/utils/food/pricePresentation';
 import { router, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useMemo, useState } from "react";
@@ -16,7 +18,7 @@ import { MealType } from "@/types/food";
 import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 import { foodBudgetFacts } from "@/features/food/budgetReadModel";
 import { getWeekdayNames } from "@/utils/food/foodWeek";
-import { planWeek, WeekPlan } from "@/utils/food/mealPlanning";
+import { planWeek, pricePlan, WeekPlan } from "@/utils/food/mealPlanning";
 
 const MEAL_SLOTS: MealType[] = ["breakfast", "lunch", "dinner"];
 
@@ -32,7 +34,6 @@ export default function WeeklyPlanScreen() {
   const tintColor = accentTints.accent;
   const textMuted = useThemeColor({}, "textMuted");
   const warning = useThemeColor({}, "warning");
-  const success = useThemeColor({}, "success");
   const showToast = useToastStore((s) => s.show);
   const locale = i18n.language === "da" ? "da-DK" : "en-US";
 
@@ -50,7 +51,8 @@ export default function WeeklyPlanScreen() {
 
   // APP-045: the Copenhagen week the plan is saved under, and the same Food
   // facts as the Food overview. Without a budget the planner still gets 0.
-  const period = budgetPeriodForInstant(new Date());
+  const reference = useFoodPriceReference();
+  const period = budgetPeriodForInstant(reference);
   const weekKey = period.weekKey;
   const facts = foodBudgetFacts({ period, monthlyBudgetByMonth, purchases });
   const monthlyBudget = facts.hasBudget ? facts.monthlyBudget : null;
@@ -61,12 +63,13 @@ export default function WeeklyPlanScreen() {
   const [locked, setLocked] = useState<Record<string, string>>({});
   const [pickerSlot, setPickerSlot] = useState<{ day: number; mealType: MealType } | null>(null);
   const [pickerMode, setPickerMode] = useState<"lock" | "swap">("lock");
-  const [plan, setPlan] = useState<WeekPlan | null>(null);
+  const [chosenPlan, setPlan] = useState<WeekPlan | null>(null);
+
+  const plan = useMemo(() => chosenPlan ? pricePlan(chosenPlan.slots, globalOffers, globalStandardPrices, selectedStores, pantryItems, reference) : null, [chosenPlan, globalOffers, globalStandardPrices, selectedStores, pantryItems, reference]);
 
   const slotKey = (day: number, mealType: MealType) => `${day}-${mealType}`;
   const lockedCount = Object.keys(locked).length;
   const plannedMealCount = plan?.slots.filter((slot) => slot.recipe).length ?? 0;
-  const hasUnknownPrices = plan?.shoppingList.some((e) => e.source === "unknown") ?? false;
   const slotsByDay = plan ? Array.from({ length: 7 }, (_, day) => plan.slots.filter((s) => s.day === day)) : [];
   const pickerCandidates = pickerSlot ? recipes.filter((r) => r.mealType === pickerSlot.mealType) : [];
   const weekLabel = useMemo(() => {
@@ -272,12 +275,13 @@ export default function WeeklyPlanScreen() {
             <View style={styles.resultTextGroup}>
               <Text style={styles.resultTitle}>{t("food.planReadyTitle")}</Text>
               <Text style={[styles.resultSubtitle, { color: textMuted }]}>
-                {t("food.planReadySummary", { meals: plannedMealCount, price: plan.totalPrice.toFixed(0) })}
+                {t("food.priceEvidence.planMeals", { count: plannedMealCount })}
+                {" · "}{formatPriceEstimate(plan.estimate, t, locale)}
               </Text>
             </View>
           </Card>
 
-          {hasUnknownPrices && <Text style={[styles.warning, { color: warning }]}>{t("food.unknownPriceWarning")}</Text>}
+          <Text style={{ color: textMuted }}>{t("food.priceEvidence.planningLimit")}</Text>
 
           <View style={styles.sectionHeader}>
             <View>
@@ -322,7 +326,7 @@ export default function WeeklyPlanScreen() {
               {plan.storeTotals.map((st) => (
                 <Card key={st.store} style={styles.storeTotalRow}>
                   <Text style={styles.storeTotalName}>{st.store}</Text>
-                  <Text style={styles.storeTotalAmount}>{st.total.toFixed(2)} kr.</Text>
+                  <Text style={styles.storeTotalAmount}>{formatPriceEstimate(st.estimate, t, locale)}</Text>
                 </Card>
               ))}
             </>
@@ -339,8 +343,8 @@ export default function WeeklyPlanScreen() {
           {plan.shoppingList.map((entry, i) => (
             <Card key={`${entry.ingredientName}-${i}`} style={styles.shoppingRow}>
               <Text style={styles.ingredientName}>{entry.ingredientName}</Text>
-              <Text style={[styles.priceText, { color: entry.source === "unknown" ? warning : textMuted }]}>
-                {entry.price !== null ? `${entry.price.toFixed(2)} kr. (${entry.store})` : t("food.unknownPriceLabel")}
+              <Text style={[styles.priceText, { color: entry.evidence.freshness !== "current" ? warning : textMuted }]}>
+                {formatPriceEvidence(entry.evidence, t, locale)}
               </Text>
             </Card>
           ))}
@@ -431,10 +435,10 @@ const styles = StyleSheet.create({
   slotRecipe: { flexShrink: 1, fontSize: 13, fontWeight: "800", textAlign: "right" },
   lockedBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
   lockedBadgeText: { fontSize: 10, fontWeight: "800" },
-  storeTotalRow: { flexDirection: "row", justifyContent: "space-between" },
+  storeTotalRow: { gap: 6 },
   storeTotalName: { fontWeight: "700" },
   storeTotalAmount: { fontWeight: "700" },
-  shoppingRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
+  shoppingRow: { gap: 6 },
   ingredientName: { flex: 1, fontWeight: "700" },
   priceText: { fontSize: 13, fontWeight: "700" },
   modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },

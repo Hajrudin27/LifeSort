@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  */
 
 type Row = Record<string, unknown>;
+const mockSelects: { table: string; columns: string }[] = [];
 const mockWrites: { table: string; payload: unknown }[] = [];
 const mockRemote: Record<string, Row[]> = {};
 
@@ -13,7 +14,7 @@ jest.mock('@/lib/supabase', () => {
   const from = (table: string) => {
     const chain: Record<string, unknown> = {};
     Object.assign(chain, {
-      select: () => chain, eq: () => chain, delete: () => chain,
+      select: (columns: string) => { mockSelects.push({ table, columns }); return chain; }, eq: () => chain, delete: () => chain,
       then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
         Promise.resolve({ data: mockRemote[table] ?? [], error: null }).then(resolve, reject),
       upsert: (payload: unknown) => { mockWrites.push({ table, payload }); return Promise.resolve({ error: null }); },
@@ -111,5 +112,27 @@ describe('APP-047 remote recipes', () => {
     // Nothing is written back: the server's copy of a skipped row is untouched.
     await flush();
     expect(recipeWrites()).toEqual([]);
+  });
+});
+
+
+describe('APP-048 real store catalogue boundary', () => {
+  it('queries products through both foreign keys and only installs validated rows', async () => {
+    const productId = '11111111-1111-4111-8111-111111111111';
+    const priceId = '22222222-2222-4222-8222-222222222222';
+    const offerId = '33333333-3333-4333-8333-333333333333';
+    const price = { id: priceId, product_id: productId, product: { id: productId, name: 'Synthetic eggs' }, store: 'Netto', price: 15 };
+    const offer = { id: offerId, standard_price_id: priceId, standard_price: price, offer_price: 10, valid_from: '2026-09-21', valid_to: '2026-09-27' };
+    mockRemote.global_standard_prices = [price, { ...price, price: null }, { ...price, product: null }];
+    mockRemote.global_offers = [offer, { ...offer, valid_to: '2026-02-30' }, { ...offer, standard_price: null }];
+    mockSelects.length = 0;
+    await useFoodStore.getState().fetchFromSupabase();
+    expect(mockSelects).toEqual(expect.arrayContaining([
+      { table: 'global_standard_prices', columns: 'id, product_id, store, price, product:products(id, name)' },
+      { table: 'global_offers', columns: 'id, standard_price_id, offer_price, valid_from, valid_to, standard_price:global_standard_prices(id, product_id, store, product:products(id, name))' },
+    ]));
+    expect(useFoodStore.getState().globalStandardPrices).toEqual([{ id: priceId, productName: 'Synthetic eggs', store: 'Netto', price: 15 }]);
+    expect(useFoodStore.getState().globalOffers).toEqual([{ id: offerId, productName: 'Synthetic eggs', store: 'Netto', offerPrice: 10, validFrom: '2026-09-21', validTo: '2026-09-27' }]);
+    expect(mockWrites).toEqual([]);
   });
 });

@@ -1,65 +1,31 @@
-import { budgetPeriodForInstant } from '@/core/dates/budgetPeriod';
-import { GlobalOffer, GlobalStandardPrice } from '@/types/food';
+import type { GlobalOffer, GlobalStandardPrice } from '@/types/food';
+import { offerEvidence, unavailablePrice, validOfferEntry, validPriceEntry, type PriceEvidence } from '@/utils/food/priceEvidence';
 
-function normalize(text: string): string {
-  return text.trim().toLowerCase();
-}
-
-export interface PriceMatch {
-  price: number;
-  store: string;
-  source: 'offer' | 'standard';
-}
-
-function isOfferActive(offer: GlobalOffer, today: string): boolean {
-  return offer.validFrom <= today && offer.validTo >= today;
-}
-
-function matchByName<T extends { productName: string; store: string }>(
-  ingredientName: string,
-  entries: T[],
-  selectedStores: string[]
-): T[] {
-  const norm = normalize(ingredientName);
-  if (norm.length === 0) return [];
-  return entries.filter((e) => {
-    if (!selectedStores.includes(e.store)) return false;
-    const productNorm = normalize(e.productName);
-    return productNorm.includes(norm) || norm.includes(productNorm);
+function matchByName<T extends { productName: string; store: string }>(name: string, entries: T[], stores: string[]): T[] {
+  const norm = name.trim().toLowerCase();
+  if (!norm) return [];
+  return entries.filter((entry) => {
+    const product = entry.productName.trim().toLowerCase();
+    return stores.includes(entry.store) && (product.includes(norm) || norm.includes(product));
   });
 }
 
-// Finder den billigste pris for en ingrediens, udelukkende inden for brugerens
-// valgte butikker — tjekker først aktive tilbud, falder derefter tilbage til
-// billigste standardpris. Bruges til madplan-generering og shoppingliste.
+/** Compatibility display-name matching only. Ingredient family IDs are never product IDs. */
 export function findBestGlobalPrice(
-  ingredientName: string,
-  globalOffers: GlobalOffer[],
-  globalStandardPrices: GlobalStandardPrice[],
-  selectedStores: string[]
-): PriceMatch | null {
-  if (selectedStores.length === 0) return null;
-
-  // APP-045: offers are Danish campaigns, valid on Copenhagen calendar dates.
-  const today = budgetPeriodForInstant(new Date()).dateKey;
-  const activeOffers = globalOffers.filter((o) => isOfferActive(o, today));
-
-  const offerMatches = matchByName(ingredientName, activeOffers, selectedStores).map((o) => ({
-    price: o.offerPrice,
-    store: o.store,
-    source: 'offer' as const,
-  }));
-
-  if (offerMatches.length > 0) {
-    return [...offerMatches].sort((a, b) => a.price - b.price)[0];
+  ingredientName: string, globalOffers: GlobalOffer[], globalStandardPrices: GlobalStandardPrice[],
+  selectedStores: string[], reference: Date = new Date(),
+): PriceEvidence {
+  const campaigns = matchByName(ingredientName, globalOffers.filter(validOfferEntry), selectedStores)
+    .map((offer) => offerEvidence(offer, reference));
+  const current = campaigns.filter((item) => item.freshness === 'current');
+  const cheapest = (items: PriceEvidence[]) => items.sort((a, b) => ('price' in a ? a.price : Infinity) - ('price' in b ? b.price : Infinity))[0];
+  if (current.length) return cheapest(current);
+  const standards = matchByName(ingredientName, globalStandardPrices.filter(validPriceEntry), selectedStores);
+  if (standards.length) {
+    const entry = standards.sort((a, b) => a.price - b.price)[0];
+    return { freshness: 'unknown', source: 'standard', price: entry.price, store: entry.store };
   }
-
-  const standardMatches = matchByName(ingredientName, globalStandardPrices, selectedStores).map((s) => ({
-    price: s.price,
-    store: s.store,
-    source: 'standard' as const,
-  }));
-
-  if (standardMatches.length === 0) return null;
-  return [...standardMatches].sort((a, b) => a.price - b.price)[0];
+  // Retain dated evidence for explanation only; it cannot contribute to a subtotal.
+  const expired = campaigns.filter((item) => item.freshness === 'stale');
+  return cheapest(expired.length ? expired : campaigns) ?? unavailablePrice();
 }

@@ -1,16 +1,18 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, Pressable, StyleSheet, TextInput } from 'react-native';
+import { Alert, AppState, FlatList, Pressable, StyleSheet, TextInput } from 'react-native';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { INGREDIENT_UNITS, parseIngredientQuantityInput, type IngredientUnit } from '@/core/food/ingredients';
 import type { PantryItem } from '@/core/food/pantry';
-import { parseCalendarDate } from '@/utils/shared/localDate';
+import { parseCalendarDate, todayIso } from '@/utils/shared/localDate';
 import { useFoodStore } from '@/store/useFoodStore';
 import { useToastStore } from '@/store/useToastStore';
 import { formatIngredientQuantity } from '@/utils/food/ingredientFormat';
+import { useSoonSuggestions } from '@/features/food/useSoonSuggestions';
 
 type DateField = 'purchasedDate' | 'openedDate' | 'expiryDate';
 const DATE_FIELDS: DateField[] = ['purchasedDate', 'openedDate', 'expiryDate'];
@@ -24,6 +26,15 @@ export default function PantryScreen() {
   const textMuted = useThemeColor({}, 'textMuted');
   const danger = useThemeColor({}, 'danger');
   const pantryItems = useFoodStore((s) => s.pantryItems);
+  const recipes = useFoodStore((s) => s.recipes);
+  const [referenceDate, setReferenceDate] = useState(todayIso);
+  useEffect(() => {
+    const refresh = () => setReferenceDate(todayIso());
+    const timer = setInterval(refresh, 60_000);
+    const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') refresh(); });
+    return () => { clearInterval(timer); subscription.remove(); };
+  }, []);
+  const useSoon = useMemo(() => useSoonSuggestions({ pantryItems, recipes, referenceDate }), [pantryItems, recipes, referenceDate]);
   const addPantryItem = useFoodStore((s) => s.addPantryItem);
   const updatePantryItem = useFoodStore((s) => s.updatePantryItem);
   const removePantryItem = useFoodStore((s) => s.removePantryItem);
@@ -102,6 +113,48 @@ export default function PantryScreen() {
         data={pantryItems}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          <Card style={styles.useSoonSection}>
+            <Text style={styles.sectionTitle}>{t('food.useSoon.title')}</Text>
+            <Text style={{ color: textMuted }}>{t('food.useSoon.context')}</Text>
+            <Text style={{ color: textMuted }}>{t('food.useSoon.checkLabel')}</Text>
+            {useSoon.useSoonItems.length ? useSoon.useSoonItems.map(({ item, expiryDate, daysUntilExpiry }) => (
+              <View key={item.id} style={styles.evidenceRow}>
+                <Text>{item.name}</Text>
+                <Text style={{ color: textMuted }}>{t('food.useSoon.registeredExpiry', { date: expiryDate })} · {daysUntilExpiry === 0
+                  ? t('food.useSoon.today') : t('food.useSoon.inDays', { count: daysUntilExpiry })}</Text>
+              </View>
+            )) : <Text style={{ color: textMuted }}>{t('food.useSoon.noItems')}</Text>}
+            {useSoon.suggestions.length ? <>
+              <Text style={styles.subheading}>{t('food.useSoon.suggestions')}</Text>
+              {useSoon.suggestions.map((suggestion) => (
+                <Pressable key={suggestion.recipe.id} accessibilityRole="button"
+                  accessibilityLabel={t('food.useSoon.openRecipe', { name: suggestion.recipe.name })}
+                  onPress={() => router.push({ pathname: '/food/recipes/[id]', params: { id: suggestion.recipe.id } })}
+                  style={[styles.suggestion, { borderColor }]}>
+                  <Text style={styles.name}>{suggestion.recipe.name}</Text>
+                  <Text style={{ color: textMuted }}>{t('food.useSoon.triggeredBy', {
+                    items: suggestion.matchedUseSoonItems.map(({ item, expiryDate }) => t('food.useSoon.triggerItem', {
+                      name: item.name, date: expiryDate,
+                    })).join(', '),
+                  })}</Text>
+                  {suggestion.otherPantryMatchedIngredients.length > 0 && <Text style={{ color: textMuted }}>{t('food.useSoon.otherPantryMatches', {
+                    items: suggestion.otherPantryMatchedIngredients.map(({ ingredientName }) => ingredientName).join(', '),
+                  })}</Text>}
+                  {suggestion.notConfirmedIngredientCount > 0 && <Text style={{ color: textMuted }}>{t('food.useSoon.notConfirmed', {
+                    count: suggestion.notConfirmedIngredientCount,
+                  })}</Text>}
+                </Pressable>
+              ))}
+            </> : <Text style={{ color: textMuted }}>{t('food.useSoon.noSuggestions')}</Text>}
+            {useSoon.pastExpiryItems.length > 0 && <>
+              <Text style={styles.subheading}>{t('food.useSoon.pastExpiry')}</Text>
+              {useSoon.pastExpiryItems.map(({ item, expiryDate }) => (
+                <Text key={item.id} style={{ color: textMuted }}>{item.name} · {t('food.useSoon.registeredExpiry', { date: expiryDate })} · {t('food.useSoon.datePassed')}</Text>
+              ))}
+            </>}
+          </Card>
+        }
         ListEmptyComponent={<Card style={sharedStyles.emptyCard}><Text style={{ color: textMuted }}>{t('food.pantryEmpty')}</Text></Card>}
         renderItem={({ item }) => (
           <Card style={styles.itemCard}>
@@ -174,4 +227,9 @@ const styles = StyleSheet.create({
   units: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   unit: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
   dateField: { gap: 8 },
+  useSoonSection: { gap: 10 },
+  sectionTitle: { fontSize: 20, fontWeight: '700' },
+  subheading: { fontSize: 16, fontWeight: '700', marginTop: 6 },
+  evidenceRow: { gap: 2 },
+  suggestion: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 4 },
 });

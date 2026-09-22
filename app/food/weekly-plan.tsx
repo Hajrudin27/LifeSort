@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -18,6 +18,7 @@ import { MealType } from "@/types/food";
 import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 import { foodBudgetFacts } from "@/features/food/budgetReadModel";
 import { assessFoodPlanBudget } from "@/features/food/planBudgetAssessment";
+import { deriveShoppingList } from "@/features/food/shoppingListDerivation";
 import { getWeekdayNames } from "@/utils/food/foodWeek";
 import { planWeek, pricePlan, WeekPlan } from "@/utils/food/mealPlanning";
 
@@ -47,7 +48,7 @@ export default function WeeklyPlanScreen() {
   const selectedStores = useFoodStore((s) => s.selectedStores);
   const shoppingItems = useFoodStore((s) => s.shoppingItems);
   const savedPlans = useFoodStore((s) => s.savedPlans);
-  const addShoppingItem = useFoodStore((s) => s.addShoppingItem);
+  const materializeShoppingList = useFoodStore((s) => s.materializeShoppingList);
   const savePlan = useFoodStore((s) => s.savePlan);
 
   // APP-045: the Copenhagen week and the same Food facts as the overview.
@@ -160,8 +161,16 @@ export default function WeeklyPlanScreen() {
 
   const sendAllToShoppingList = () => {
     if (!plan) return;
-    plan.shoppingList.forEach((entry) => addShoppingItem(entry.ingredientName));
-    showToast(t("food.shoppingListSentToast"));
+    const generateList = () => {
+      materializeShoppingList(weekKey, deriveShoppingList(plan.slots));
+      showToast(t("food.shoppingListSentToast"));
+    };
+    if (shoppingItems.some((item) => item.kind === 'meal_plan' && item.weekKey === weekKey)) {
+      Alert.alert(t('food.shoppingDerivation.replaceTitle'), t('food.shoppingDerivation.replaceBody'), [
+        { text: t('food.cancel'), style: 'cancel' },
+        { text: t('food.shoppingDerivation.replaceAction'), onPress: generateList },
+      ]);
+    } else generateList();
   };
 
   return (
@@ -370,7 +379,7 @@ export default function WeeklyPlanScreen() {
             </Card>
           ))}
 
-          <Button label={t("food.sendToShoppingList")} onPress={sendAllToShoppingList} />
+          <Button label={t("food.shoppingDerivation.generateAction")} onPress={sendAllToShoppingList} />
         </>
       )}
 

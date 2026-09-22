@@ -69,6 +69,21 @@
     "expired": "Expired",
     "shoppingListLabel": "Shopping list",
     "shoppingListEmpty": "List is empty",
+    "shoppingDerivation": {
+      "generateAction": "Generate shopping list from meal plan",
+      "replaceTitle": "Replace generated list?",
+      "replaceBody": "Generated items for this week will be replaced. Manual items and other weeks stay.",
+      "replaceAction": "Replace",
+      "fromWeek": "From meal plan · {{week}}",
+      "legacyAmount": "Amount text: {{text}} · {{count}} occurrences",
+      "editItem": "Edit {{name}}",
+      "showSources": "Show sources for {{name}}",
+      "sources": "Sources ({{count}})",
+      "missingRecipe": "Source recipe no longer available",
+      "day": "Day {{day}}",
+      "label": "Shopping item name",
+      "amount": "Amount"
+    },
     "newShoppingItemPlaceholder": "New item",
     "mealTypes": {
       "all": "All",

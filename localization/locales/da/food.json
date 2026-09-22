@@ -69,6 +69,21 @@
     "expired": "Udløbet",
     "shoppingListLabel": "Indkøbsliste",
     "shoppingListEmpty": "Listen er tom",
+    "shoppingDerivation": {
+      "generateAction": "Generér indkøbsliste fra madplan",
+      "replaceTitle": "Erstat genereret liste?",
+      "replaceBody": "Genererede varer for denne uge erstattes. Manuelle varer og andre uger bevares.",
+      "replaceAction": "Erstat",
+      "fromWeek": "Fra madplan · {{week}}",
+      "legacyAmount": "Mængdetekst: {{text}} · {{count}} forekomster",
+      "editItem": "Rediger {{name}}",
+      "showSources": "Vis kilder for {{name}}",
+      "sources": "Kilder ({{count}})",
+      "missingRecipe": "Kildeopskrift ikke længere tilgængelig",
+      "day": "Dag {{day}}",
+      "label": "Navn på indkøbsvare",
+      "amount": "Mængde"
+    },
     "newShoppingItemPlaceholder": "Ny vare",
     "mealTypes": {
       "all": "Alle",

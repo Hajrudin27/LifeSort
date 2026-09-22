@@ -136,7 +136,7 @@ describe('APP-047 creating a recipe', () => {
     await flush();
     expect(recipeWrites()).toEqual([expect.objectContaining({ id: recipe.id, ingredients })]);
     const persisted = JSON.parse((await AsyncStorage.getItem('lifesort-food-v2'))!);
-    expect(persisted.version).toBe(2);
+    expect(persisted.version).toBe(3);
     expect(persisted.state.recipes.find((r: Row) => r.id === recipe.id).ingredients).toEqual(ingredients);
   });
 

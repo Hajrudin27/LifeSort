@@ -12,6 +12,8 @@ import {
   type NewRecipeIngredient,
 } from '@/core/food/ingredients';
 import { canonicalPantryEdit, decodePantryRow, type NewPantryItem } from '@/core/food/pantry';
+import { decodeShoppingItem, isWeekKey, type ShoppingAmount, type ShoppingRequirement } from '@/core/food/shopping';
+import { decodeRemoteShoppingItems, shoppingBaseRow, shoppingDerivationRow } from '@/core/food/shoppingRemote';
 import { getSeedRecipesForLanguage, refreshSeedRecipes } from '@/data/seedRecipes';
 import { supabase } from '@/lib/supabase';
 import { trackSync, reportSyncFailure } from '@/store/useSyncStatusStore';
@@ -57,6 +59,8 @@ interface FoodState {
   removePantryItem: (id: string) => void;
 
   addShoppingItem: (label: string) => void;
+  editShoppingItem: (id: string, changes: { label: string; amount?: ShoppingAmount }) => void;
+  materializeShoppingList: (weekKey: string, requirements: readonly ShoppingRequirement[]) => void;
   toggleShoppingItem: (id: string) => void;
   removeShoppingItem: (id: string) => void;
 
@@ -104,8 +108,12 @@ function pantryItemToRow(userId: string, p: PantryItem) {
     added_at: p.addedAt,
   };
 }
-function shoppingItemToRow(userId: string, i: ShoppingListItem) {
-  return { id: i.id, user_id: userId, label: i.label, checked: i.checked };
+async function upsertShoppingItem(userId: string, item: ShoppingListItem) {
+  const base = await supabase.from('food_shopping_items').upsert(shoppingBaseRow(userId, item));
+  trackSync('food', 'shopping item', base);
+  if (base.error || item.kind !== 'meal_plan') return;
+  const derivation = await supabase.from('food_shopping_item_derivations').upsert(shoppingDerivationRow(userId, item));
+  trackSync('food', 'shopping derivation', derivation);
 }
 function offerToRow(userId: string, o: GroceryOffer) {
   return { id: o.id, user_id: userId, product_name: o.productName, price: o.price, store: o.store, week_key: o.weekKey, source: o.source };
@@ -229,24 +237,56 @@ export const useFoodStore = create<FoodState>()(
       },
 
       addShoppingItem: (label) => {
-        const newItem: ShoppingListItem = { id: newEntityId(), label, checked: false };
+        const newItem = decodeShoppingItem({ id: newEntityId(), kind: 'manual', label, checked: false });
+        if (!newItem || !label.trim()) throw new Error('shopping_invalid');
         set((state) => ({ shoppingItems: [...state.shoppingItems, newItem] }));
         getUserId().then((userId) => {
-          if (userId) supabase.from('food_shopping_items').upsert(shoppingItemToRow(userId, newItem)).then(logIfError('addShoppingItem'));
+          if (userId) void upsertShoppingItem(userId, newItem);
+        });
+      },
+      editShoppingItem: (id, changes) => {
+        const current = get().shoppingItems.find((item) => item.id === id);
+        if (!current) return;
+        const next = decodeShoppingItem({ ...current, label: changes.label,
+          ...(current.kind === 'meal_plan' && changes.amount ? { amount: changes.amount } : {}) });
+        if (!next || !changes.label.trim() || (current.kind === 'manual' && changes.amount)) throw new Error('shopping_invalid');
+        set((state) => ({ shoppingItems: state.shoppingItems.map((item) => item.id === id ? next : item) }));
+        getUserId().then((userId) => { if (userId) void upsertShoppingItem(userId, next); });
+      },
+      materializeShoppingList: (weekKey, requirements) => {
+        if (!isWeekKey(weekKey) || !Array.isArray(requirements)) throw new Error('shopping_invalid');
+        const validated = requirements.map((requirement) => decodeShoppingItem({
+          id: 'validation', kind: 'meal_plan', weekKey, checked: false, ...requirement,
+        }));
+        if (validated.some((item) => !item || item.kind !== 'meal_plan')) throw new Error('shopping_invalid');
+        const created = validated.map((item) => ({ ...item!, id: newEntityId() } as ShoppingListItem));
+        const replaced = get().shoppingItems.filter((item) => item.kind === 'meal_plan' && item.weekKey === weekKey);
+        set((state) => ({ shoppingItems: [
+          ...state.shoppingItems.filter((item) => item.kind !== 'meal_plan' || item.weekKey !== weekKey), ...created,
+        ] }));
+        getUserId().then(async (userId) => {
+          if (!userId) return;
+          for (const item of replaced) {
+            const result = await supabase.from('food_shopping_items').delete().eq('user_id', userId).eq('id', item.id);
+            trackSync('food', 'shopping replacement', result);
+          }
+          for (const item of created) await upsertShoppingItem(userId, item);
         });
       },
       toggleShoppingItem: (id) => {
+        const current = get().shoppingItems.find((item) => item.id === id);
+        if (!current) return;
+        const next = decodeShoppingItem({ ...current, checked: !current.checked });
+        if (!next) throw new Error('shopping_invalid');
         set((state) => ({
-          shoppingItems: state.shoppingItems.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)),
+          shoppingItems: state.shoppingItems.map((i) => (i.id === id ? next : i)),
         }));
-        const target = get().shoppingItems.find((i) => i.id === id);
-        if (target) {
-          getUserId().then((userId) => {
-            if (userId) supabase.from('food_shopping_items').upsert(shoppingItemToRow(userId, target)).then(logIfError('toggleShoppingItem'));
-          });
-        }
+        getUserId().then((userId) => { if (userId) void upsertShoppingItem(userId, next); });
       },
       removeShoppingItem: (id) => {
+        const current = get().shoppingItems.find((item) => item.id === id);
+        if (!current) return;
+        if (!decodeShoppingItem(current)) throw new Error('shopping_invalid');
         set((state) => ({ shoppingItems: state.shoppingItems.filter((i) => i.id !== id) }));
         getUserId().then((userId) => {
           if (userId) supabase.from('food_shopping_items').delete().eq('user_id', userId).eq('id', id).then(logIfError('removeShoppingItem'));
@@ -330,6 +370,7 @@ export const useFoodStore = create<FoodState>()(
           purchasesResult,
           pantryResult,
           shoppingResult,
+          shoppingDerivationsResult,
           offersResult,
           recipesResult,
           pricesResult,
@@ -341,7 +382,8 @@ export const useFoodStore = create<FoodState>()(
           supabase.from('food_monthly_budget').select('month_key, amount').eq('user_id', userId),
           supabase.from('food_purchases').select('id, amount, date').eq('user_id', userId),
           supabase.from('food_pantry_items').select('id, name, quantity, structured_quantity, structured_unit, purchased_date, opened_date, expiry_date, added_at').eq('user_id', userId),
-          supabase.from('food_shopping_items').select('id, label, checked').eq('user_id', userId),
+          supabase.from('food_shopping_items').select('id, label, checked, source_kind').eq('user_id', userId),
+          supabase.from('food_shopping_item_derivations').select('shopping_item_id, week_key, identity_kind, family_id, source_recipe_id, source_ingredient_index, identity_unit, amount_kind, current_quantity, current_unit, current_legacy_text, repetitions, provenance').eq('user_id', userId),
           supabase.from('food_offers').select('id, product_name, price, store, week_key, source').eq('user_id', userId),
           supabase.from('food_recipes').select('id, name, meal_type, ingredients, minutes, instructions, calories, protein, carbs, fat, tags').eq('user_id', userId),
           supabase.from('food_standard_prices').select('id, product_name, store, price').eq('user_id', userId),
@@ -356,6 +398,7 @@ export const useFoodStore = create<FoodState>()(
         if (purchasesResult.error) reportSyncFailure('food', 'purchases', purchasesResult.error);
         if (pantryResult.error) reportSyncFailure('food', 'pantry', pantryResult.error);
         if (shoppingResult.error) reportSyncFailure('food', 'shopping', shoppingResult.error);
+        if (shoppingDerivationsResult.error) reportSyncFailure('food', 'shopping derivations', shoppingDerivationsResult.error);
         if (offersResult.error) reportSyncFailure('food', 'offers', offersResult.error);
         if (recipesResult.error) reportSyncFailure('food', 'recipes', recipesResult.error);
         if (pricesResult.error) reportSyncFailure('food', 'prices', pricesResult.error);
@@ -366,6 +409,7 @@ export const useFoodStore = create<FoodState>()(
 
         let skippedRecipeRows = 0;
         let invalidPantryRows = false;
+        let invalidShoppingRows = false;
         set((state) => {
           const next: Partial<FoodState> = {};
 
@@ -392,12 +436,14 @@ export const useFoodStore = create<FoodState>()(
             else next.pantryItems = [...state.pantryItems, ...(decoded as PantryItem[]).filter((item) => !existingIds.has(item.id))];
           }
 
-          if (!shoppingResult.error && shoppingResult.data) {
+          if (!shoppingResult.error && !shoppingDerivationsResult.error && shoppingResult.data && shoppingDerivationsResult.data) {
+            const decoded = decodeRemoteShoppingItems(shoppingResult.data, shoppingDerivationsResult.data);
+            if (!decoded) invalidShoppingRows = true;
+            else {
             const existingIds = new Set(state.shoppingItems.map((i) => i.id));
-            const fetched: ShoppingListItem[] = shoppingResult.data
-              .filter((row) => !existingIds.has(row.id))
-              .map((row) => ({ id: row.id, label: row.label, checked: row.checked }));
+            const fetched = decoded.filter((row) => !existingIds.has(row.id));
             next.shoppingItems = [...state.shoppingItems, ...fetched];
+            }
           }
 
           if (!offersResult.error && offersResult.data) {
@@ -472,13 +518,14 @@ export const useFoodStore = create<FoodState>()(
         // Privacy-safe: a fixed code, never the row or its ingredient text.
         if (skippedRecipeRows > 0) reportSyncFailure('food', 'recipes', new IngredientError('ingredient_invalid'));
         if (invalidPantryRows) reportSyncFailure('food', 'pantry', new Error('pantry_invalid'));
+        if (invalidShoppingRows) reportSyncFailure('food', 'shopping', new Error('shopping_invalid'));
       },
     }),
     {
       name: 'lifesort-food-v2',
       storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
-      // APP-050 v2: typed pantry items; APP-047 recipes remain typed.
-      version: 2,
+      // APP-052 v3: typed shopping artifacts; existing Pantry and recipes remain typed.
+      version: 3,
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         const seeds = getSeedRecipesForLanguage(i18n.language);

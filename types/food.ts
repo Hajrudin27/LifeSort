@@ -10,11 +10,7 @@ export interface GroceryPurchase {
   date: string;
 }
 
-export interface ShoppingListItem {
-  id: string;
-  label: string;
-  checked: boolean;
-}
+export type { ShoppingListItem } from '@/core/food/shopping';
 
 export interface GroceryOffer {
   id: string;

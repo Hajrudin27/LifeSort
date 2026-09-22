@@ -212,7 +212,7 @@ describe('APP-027 logical domain contracts', () => {
 
 describe('APP-027 physical persistence surfaces', () => {
   it('has no duplicate physical surface ids and no dangling domain references', () => {
-    expect(PERSISTENCE_SURFACES).toHaveLength(87);
+    expect(PERSISTENCE_SURFACES).toHaveLength(88);
     expect(new Set(registeredSurfaceIds).size).toBe(PERSISTENCE_SURFACES.length);
 
     for (const surface of PERSISTENCE_SURFACES) {

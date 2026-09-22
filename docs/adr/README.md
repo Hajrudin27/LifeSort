@@ -59,6 +59,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0038](./0038-ingredient-identity-is-a-locale-independent-family-id.md) | Ingredient identity is a locale-independent family ID, separate from display text and retailer products | Accepted | 2026-09-19 | APP-047 |
 | [0039](./0039-price-freshness-requires-temporal-provenance.md) | Price freshness requires authoritative temporal provenance | Accepted | 2026-09-21 | APP-048 |
 | [0040](./0040-pantry-inventory-preserves-explicit-facts.md) | Pantry inventory preserves explicit facts and legacy text | Accepted | 2026-09-21 | APP-050 |
+| [0041](./0041-shopping-lists-are-editable-snapshots-with-durable-source-trace.md) | Shopping lists are editable snapshots with durable source trace | Accepted | 2026-09-21 | APP-052 |
 
 ## When an ADR is required
 

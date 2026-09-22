@@ -1,5 +1,6 @@
 import { decodeCompatibleRecipeIngredients, decodeRecipeIngredients } from '@/core/food/ingredients';
 import { decodePantryItems } from '@/core/food/pantry';
+import { decodeShoppingItems } from '@/core/food/shopping';
 import type { LocalMigrationDefinition } from './harness';
 
 /**
@@ -22,6 +23,8 @@ import type { LocalMigrationDefinition } from './harness';
  * APP-050 adds v1 → v2 in the same Food-store definition: old Pantry quantity
  * text is copied verbatim to legacyQuantityText. No amount, unit, date or
  * ingredient family is inferred. Malformed Pantry state fails before any write.
+ * APP-052 adds v2 → v3: every historical shopping row becomes an explicit
+ * manual item, preserving its id, label and checked state without inference.
  */
 
 type Json = Record<string, unknown>;
@@ -54,7 +57,7 @@ export const foodIngredientsMigration: LocalMigrationDefinition = {
   storeId: 'async-storage:lifesort-food-v2',
   // "-v2" is part of the key name, not a schema version.
   storageKey: 'lifesort-food-v2',
-  currentVersion: 2,
+  currentVersion: 3,
   detectVersion,
   steps: {
     0: (v) => {
@@ -85,9 +88,17 @@ export const foodIngredientsMigration: LocalMigrationDefinition = {
         version: 2,
       };
     },
+    2: (v) => {
+      if (!knownFood(v, 2, decodeRecipeIngredients)) throw new Error('unknown-legacy-shape');
+      const current = v as Json;
+      const state = current.state as Json;
+      const shoppingItems = decodeShoppingItems(state.shoppingItems, true);
+      if (!shoppingItems || decodePantryItems(state.pantryItems) === null) throw new Error('unknown-legacy-shopping-shape');
+      return { ...current, state: { ...state, shoppingItems }, version: 3 };
+    },
   },
   validateCurrent: (v) => {
-    const state = foodState(v, 2);
-    return knownFood(v, 2, decodeRecipeIngredients) && decodePantryItems(state?.pantryItems) !== null;
+    const state = foodState(v, 3);
+    return knownFood(v, 3, decodeRecipeIngredients) && decodePantryItems(state?.pantryItems) !== null && decodeShoppingItems(state?.shoppingItems) !== null;
   },
 };

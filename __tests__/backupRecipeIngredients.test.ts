@@ -20,6 +20,7 @@ jest.mock('expo-sharing', () => ({
   shareAsync: jest.fn(() => Promise.resolve()),
 }));
 import { familyIngredient, unlinkedIngredient } from '@/core/food/ingredients';
+import { deriveShoppingList } from '@/features/food/shoppingListDerivation';
 import { useFoodStore } from '@/store/useFoodStore';
 import { exportBackup, importBackup } from '@/utils/shared/dataBackup';
 
@@ -29,8 +30,8 @@ const food = (ingredients: unknown) => ({ food: { recipes: [recipe(ingredients)]
 const recipesOf = (result: ReturnType<typeof parseBackupFile>) => (result.ok ? result.data.food?.recipes : undefined);
 
 describe('APP-047 backup parsing', () => {
-  it('exports the current format 5 while keeping the format 4 ingredient contract', () => {
-    expect(BACKUP_VERSION).toBe(5);
+  it('exports the current format 6 while keeping the format 4 ingredient contract', () => {
+    expect(BACKUP_VERSION).toBe(6);
   });
 
   it.each([1, 2, 3])('format %i: keeps each { name, amount } verbatim as legacy, inferring no family', (version) => {
@@ -65,7 +66,7 @@ describe('APP-047 backup parsing', () => {
 
   it('rejects a recipe that is not an object, and a future format', () => {
     expect(parseBackupFile(backup(4, { food: { recipes: ['seed-1'] } }))).toEqual({ ok: false, error: 'invalid_format' });
-    expect(parseBackupFile(backup(6, food([])))).toEqual({ ok: false, error: 'unsupported_version' });
+    expect(parseBackupFile(backup(7, food([])))).toEqual({ ok: false, error: 'unsupported_version' });
   });
 
   it('never reports ingredient text', () => {
@@ -78,7 +79,7 @@ describe('APP-047 backup restore and export through the real Food store', () => 
     await useFoodStore.persist.rehydrate();
   });
 
-  it('restores a format 3 recipe as typed legacy data, and a format 5 re-export round-trips', async () => {
+  it('restores a format 3 recipe as typed legacy data, and a format 6 re-export round-trips', async () => {
     mockFileContent = backup(3, food([{ name: 'Æg', amount: '2 stk' }]));
     expect(await importBackup()).toMatchObject({ success: true });
     expect(useFoodStore.getState().recipes).toEqual([recipe([{ kind: 'legacy', name: 'Æg', amount: '2 stk' }])]);
@@ -88,7 +89,7 @@ describe('APP-047 backup restore and export through the real Food store', () => 
     const restored = JSON.stringify(useFoodStore.getState().recipes);
     await exportBackup();
     const exported = JSON.parse(mockWritten);
-    expect(exported.version).toBe(5);
+    expect(exported.version).toBe(6);
 
     useFoodStore.setState({ recipes: [] });
     mockFileContent = mockWritten;
@@ -101,14 +102,14 @@ describe('APP-050 Pantry backup restore', () => {
   const old = { id: 'p', name: 'Synthetic pantry', quantity: 'ca. halvdelen',
     expiryDate: '2026-10-01', addedAt: '2026-09-01T08:00:00.000Z' };
 
-  it('imports format 4 text, exports format 5 and round-trips the canonical item', async () => {
+  it('imports format 4 text, exports format 6 and round-trips the canonical item', async () => {
     mockFileContent = backup(4, { food: { pantryItems: [old] } });
     expect(await importBackup()).toMatchObject({ success: true });
     const expected = [{ id: old.id, name: old.name, legacyQuantityText: old.quantity,
       expiryDate: old.expiryDate, addedAt: old.addedAt }];
     expect(useFoodStore.getState().pantryItems).toEqual(expected);
     await exportBackup();
-    expect(JSON.parse(mockWritten).version).toBe(5);
+    expect(JSON.parse(mockWritten).version).toBe(6);
     useFoodStore.setState({ pantryItems: [] });
     mockFileContent = mockWritten;
     expect(await importBackup()).toMatchObject({ success: true });
@@ -121,5 +122,42 @@ describe('APP-050 Pantry backup restore', () => {
     mockFileContent = backup(5, { food: { pantryItems: [{ ...old, quantity: 0, unit: 'g' }] }, todos: { todos: [] } });
     expect(await importBackup()).toEqual({ success: false, restoredKeys: [], skippedKeys: [], error: 'invalid_format' });
     expect(useFoodStore.getState().pantryItems).toBe(before);
+  });
+});
+
+describe('APP-052 shopping backup v6', () => {
+  const old = { id: 'old-shopping', label: '  Milk  ', checked: true };
+  const sourceRecipe = { id: 'shopping-recipe', name: 'Dinner', mealType: 'dinner' as const, ingredients: [familyIngredient('potato', 'Potatoes', 500, 'g')] };
+  const derived = { ...deriveShoppingList([{ day: 0, mealType: 'dinner' as const, recipe: sourceRecipe }])[0],
+    id: 'generated', kind: 'meal_plan' as const, weekKey: '2026-W39', checked: false,
+    amount: { kind: 'structured' as const, quantity: 600, unit: 'g' as const } };
+
+  it.each([1, 2, 3, 4, 5])('upgrades format %i manual labels without inferred fields', (version) => {
+    const result = parseBackupFile(backup(version, { food: { shoppingItems: [old] } }));
+    expect(result.ok && result.data.food?.shoppingItems).toEqual([{ ...old, kind: 'manual' }]);
+  });
+
+  it('accepts current manual and derived items and rejects malformed derived imports in full', () => {
+    const payload = { food: { shoppingItems: [{ ...old, kind: 'manual' }, derived] } };
+    expect(parseBackupFile(backup(6, payload))).toMatchObject({ ok: true, data: payload });
+    for (const invalid of [
+      { ...derived, provenance: [] },
+      { ...derived, provenance: [{ ...derived.provenance[0], recipeId: '' }] },
+      { ...derived, amount: { kind: 'structured', quantity: 0, unit: 'g' } },
+      { ...derived, amount: { kind: 'structured', quantity: 500, unit: 'kg' } },
+      { ...derived, kind: 'other' },
+    ]) expect(parseBackupFile(backup(6, { food: { shoppingItems: [{ ...old, kind: 'manual' }, invalid] } }))).toEqual({ ok: false, error: 'invalid_format' });
+  });
+
+  it('round-trips current amount edits and original provenance', async () => {
+    await useFoodStore.persist.rehydrate();
+    useFoodStore.setState({ shoppingItems: [derived] });
+    await exportBackup();
+    expect(JSON.parse(mockWritten).version).toBe(6);
+    useFoodStore.setState({ shoppingItems: [] });
+    mockFileContent = mockWritten;
+    expect(await importBackup()).toMatchObject({ success: true });
+    expect(useFoodStore.getState().shoppingItems).toEqual([derived]);
+    expect(derived.provenance[0]).toMatchObject({ recipeId: 'shopping-recipe', quantity: 500 });
   });
 });

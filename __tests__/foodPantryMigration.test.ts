@@ -17,11 +17,12 @@ describe('APP-050 local Food v1 → v2', () => {
     const storage = memory(JSON.stringify(before));
     expect((await migrateLocalStore(foodIngredientsMigration, storage)).migrated).toBe(true);
     const after = JSON.parse(storage.bytes());
-    expect(after.version).toBe(2);
+    expect(after.version).toBe(3);
     expect(after.state.pantryItems).toEqual([{
       id: item.id, name: item.name, legacyQuantityText: '2 dåser', expiryDate: item.expiryDate, addedAt: item.addedAt,
     }]);
-    expect({ ...after.state, pantryItems: null }).toEqual({ ...before.state, pantryItems: null });
+    expect(after.state.shoppingItems).toEqual([{ id: 's', kind: 'manual', label: 'Bread', checked: false }]);
+    expect({ ...after.state, pantryItems: null, shoppingItems: null }).toEqual({ ...before.state, pantryItems: null, shoppingItems: null });
     storage.setItem.mockClear();
     expect((await migrateLocalStore(foodIngredientsMigration, storage)).migrated).toBe(false);
     expect(storage.setItem).not.toHaveBeenCalled();
@@ -46,14 +47,60 @@ describe('APP-050 local Food v1 → v2', () => {
     await expect(migrateLocalStore(foodIngredientsMigration, storage)).rejects.toMatchObject({ code: 'transform-failed' });
     expect(storage.bytes()).toBe(bytes);
   });
-  it('rejects malformed current v2 and unknown newer versions without rewriting', async () => {
+  it('rejects malformed historical v2 and unknown newer versions without rewriting', async () => {
     for (const [bytes, code] of [
-      [JSON.stringify({ version: 2, state: { recipes: [], pantryItems: [{ ...item, quantity: '2 dåser' }] } }), 'validation-failed'],
-      [JSON.stringify({ version: 3, state: { recipes: [], pantryItems: [] } }), 'unsupported-newer-version'],
+      [JSON.stringify({ version: 2, state: { recipes: [], pantryItems: [{ ...item, quantity: '2 dåser' }], shoppingItems: [] } }), 'transform-failed'],
+      [JSON.stringify({ version: 4, state: { recipes: [], pantryItems: [], shoppingItems: [] } }), 'unsupported-newer-version'],
     ]) {
       const storage = memory(bytes);
       await expect(migrateLocalStore(foodIngredientsMigration, storage)).rejects.toMatchObject({ code });
       expect(storage.bytes()).toBe(bytes);
     }
+  });
+});
+
+describe('APP-052 local Food v2 → v3 shopping migration', () => {
+  const v2 = (shoppingItems: unknown) => JSON.stringify({ version: 2, state: {
+    recipes: [], pantryItems: [], shoppingItems, monthlyBudgetByMonth: { '2026-09': 4000 },
+    selectedStores: ['Synthetic store'],
+  } });
+
+  it('converts every old item to manual, preserving id, label and checked verbatim', async () => {
+    const old = [{ id: 'one', label: '  Potatoes  ', checked: true }, { id: 'two', label: '', checked: false }];
+    const bytes = v2(old);
+    const storage = memory(bytes);
+    await migrateLocalStore(foodIngredientsMigration, storage);
+    const after = JSON.parse(storage.bytes());
+    expect(after.version).toBe(3);
+    expect(after.state.shoppingItems).toEqual(old.map((item) => ({ ...item, kind: 'manual' })));
+    expect(after.state.shoppingItems[0]).not.toHaveProperty('familyId');
+    expect(after.state.shoppingItems[0]).not.toHaveProperty('amount');
+    expect(after.state.shoppingItems[0]).not.toHaveProperty('provenance');
+    expect(after.state.monthlyBudgetByMonth).toEqual({ '2026-09': 4000 });
+    expect(after.state.selectedStores).toEqual(['Synthetic store']);
+  });
+
+  it.each([
+    [{ id: 'bad', label: 'Potatoes', checked: 'yes' }],
+    [{ id: 'bad', label: 'Potatoes', checked: false, familyId: 'potato' }],
+    [{ id: '', label: 'Potatoes', checked: false }],
+    null,
+  ])('rejects malformed v2 shopping input without writing', async (shoppingItems) => {
+    const bytes = v2(shoppingItems);
+    const storage = memory(bytes);
+    await expect(migrateLocalStore(foodIngredientsMigration, storage)).rejects.toMatchObject({ code: 'transform-failed' });
+    expect(storage.bytes()).toBe(bytes);
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
+  it('strictly rejects malformed current v3 shopping items without writing', async () => {
+    const bytes = JSON.stringify({ version: 3, state: { recipes: [], pantryItems: [], shoppingItems: [
+      { id: 'derived', kind: 'meal_plan', label: 'Potatoes', checked: false, weekKey: '2026-W39',
+        identity: { kind: 'family', familyId: 'potato', unit: 'g' }, amount: { kind: 'structured', quantity: 0, unit: 'g' }, provenance: [] },
+    ] } });
+    const storage = memory(bytes);
+    await expect(migrateLocalStore(foodIngredientsMigration, storage)).rejects.toMatchObject({ code: 'validation-failed' });
+    expect(storage.bytes()).toBe(bytes);
+    expect(storage.setItem).not.toHaveBeenCalled();
   });
 });

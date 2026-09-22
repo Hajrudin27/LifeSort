@@ -252,7 +252,7 @@ the key material in SecureStore.
 | `useIncomeStore` | `store/useIncomeStore.ts` | `economy` | `lifesort-income-v2` | AsyncStorage (plain) | `income` | financial | Hajrudin Kardasevic |
 | `useSavingsGoalsStore` | `store/useSavingsGoalsStore.ts` | `economy` | `lifesort-savings-goals` | AsyncStorage (plain) | `savings_goals`, `savings_history`, `savings_extra` | financial | Hajrudin Kardasevic |
 | `useCategoriesStore` | `store/useCategoriesStore.ts` | `economy` | `lifesort-categories` | AsyncStorage (plain) | `categories` | ordinary | Hajrudin Kardasevic |
-| `useFoodStore` | `store/useFoodStore.ts` | `food` | `lifesort-food-v2` | AsyncStorage (plain) | `food_standard_prices`, `food_monthly_budget`, `food_saved_plans`, `food_purchases`, `food_pantry_items`, `food_shopping_items`, `food_recipes`, `food_offers`, `food_selected_stores`, `global_offers`, `global_standard_prices` | ordinary, financial | Hajrudin Kardasevic |
+| `useFoodStore` | `store/useFoodStore.ts` | `food` | `lifesort-food-v2` | AsyncStorage (plain) | `food_standard_prices`, `food_monthly_budget`, `food_saved_plans`, `food_purchases`, `food_pantry_items`, `food_shopping_items`, `food_shopping_item_derivations`, `food_recipes`, `food_offers`, `food_selected_stores`, `global_offers`, `global_standard_prices` | ordinary, financial | Hajrudin Kardasevic |
 | `useHouseholdStore` | `store/useHouseholdStore.ts` | `home` | `lifesort-household` | AsyncStorage (plain) | `household_tasks`, `household_shopping_items`, `household_moving_items` | ordinary | Hajrudin Kardasevic |
 | `useLifeGoalsStore` | `store/useLifeGoalsStore.ts` | `goals` | `lifesort-life-goals` | AsyncStorage (plain) | `life_goals` | personal | Hajrudin Kardasevic |
 | `useHabitsStore` | `store/useHabitsStore.ts` | `habits` | `lifesort-habits` | AsyncStorage (plain) | `habits` | ordinary | Hajrudin Kardasevic |
@@ -296,6 +296,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `food_purchases` | `food` | `store/useFoodStore.ts` | financial | Hajrudin Kardasevic |
 | `food_pantry_items` | `food` | `store/useFoodStore.ts` | ordinary | Hajrudin Kardasevic |
 | `food_shopping_items` | `food` | `store/useFoodStore.ts` | ordinary | Hajrudin Kardasevic |
+| `food_shopping_item_derivations` | `food` | `store/useFoodStore.ts` | ordinary | Hajrudin Kardasevic |
 | `food_recipes` | `food` | `store/useFoodStore.ts` | ordinary | Hajrudin Kardasevic |
 | `food_offers` | `food` | `store/useFoodStore.ts` | ordinary | Hajrudin Kardasevic |
 | `food_selected_stores` | `food` | `store/useFoodStore.ts` | personal | Hajrudin Kardasevic |

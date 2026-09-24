@@ -38,6 +38,10 @@ function normalize(text: string): string {
   return text.trim().toLowerCase();
 }
 
+function ingredientKey(ingredient: Recipe['ingredients'][number]): string {
+  return ingredient.kind === 'family' ? `family:${ingredient.familyId}:${ingredient.unit}` : `${ingredient.kind}:${normalize(ingredient.name)}`;
+}
+
 function isInPantry(ingredientName: string, pantryItems: PantryItem[]): boolean {
   const norm = normalize(ingredientName);
   return pantryItems.some((p) => {
@@ -57,10 +61,10 @@ function marginalPrice(
 ): number {
   let total = 0;
   for (const ing of recipe.ingredients) {
-    const key = normalize(ing.name);
+    const key = ingredientKey(ing);
     if (purchased.has(key)) continue;
     if (isInPantry(ing.name, pantryItems)) continue;
-    const match = findBestGlobalPrice(ing.name, globalOffers, globalStandardPrices, selectedStores, reference);
+    const match = findBestGlobalPrice(ing, globalOffers, globalStandardPrices, selectedStores, reference);
     const price = usablePrice(match);
     if (price !== null) total += price; // Internal ranking uses a known subtotal, never a complete cost.
   }
@@ -77,7 +81,7 @@ function recordIngredients(
   reference: Date
 ) {
   for (const ing of recipe.ingredients) {
-    const key = normalize(ing.name);
+    const key = ingredientKey(ing);
     if (purchased.has(key)) continue;
 
     if (isInPantry(ing.name, pantryItems)) {
@@ -85,7 +89,7 @@ function recordIngredients(
       continue;
     }
 
-    const match = findBestGlobalPrice(ing.name, globalOffers, globalStandardPrices, selectedStores, reference);
+    const match = findBestGlobalPrice(ing, globalOffers, globalStandardPrices, selectedStores, reference);
     purchased.set(key, {
       ingredientName: ing.name,
       evidence: match,

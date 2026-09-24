@@ -17,6 +17,8 @@ export default function OffersScreen() {
   const selectedStores = useFoodStore((s) => s.selectedStores);
 
   const reference = useFoodPriceReference();
+  const locale = i18n.language === 'da' ? 'da-DK' : 'en-US';
+  const money = (value: number) => new Intl.NumberFormat(locale, { style: 'currency', currency: 'DKK' }).format(value);
   const activeOffers = globalOffers.filter(validOfferEntry)
     .filter((offer) => selectedStores.includes(offer.store))
     .map((offer) => ({ ...offer, evidence: offerEvidence(offer, reference) }))
@@ -43,6 +45,13 @@ export default function OffersScreen() {
             <View style={styles.rowText}>
               <Text style={styles.name}>{item.productName}</Text>
               <Text style={[styles.meta, { color: textMuted }]}>{formatPriceEvidence(item.evidence, t, i18n.language)}</Text>
+              <Text style={[styles.meta, { color: textMuted }]}>
+                {t("food.offerAware.priceComparison", { offer: money(item.offerPrice), reference: money(item.referencePrice) })}
+              </Text>
+              {item.memberCondition !== null && (
+                <Text style={styles.condition}>{t("food.offerAware.requires", { condition: item.memberCondition })}</Text>
+              )}
+              <Text style={[styles.meta, { color: textMuted }]}>{t("food.offerAware.referenceUnknown")}</Text>
             </View>
           </Card>
         )}
@@ -56,4 +65,5 @@ const styles = {
   rowText: { flex: 1 },
   name: { fontWeight: "700" as const },
   meta: { fontSize: 13 },
+  condition: { fontSize: 13, fontWeight: "700" as const },
 };

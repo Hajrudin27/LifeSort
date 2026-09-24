@@ -391,7 +391,7 @@ export const useFoodStore = create<FoodState>()(
           supabase.from('food_selected_stores').select('store').eq('user_id', userId),
           // Globale, admin-styrede data — ingen user_id-filter, alle brugere ser samme data
           supabase.from('global_standard_prices').select(GLOBAL_PRICE_SELECT),
-          supabase.from('global_offers').select(GLOBAL_OFFER_SELECT),
+          supabase.from('global_offers').select(GLOBAL_OFFER_SELECT).eq('published', true).eq('licence_cleared', true),
         ]);
 
         if (budgetResult.error) reportSyncFailure('food', 'budget', budgetResult.error);

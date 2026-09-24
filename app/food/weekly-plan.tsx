@@ -19,6 +19,7 @@ import { budgetPeriodForInstant } from "@/core/dates/budgetPeriod";
 import { foodBudgetFacts } from "@/features/food/budgetReadModel";
 import { assessFoodPlanBudget } from "@/features/food/planBudgetAssessment";
 import { deriveShoppingList } from "@/features/food/shoppingListDerivation";
+import { deriveOfferOpportunities } from "@/features/food/offerAwarePlanning";
 import { getWeekdayNames } from "@/utils/food/foodWeek";
 import { planWeek, pricePlan, WeekPlan } from "@/utils/food/mealPlanning";
 
@@ -68,6 +69,9 @@ export default function WeeklyPlanScreen() {
 
   const plan = useMemo(() => chosenPlan ? pricePlan(chosenPlan.slots, globalOffers, globalStandardPrices, selectedStores, pantryItems, reference) : null, [chosenPlan, globalOffers, globalStandardPrices, selectedStores, pantryItems, reference]);
   const budgetAssessment = plan ? assessFoodPlanBudget(facts, plan.estimate) : null;
+  const offerOpportunities = useMemo(() => plan
+    ? deriveOfferOpportunities(deriveShoppingList(plan.slots), globalOffers, selectedStores, reference)
+    : [], [globalOffers, plan, reference, selectedStores]);
   const budgetAmount = (value: number) => new Intl.NumberFormat(locale, { style: "currency", currency: "DKK" }).format(value);
   const assessmentText = budgetAssessment
     ? t(`food.planBudget.${budgetAssessment.status}`, {
@@ -362,6 +366,41 @@ export default function WeeklyPlanScreen() {
             </>
           )}
 
+          {offerOpportunities.length > 0 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={styles.sectionEyebrow}>{t("food.offerAware.eyebrow")}</Text>
+                  <Text style={styles.sectionTitle}>{t("food.offerAware.title")}</Text>
+                </View>
+                <Text style={[styles.sectionMeta, { color: textMuted }]}>{offerOpportunities.length}</Text>
+              </View>
+              <Text style={{ color: textMuted }}>{t("food.offerAware.summaryLimit")}</Text>
+              {offerOpportunities.map((opportunity) => (
+                <Card key={opportunity.familyId} style={styles.opportunityCard}>
+                  <Text style={styles.ingredientName}>{opportunity.label}</Text>
+                  <Text style={styles.opportunityProduct}>{opportunity.productName} · {opportunity.store}</Text>
+                  <Text style={[styles.priceText, { color: textMuted }]}>
+                    {t("food.offerAware.priceComparison", {
+                      offer: budgetAmount(opportunity.offerPrice),
+                      reference: budgetAmount(opportunity.referencePrice),
+                    })}
+                  </Text>
+                  <Text style={styles.opportunitySaving}>
+                    {t("food.offerAware.potentialSaving", { amount: budgetAmount(opportunity.potentialDifference) })}
+                  </Text>
+                  <Text style={[styles.priceText, { color: textMuted }]}>
+                    {t("food.priceEvidence.validity", { from: opportunity.validFrom, to: opportunity.validTo })}
+                  </Text>
+                  {opportunity.memberCondition !== null && (
+                    <Text style={styles.conditionText}>{t("food.offerAware.requires", { condition: opportunity.memberCondition })}</Text>
+                  )}
+                  <Text style={[styles.priceText, { color: textMuted }]}>{t("food.offerAware.referenceUnknown")}</Text>
+                </Card>
+              ))}
+            </>
+          )}
+
           <View style={styles.sectionHeader}>
             <View>
               <Text style={styles.sectionEyebrow}>{t("food.shoppingListEyebrow")}</Text>
@@ -471,6 +510,10 @@ const styles = StyleSheet.create({
   shoppingRow: { gap: 6 },
   ingredientName: { flex: 1, fontWeight: "700" },
   priceText: { fontSize: 13, fontWeight: "700" },
+  opportunityCard: { gap: 6 },
+  opportunityProduct: { fontSize: 14, fontWeight: "700" },
+  opportunitySaving: { fontSize: 14, fontWeight: "800" },
+  conditionText: { fontSize: 13, fontWeight: "800" },
   modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
   modalCard: {
     maxHeight: "72%",

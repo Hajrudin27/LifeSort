@@ -205,6 +205,15 @@
         "count_upcoming": "Not started: {{count}}",
         "count_missing": "Missing price: {{count}}",
         "planMeals": "Planned meals: {{count}}",
-        "planningLimit": "Prices match ingredient names and do not account for pack sizes or quantities. Campaign validity is assessed today, not for every meal date. A subtotal does not confirm that the plan fits your budget."
+        "planningLimit": "Catalogue prices for mapped ingredients use explicit ingredient families and do not account for pack sizes or quantities. Campaign validity is assessed today, not for every meal date. A subtotal does not confirm that the plan fits your budget."
+    },
+    "offerAware": {
+        "eyebrow": "Current catalogue offers",
+        "title": "Potential offer opportunities",
+        "summaryLimit": "One catalogue comparison per ingredient family. These amounts are not added to a basket saving.",
+        "priceComparison": "Offer {{offer}} · catalogue reference price {{reference}}",
+        "potentialSaving": "Potential saving: {{amount}}",
+        "referenceUnknown": "Compared with the catalogue reference price. Reference-price freshness is unknown.",
+        "requires": "Requires: {{condition}}"
     }
 }

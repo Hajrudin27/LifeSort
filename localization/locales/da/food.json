@@ -205,6 +205,15 @@
         "count_upcoming": "Ikke startet: {{count}}",
         "count_missing": "Manglende pris: {{count}}",
         "planMeals": "Planlagte måltider: {{count}}",
-        "planningLimit": "Priser matches på ingrediensnavne uden hensyn til pakkestørrelser eller mængder. Kampagner vurderes i dag, ikke for hver måltidsdato. En delsum bekræfter ikke, at planen holder dit budget."
+        "planningLimit": "Katalogpriser for kortlagte ingredienser bruger eksplicitte ingrediensfamilier uden hensyn til pakkestørrelser eller mængder. Kampagner vurderes i dag, ikke for hver måltidsdato. En delsum bekræfter ikke, at planen holder dit budget."
+    },
+    "offerAware": {
+        "eyebrow": "Aktuelle katalogtilbud",
+        "title": "Potentielle tilbudsmuligheder",
+        "summaryLimit": "Én katalogsammenligning pr. ingrediensfamilie. Beløbene lægges ikke sammen til en samlet besparelse.",
+        "priceComparison": "Tilbud {{offer}} · katalogets referencepris {{reference}}",
+        "potentialSaving": "Potentiel besparelse: {{amount}}",
+        "referenceUnknown": "Sammenlignet med katalogets referencepris. Referenceprisens aktualitet er ukendt.",
+        "requires": "Kræver: {{condition}}"
     }
 }

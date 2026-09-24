@@ -7,11 +7,15 @@ import { planWeek, pricePlan } from '@/utils/food/mealPlanning';
 import { formatPriceEstimate, formatPriceEvidence } from '@/utils/food/pricePresentation';
 import da from '@/localization/locales/da/food.json';
 import en from '@/localization/locales/en/food.json';
+import type { GlobalOffer, GlobalStandardPrice } from '@/types/food';
 
 const reference = new Date('2026-09-20T22:00:00Z'); // Copenhagen 21 September
-const offer = { id: 'offer', productName: 'Eggs', store: 'Netto', offerPrice: 10, validFrom: '2026-09-21', validTo: '2026-09-27' };
-const standard = { id: 'standard', productName: 'Eggs', store: 'Netto', price: 15 };
-const lookup = (offers = [offer], standards = [standard], stores = ['Netto'], date = reference) => findBestGlobalPrice('Eggs', offers, standards, stores, date);
+const offer = { id: 'offer', standardPriceId: 'standard', productId: 'product', productName: 'Eggs', ingredientFamilyId: 'egg' as const,
+  store: 'Netto', offerPrice: 10, referencePrice: 15, validFrom: '2026-09-21', validTo: '2026-09-27',
+  published: true as const, licenceCleared: true as const, memberCondition: null };
+const standard = { id: 'standard', productId: 'product', productName: 'Eggs', ingredientFamilyId: 'egg' as const, store: 'Netto', price: 15 };
+const egg = familyIngredient('egg', 'Eggs', 2, 'piece');
+const lookup = (offers: GlobalOffer[] = [offer], standards: GlobalStandardPrice[] = [standard], stores = ['Netto'], date = reference) => findBestGlobalPrice(egg, offers, standards, stores, date);
 
 describe('APP-048 authoritative campaign evidence', () => {
   it.each([
@@ -62,12 +66,13 @@ describe('APP-048 authoritative campaign evidence', () => {
 const productId = '11111111-1111-4111-8111-111111111111';
 const priceId = '22222222-2222-4222-8222-222222222222';
 const offerId = '33333333-3333-4333-8333-333333333333';
-const row = { id: priceId, product_id: productId, product: { id: productId, name: 'Eggs' }, store: 'Netto', price: 15, updated_at: reference.toISOString() };
-const offerRow = { id: offerId, standard_price_id: priceId, standard_price: row, offer_price: 10, valid_from: offer.validFrom, valid_to: offer.validTo };
+const row = { id: priceId, product_id: productId, product: { id: productId, name: 'Eggs', ingredient_family_id: 'egg' }, store: 'Netto', price: 15, updated_at: reference.toISOString() };
+const offerRow = { id: offerId, standard_price_id: priceId, standard_price: row, offer_price: 10, valid_from: offer.validFrom, valid_to: offer.validTo,
+  published: true, licence_cleared: true, member_condition: null };
 describe('APP-048 external row decoding', () => {
   it('follows products through the standard price relationship and ignores row timestamps', () => {
-    expect(decodeGlobalPrice(row)).toEqual({ ...standard, id: priceId });
-    expect(decodeGlobalOffer(offerRow)).toEqual({ ...offer, id: offerId });
+    expect(decodeGlobalPrice(row)).toEqual({ ...standard, id: priceId, productId });
+    expect(decodeGlobalOffer(offerRow)).toEqual({ ...offer, id: offerId, standardPriceId: priceId, productId });
     expect(lookup([], [decodeGlobalPrice(row)!])).toEqual({ freshness: 'unknown', source: 'standard', price: 15, store: 'Netto' });
   });
   it.each([
@@ -83,6 +88,24 @@ describe('APP-048 external row decoding', () => {
     expect(decodeGlobalOffer({ ...offerRow, valid_to: '2026-02-30' })).toBeNull();
     expect(decodeGlobalOffer({ ...offerRow, offer_price: '' })).toBeNull();
     expect(decodePersonalOffer({ id: 'old', product_name: 'Eggs', store: 'Netto', price: 10, week_key: '2026-W39' })).toBeNull();
+  });
+});
+
+describe('APP-053 authoritative catalogue decoding', () => {
+  it('keeps an explicit family and allows a deliberately unmapped product', () => {
+    expect(decodeGlobalPrice(row)).toMatchObject({ ingredientFamilyId: 'egg' });
+    expect(decodeGlobalPrice({ ...row, product: { ...row.product, ingredient_family_id: null } }))
+      .toMatchObject({ ingredientFamilyId: null });
+    expect(decodeGlobalPrice({ ...row, product: { ...row.product, ingredient_family_id: 'not-a-family' } })).toBeNull();
+  });
+  it('requires published, licence-cleared, nonblank conditions and the linked reference price', () => {
+    expect(decodeGlobalOffer(offerRow)).not.toBeNull();
+    expect(decodeGlobalOffer({ ...offerRow, published: false })).toBeNull();
+    expect(decodeGlobalOffer({ ...offerRow, licence_cleared: false })).toBeNull();
+    expect(decodeGlobalOffer({ ...offerRow, member_condition: '  ' })).toBeNull();
+    expect(decodeGlobalOffer({ ...offerRow, member_condition: 'Member card' })).toMatchObject({ memberCondition: 'Member card' });
+    expect(decodeGlobalOffer({ ...offerRow, standard_price: { ...row, price: null } })).toBeNull();
+    expect(decodeGlobalOffer({ ...offerRow, standard_price: { ...row, product_id: offerId } })).toBeNull();
   });
 });
 
@@ -124,7 +147,7 @@ describe('APP-048 aggregate propagation and planning regression', () => {
     expect(planWeek([recipe], [], [], [], structuredPantry, 20, {}, reference).pantryCovered).toEqual(plan.pantryCovered);
     expect(structuredPantry[0].quantity).toBe(1); // Planning does not consume stock or use quantity as coverage.
     const renamed = { ...recipe, ingredients: [familyIngredient('egg', 'Unmatched display name', 2, 'piece')] };
-    expect(planWeek([renamed], [offer], [], ['Netto'], [], 20, {}, reference).estimate).toMatchObject({ status: 'unavailable', missing: 1, knownSubtotal: null });
+    expect(planWeek([renamed], [offer], [], ['Netto'], [], 20, {}, reference).estimate).toMatchObject({ status: 'current', current: 1, knownSubtotal: 10 });
   });
   it('limits new meals by remaining allocation while keeping missing and negative budgets distinct', () => {
     const costly = { ...offer, offerPrice: 600 };

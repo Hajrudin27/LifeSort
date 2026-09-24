@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Row = Record<string, unknown>;
 const mockSelects: { table: string; columns: string }[] = [];
+const mockFilters: { table: string; column: string; value: unknown }[] = [];
 const mockWrites: { table: string; payload: unknown }[] = [];
 const mockDeletes: string[] = [];
 const mockRemote: Record<string, Row[]> = {};
@@ -15,7 +16,9 @@ jest.mock('@/lib/supabase', () => {
   const from = (table: string) => {
     const chain: Record<string, unknown> = {};
     Object.assign(chain, {
-      select: (columns: string) => { mockSelects.push({ table, columns }); return chain; }, eq: () => chain, delete: () => { mockDeletes.push(table); return chain; },
+      select: (columns: string) => { mockSelects.push({ table, columns }); return chain; },
+      eq: (column: string, value: unknown) => { mockFilters.push({ table, column, value }); return chain; },
+      delete: () => { mockDeletes.push(table); return chain; },
       then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
         Promise.resolve({ data: mockRemote[table] ?? [], error: null }).then(resolve, reject),
       upsert: (payload: unknown) => { mockWrites.push({ table, payload }); return Promise.resolve({ error: null }); },
@@ -43,6 +46,7 @@ beforeEach(async () => {
   await flush();
   mockWrites.length = 0;
   mockDeletes.length = 0;
+  mockFilters.length = 0;
   useFoodStore.setState({ pantryItems: [] });
   for (const key of Object.keys(mockRemote)) delete mockRemote[key];
 });
@@ -205,18 +209,24 @@ describe('APP-048 real store catalogue boundary', () => {
     const productId = '11111111-1111-4111-8111-111111111111';
     const priceId = '22222222-2222-4222-8222-222222222222';
     const offerId = '33333333-3333-4333-8333-333333333333';
-    const price = { id: priceId, product_id: productId, product: { id: productId, name: 'Synthetic eggs' }, store: 'Netto', price: 15 };
-    const offer = { id: offerId, standard_price_id: priceId, standard_price: price, offer_price: 10, valid_from: '2026-09-21', valid_to: '2026-09-27' };
+    const price = { id: priceId, product_id: productId, product: { id: productId, name: 'Synthetic eggs', ingredient_family_id: 'egg' }, store: 'Netto', price: 15 };
+    const offer = { id: offerId, standard_price_id: priceId, standard_price: price, offer_price: 10, valid_from: '2026-09-21', valid_to: '2026-09-27',
+      published: true, licence_cleared: true, member_condition: null };
     mockRemote.global_standard_prices = [price, { ...price, price: null }, { ...price, product: null }];
     mockRemote.global_offers = [offer, { ...offer, valid_to: '2026-02-30' }, { ...offer, standard_price: null }];
     mockSelects.length = 0;
     await useFoodStore.getState().fetchFromSupabase();
     expect(mockSelects).toEqual(expect.arrayContaining([
-      { table: 'global_standard_prices', columns: 'id, product_id, store, price, product:products(id, name)' },
-      { table: 'global_offers', columns: 'id, standard_price_id, offer_price, valid_from, valid_to, standard_price:global_standard_prices(id, product_id, store, product:products(id, name))' },
+      { table: 'global_standard_prices', columns: 'id, product_id, store, price, product:products(id, name, ingredient_family_id)' },
+      { table: 'global_offers', columns: 'id, standard_price_id, offer_price, valid_from, valid_to, published, licence_cleared, member_condition, standard_price:global_standard_prices(id, product_id, store, price, product:products(id, name, ingredient_family_id))' },
     ]));
-    expect(useFoodStore.getState().globalStandardPrices).toEqual([{ id: priceId, productName: 'Synthetic eggs', store: 'Netto', price: 15 }]);
-    expect(useFoodStore.getState().globalOffers).toEqual([{ id: offerId, productName: 'Synthetic eggs', store: 'Netto', offerPrice: 10, validFrom: '2026-09-21', validTo: '2026-09-27' }]);
+    expect(mockFilters).toEqual(expect.arrayContaining([
+      { table: 'global_offers', column: 'published', value: true },
+      { table: 'global_offers', column: 'licence_cleared', value: true },
+    ]));
+    expect(useFoodStore.getState().globalStandardPrices).toEqual([{ id: priceId, productId, productName: 'Synthetic eggs', ingredientFamilyId: 'egg', store: 'Netto', price: 15 }]);
+    expect(useFoodStore.getState().globalOffers).toEqual([{ id: offerId, standardPriceId: priceId, productId, productName: 'Synthetic eggs', ingredientFamilyId: 'egg', store: 'Netto',
+      offerPrice: 10, referencePrice: 15, validFrom: '2026-09-21', validTo: '2026-09-27', published: true, licenceCleared: true, memberCondition: null }]);
     expect(mockWrites).toEqual([]);
   });
 });

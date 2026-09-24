@@ -33,7 +33,7 @@ import OffersScreen from '@/app/food/offers';
 import RecipesScreen from '@/app/food/recipes/index';
 import WeeklyPlanScreen from '@/app/food/weekly-plan';
 import { budgetPeriodForCalendarDate, budgetPeriodForInstant } from '@/core/dates/budgetPeriod';
-import { unlinkedIngredient } from '@/core/food/ingredients';
+import { familyIngredient, unlinkedIngredient } from '@/core/food/ingredients';
 import { foodBudgetFacts, previousFoodWeekKey } from '@/features/food/budgetReadModel';
 import { assessFoodPlanBudget } from '@/features/food/planBudgetAssessment';
 import { foodHomeSnapshot } from '@/features/food/homeSnapshot';
@@ -41,7 +41,7 @@ import { foodMonthlyReview } from '@/features/food/monthlyReview';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useFoodStore } from '@/store/useFoodStore';
 import { useIncomeStore } from '@/store/useIncomeStore';
-import type { GroceryPurchase } from '@/types/food';
+import type { GlobalOffer, GlobalStandardPrice, GroceryPurchase } from '@/types/food';
 import { findBestGlobalPrice } from '@/utils/food/priceLookup';
 import { offerEvidence, summarizePrices, unavailablePrice } from '@/utils/food/priceEvidence';
 
@@ -53,6 +53,16 @@ const PURCHASES: GroceryPurchase[] = [
   { id: 'before-midnight', amount: 90, date: '2026-05-31T21:50:00.000Z' }, // Copenhagen Sun 31 May, 2026-W22
   { id: 'earlier', amount: 70, date: '2026-05-29T10:00:00.000Z' }, // 2026-W22
 ];
+const catalogueOffer = (overrides: Partial<GlobalOffer> = {}): GlobalOffer => ({
+  id: 'catalogue-offer', standardPriceId: 'catalogue-standard', productId: 'catalogue-product', productName: 'Pasta',
+  ingredientFamilyId: 'pasta', store: 'Netto', offerPrice: 5, referencePrice: 12,
+  validFrom: '2026-06-01', validTo: '2026-06-01', published: true, licenceCleared: true, memberCondition: null,
+  ...overrides,
+});
+const catalogueStandard = (overrides: Partial<GlobalStandardPrice> = {}): GlobalStandardPrice => ({
+  id: 'catalogue-standard', productId: 'catalogue-product', productName: 'Pasta', ingredientFamilyId: 'pasta',
+  store: 'Netto', price: 12, ...overrides,
+});
 /**
  * The Copenhagen facts at T. June 2026 touches five ISO weeks: 3000 / 5 = 600.
  * A device deriving the period from its own UTC clock would instead show May,
@@ -193,10 +203,11 @@ describe('APP-045 weekly plan and current offers use the Copenhagen week and dat
   });
 
   it("treats a Danish campaign as active on its Copenhagen dates", async () => {
-    const campaign = (day: string) => ({ id: `g-${day}`, productName: 'Pasta', store: 'Netto', offerPrice: 5, validFrom: day, validTo: day });
-    const standard = [{ id: 's1', productName: 'Pasta', store: 'Netto', price: 12 }];
-    expect(findBestGlobalPrice('pasta', [campaign('2026-06-01')], standard, ['Netto'])).toMatchObject({ source: 'offer', price: 5 });
-    expect(findBestGlobalPrice('pasta', [campaign('2026-05-31')], standard, ['Netto'])).toMatchObject({ source: 'standard', price: 12 });
+    const campaign = (day: string) => catalogueOffer({ id: `g-${day}`, validFrom: day, validTo: day });
+    const standard = [catalogueStandard({ id: 's1' })];
+    const pasta = familyIngredient('pasta', 'pasta', 500, 'g');
+    expect(findBestGlobalPrice(pasta, [campaign('2026-06-01')], standard, ['Netto'])).toMatchObject({ source: 'offer', price: 5 });
+    expect(findBestGlobalPrice(pasta, [campaign('2026-05-31')], standard, ['Netto'])).toMatchObject({ source: 'standard', price: 12 });
 
     useFoodStore.setState({ globalOffers: [campaign('2026-06-01'), { ...campaign('2026-05-31'), productName: 'Ris' }], selectedStores: ['Netto'] });
     await render(<OffersScreen />);
@@ -224,8 +235,8 @@ describe('APP-048 visible estimates', () => {
   it.each(['da', 'en'])('keeps partial/unknown/stale states visible in %s and refreshes an existing plan', async (language) => {
     await i18n.changeLanguage(language);
     const recipe = { id: 'price-recipe', name: 'Synthetic meal', mealType: 'dinner' as const,
-      ingredients: [unlinkedIngredient('pasta', 100, 'g'), unlinkedIngredient('salt', 1, 'g')] };
-    const offer = { id: 'offer', productName: 'pasta', store: 'Netto', offerPrice: 5, validFrom: '2026-06-01', validTo: '2026-06-01' };
+      ingredients: [familyIngredient('pasta', 'pasta', 100, 'g'), unlinkedIngredient('salt', 1, 'g')] };
+    const offer = catalogueOffer({ id: 'offer', productName: 'pasta' });
     useFoodStore.setState({ recipes: [recipe], pantryItems: [], globalOffers: [offer], selectedStores: ['Netto'], savedPlans: { '2026-W23': [{ day: 0, mealType: 'dinner', recipeId: recipe.id }] } });
     await render(<WeeklyPlanScreen />);
     expect(texts().join('\n')).toContain(t('food.priceEvidence.count_missing', { count: 1 }));
@@ -238,7 +249,7 @@ describe('APP-048 visible estimates', () => {
     expect(texts().join('\n')).toContain(t('food.priceEvidence.estimate_unavailable'));
     expect(texts().join('\n')).not.toContain(t('food.priceEvidence.current'));
 
-    await act(async () => { useFoodStore.setState({ globalStandardPrices: [{ id: 's', productName: 'pasta', store: 'Netto', price: 12 }] }); });
+    await act(async () => { useFoodStore.setState({ globalStandardPrices: [catalogueStandard({ id: 's', productName: 'pasta' })] }); });
     expect(texts().join('\n')).toContain(t('food.priceEvidence.unknown'));
     expect(texts().join('\n')).not.toContain('2026-05-31');
   });
@@ -252,7 +263,7 @@ describe('APP-048 campaign rollover while open', () => {
       return 1;
     }) as typeof setInterval);
     try {
-      useFoodStore.setState({ selectedStores: ['Netto'], globalOffers: [{ id: 'one-day', productName: 'Synthetic pasta', store: 'Netto', offerPrice: 5, validFrom: '2026-06-01', validTo: '2026-06-01' }] });
+      useFoodStore.setState({ selectedStores: ['Netto'], globalOffers: [catalogueOffer({ id: 'one-day', productName: 'Synthetic pasta' })] });
       await render(<OffersScreen />);
       expect(texts()).toContain('Synthetic pasta');
       expect(refresh).toBeDefined();
@@ -262,6 +273,40 @@ describe('APP-048 campaign rollover while open', () => {
     } finally {
       timer.mockRestore();
     }
+  });
+});
+
+describe('APP-053 offer-aware UI semantics', () => {
+  it.each(['da', 'en'])('shows a current conditional plan opportunity with dates and factual qualifiers in %s', async (language) => {
+    await i18n.changeLanguage(language);
+    const recipe = { id: 'offer-aware', name: 'Egg meal', mealType: 'dinner' as const,
+      ingredients: [familyIngredient('egg', language === 'da' ? 'Æg' : 'Eggs', 24, 'piece')] };
+    const current = catalogueOffer({ productName: 'Egg carton', ingredientFamilyId: 'egg', memberCondition: 'Member card',
+      validFrom: '2026-06-01', validTo: '2026-06-01' });
+    useFoodStore.setState({ recipes: [recipe], globalOffers: [current], selectedStores: ['Netto'], pantryItems: [] });
+    await render(<WeeklyPlanScreen />);
+    const generate = tree!.root.findAllByProps({ label: t('food.generatePlan') })[0]
+      .findAllByProps({ accessibilityRole: 'button' }).find((node) => typeof node.props.onPress === 'function')!;
+    await act(async () => { generate.props.onPress(); });
+    const visible = texts().join('\n');
+    expect(visible).toContain(t('food.offerAware.potentialSaving', { amount: new Intl.NumberFormat(language === 'da' ? 'da-DK' : 'en-US', { style: 'currency', currency: 'DKK' }).format(7) }));
+    expect(visible).toContain(t('food.offerAware.requires', { condition: 'Member card' }));
+    expect(visible).toContain('2026-06-01');
+    expect(visible).toContain(t('food.offerAware.referenceUnknown'));
+    expect(visible).toContain(t('food.priceEvidence.estimate_unavailable'));
+  });
+
+  it('shows only authoritative current offers and exposes member conditions as text', async () => {
+    useFoodStore.setState({ selectedStores: ['Netto'], globalOffers: [
+      catalogueOffer({ id: 'valid', productName: 'Visible', memberCondition: 'Club card' }),
+      catalogueOffer({ id: 'draft', productName: 'Draft', published: false as true }),
+      catalogueOffer({ id: 'uncleared', productName: 'Unlicensed', licenceCleared: false as true }),
+    ] });
+    await render(<OffersScreen />);
+    expect(texts()).toContain('Visible');
+    expect(texts()).not.toContain('Draft');
+    expect(texts()).not.toContain('Unlicensed');
+    expect(texts().join('\n')).toContain(t('food.offerAware.requires', { condition: 'Club card' }));
   });
 });
 
@@ -288,7 +333,7 @@ describe('APP-049 one Food budget and the remaining weekly planning envelope', (
   });
 
   it('compares current evidence with remaining allocation and never confirms a partial estimate', () => {
-    const current = offerEvidence({ id: 'o', productName: 'Pasta', store: 'Netto', offerPrice: 400, validFrom: '2026-06-01', validTo: '2026-06-01' }, new Date(T));
+    const current = offerEvidence(catalogueOffer({ id: 'o', offerPrice: 400, referencePrice: 500 }), new Date(T));
     const remaining = facts(); // 600 allocated - 150 purchased = 450
     expect(assessFoodPlanBudget(remaining, summarizePrices([current]))).toEqual({ status: 'current_within', remaining: 450, knownSubtotal: 400 });
     expect(assessFoodPlanBudget(remaining, summarizePrices([current, unavailablePrice()]))).toEqual({ status: 'partial_within', remaining: 450, knownSubtotal: 400 });
@@ -300,8 +345,8 @@ describe('APP-049 one Food budget and the remaining weekly planning envelope', (
 
   it.each(['da', 'en'])('keeps Food, weekly plan, Home and Economy in agreement as Food facts change in %s', async (language) => {
     await i18n.changeLanguage(language);
-    const recipe = { id: 'food-budget-recipe', name: 'Synthetic pasta', mealType: 'dinner' as const, ingredients: [unlinkedIngredient('pasta', 100, 'g')] };
-    const price = { id: 'catalogue-offer', productName: 'pasta', store: 'Netto', offerPrice: 400, validFrom: '2026-06-01', validTo: '2026-06-01' };
+    const recipe = { id: 'food-budget-recipe', name: 'Synthetic pasta', mealType: 'dinner' as const, ingredients: [familyIngredient('pasta', 'pasta', 100, 'g')] };
+    const price = catalogueOffer({ productName: 'pasta', offerPrice: 400, referencePrice: 500 });
     useFoodStore.setState({ recipes: [recipe], globalOffers: [price], selectedStores: ['Netto'], pantryItems: [] });
     // An Economy category budget, even one called groceries, is not Food's budget.
     useExpensesStore.setState({ categoryBudgets: { groceries: 1 as never } });

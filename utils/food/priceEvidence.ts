@@ -1,6 +1,7 @@
 import { budgetPeriodForInstant } from '@/core/dates/budgetPeriod';
+import { isIngredientFamilyId } from '@/core/food/ingredients';
 import { parseCalendarDate } from '@/utils/shared/localDate';
-import type { GlobalOffer, GlobalStandardPrice, GroceryOffer } from '@/types/food';
+import type { GlobalOffer, GlobalStandardPrice, GroceryOffer, StandardPrice } from '@/types/food';
 
 /** APP-048: dates belong only to campaign evidence, never to a fetch/cache. */
 type Priced = { price: number; store: string };
@@ -15,12 +16,19 @@ export const nonempty = (value: unknown): value is string => typeof value === 's
 export const validPrice = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 export const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
-export function validPriceEntry(value: unknown): value is GlobalStandardPrice {
+export function validPriceEntry(value: unknown): value is StandardPrice {
   return record(value) && nonempty(value.id) && nonempty(value.productName) && nonempty(value.store) && validPrice(value.price);
 }
+export function validGlobalPriceEntry(value: unknown): value is GlobalStandardPrice {
+  return validPriceEntry(value) && record(value) && nonempty(value.productId)
+    && (value.ingredientFamilyId === null || isIngredientFamilyId(value.ingredientFamilyId));
+}
 export function validOfferEntry(value: unknown): value is GlobalOffer {
-  return record(value) && nonempty(value.id) && nonempty(value.productName) && nonempty(value.store)
-    && validPrice(value.offerPrice) && typeof value.validFrom === 'string' && typeof value.validTo === 'string'
+  return record(value) && nonempty(value.id) && nonempty(value.standardPriceId) && nonempty(value.productId)
+    && nonempty(value.productName) && nonempty(value.store) && value.published === true && value.licenceCleared === true
+    && (value.memberCondition === null || nonempty(value.memberCondition)) && validPrice(value.offerPrice)
+    && validPrice(value.referencePrice) && (value.ingredientFamilyId === null || isIngredientFamilyId(value.ingredientFamilyId))
+    && typeof value.validFrom === 'string' && typeof value.validTo === 'string'
     && !!parseCalendarDate(value.validFrom) && !!parseCalendarDate(value.validTo) && value.validFrom <= value.validTo;
 }
 export function offerEvidence(value: unknown, reference: Date): PriceEvidence {

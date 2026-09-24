@@ -1,4 +1,4 @@
-import type { RecipeIngredient } from '@/core/food/ingredients';
+import type { IngredientFamilyId, RecipeIngredient } from '@/core/food/ingredients';
 
 // APP-047: the ingredient contract (family identity, structured quantity) lives in core.
 export type { NewRecipeIngredient, RecipeIngredient } from '@/core/food/ingredients';
@@ -52,16 +52,25 @@ export interface SavedPlanSlot {
 
 export interface GlobalStandardPrice {
   id: string;
+  productId: string;
   productName: string;
+  ingredientFamilyId: IngredientFamilyId | null;
   store: string;
   price: number;
 }
 
 export interface GlobalOffer {
   id: string;
+  standardPriceId: string;
+  productId: string;
   productName: string;
+  ingredientFamilyId: IngredientFamilyId | null;
   store: string;
   offerPrice: number;
+  referencePrice: number;
   validFrom: string; // ISO-dato
   validTo: string;   // ISO-dato
+  published: true;
+  licenceCleared: true;
+  memberCondition: string | null;
 }

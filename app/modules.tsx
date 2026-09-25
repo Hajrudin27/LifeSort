@@ -37,6 +37,7 @@ const MODULE_ICONS: Record<string, { ios: string; android: string; web: string }
   tasks: { ios: 'checklist', android: 'checklist', web: 'checklist' },
   travel: { ios: 'airplane', android: 'flight', web: 'flight' },
   warranties: { ios: 'shield.lefthalf.filled', android: 'shield', web: 'shield' },
+  documents: { ios: 'doc.fill', android: 'description', web: 'description' },
   career: { ios: 'briefcase.fill', android: 'work', web: 'work' },
   cycle: { ios: 'drop.fill', android: 'water_drop', web: 'water_drop' },
   default: { ios: 'square.grid.2x2', android: 'grid_view', web: 'grid_view' },
@@ -51,6 +52,7 @@ const MODULE_ROUTES: Record<string, string> = {
   tasks: '/todos',
   travel: '/travel',
   warranties: '/warranties',
+  documents: '/documents',
   career: '/career',
   cycle: '/cycle',
 };

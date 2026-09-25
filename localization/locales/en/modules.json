@@ -32,6 +32,7 @@
     "tasks": "To-do",
     "travel": "Travel",
     "warranties": "Warranties",
+    "documents": "Documents",
     "career": "Career",
     "cycle": "Cycle"
   },
@@ -46,6 +47,7 @@
     "tasks": "Your to-do list",
     "travel": "Trips, budget and packing",
     "warranties": "Warranties, receipts and insurance",
+    "documents": "Your private documents, stored securely",
     "career": "Job applications and CV",
     "cycle": "Cycle and symptoms"
   },

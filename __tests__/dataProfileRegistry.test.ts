@@ -145,7 +145,7 @@ function bucketsInCodeAndMigrations(): string[] {
       ...walkFiles('supabase/migrations', (file) => file.endsWith('.sql')).flatMap((file) =>
         [...sourceText(file).matchAll(/(?:bucket_id\s*=\s*|values\s*\()['"]([a-z0-9-]+)['"]/g)].map((match) => match[1]),
       ),
-    ].filter((bucket) => ['attachments', 'recipe-images'].includes(bucket)),
+    ].filter((bucket) => ['attachments', 'documents', 'recipe-images'].includes(bucket)),
   );
 }
 
@@ -206,13 +206,13 @@ describe('APP-027 logical domain contracts', () => {
       B: domainsByProfile('B').length,
       C: domainsByProfile('C').length,
       D: domainsByProfile('D').length,
-    }).toEqual({ A: 24, B: 6, C: 2, D: 4 });
+    }).toEqual({ A: 24, B: 7, C: 2, D: 4 });
   });
 });
 
 describe('APP-027 physical persistence surfaces', () => {
   it('has no duplicate physical surface ids and no dangling domain references', () => {
-    expect(PERSISTENCE_SURFACES).toHaveLength(88);
+    expect(PERSISTENCE_SURFACES).toHaveLength(91);
     expect(new Set(registeredSurfaceIds).size).toBe(PERSISTENCE_SURFACES.length);
 
     for (const surface of PERSISTENCE_SURFACES) {

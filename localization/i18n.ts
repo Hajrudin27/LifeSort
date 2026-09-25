@@ -28,6 +28,7 @@ import da_review from './locales/da/review.json';
 import da_savings from './locales/da/savings.json';
 import da_search from "./locales/da/search.json";
 import da_deleteAccount from './locales/da/deleteAccount.json';
+import da_documents from './locales/da/documents.json';
 import da_settings from './locales/da/settings.json';
 import da_todos from './locales/da/todos.json';
 import da_travel from './locales/da/travel.json';
@@ -60,6 +61,7 @@ import en_review from './locales/en/review.json';
 import en_savings from './locales/en/savings.json';
 import en_search from "./locales/en/search.json";
 import en_deleteAccount from './locales/en/deleteAccount.json';
+import en_documents from './locales/en/documents.json';
 import en_settings from './locales/en/settings.json';
 import en_todos from './locales/en/todos.json';
 import en_travel from './locales/en/travel.json';
@@ -87,6 +89,7 @@ const resources = {
       career: da_career,
       cv: da_cv,
       deleteAccount: da_deleteAccount,
+      documents: da_documents,
       settings: da_settings,
       language: da_language,
       datePicker: da_datePicker,
@@ -121,6 +124,7 @@ const resources = {
       career: en_career,
       cv: en_cv,
       deleteAccount: en_deleteAccount,
+      documents: en_documents,
       settings: en_settings,
       language: en_language,
       datePicker: en_datePicker,

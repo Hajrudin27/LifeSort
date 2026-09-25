@@ -77,6 +77,7 @@ export type DomainModule =
   | 'tasks'
   | 'travel'
   | 'warranties'
+  | 'documents'
   | 'career'
   | 'cycle'
   | 'shared';
@@ -499,6 +500,20 @@ export const DATA_DOMAINS = [
     ...profileB({ expectsServerSync: true }),
   },
   {
+    id: 'documents.files',
+    title: 'Standalone private documents',
+    module: 'documents',
+    description: 'User documents kept for their own sake, plus the filename and date they are recognised by.',
+    storageSurfaces: [
+      'async-storage:lifesort-documents',
+      'supabase-table:documents',
+      'supabase-storage-bucket:documents',
+      'secure-store:lifesort-document-cache-key',
+    ],
+    evidence: ['store/useDocumentsStore.ts', 'core/documents/documentSync.ts', 'supabase/migrations/20260925090000_private_document_bucket.sql'],
+    ...profileB({ expectsServerSync: true }),
+  },
+  {
     id: 'career.applications',
     title: 'Job applications',
     module: 'career',
@@ -629,6 +644,7 @@ export const PERSISTENCE_SURFACES = [
   surface('async-storage:lifesort-todos', 'async-storage', 'Zustand key lifesort-todos', 'device', ['tasks.todos'], ['store/useTodoStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useTodoStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-trips', 'async-storage', 'Encrypted Zustand key lifesort-trips', 'device', ['travel.trips', 'travel.attachments'], ['store/useTripsStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
   surface('async-storage:lifesort-warranties', 'async-storage', 'Encrypted Zustand key lifesort-warranties', 'device', ['warranties.records', 'warranties.attachments'], ['store/useWarrantiesStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
+  surface('async-storage:lifesort-documents', 'async-storage', 'Encrypted Zustand key lifesort-documents', 'device', ['documents.files'], ['store/useDocumentsStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'APP-055 surface is born encrypted; the AES-GCM v1 adapter owns key access and protected failure handling, and no historical plaintext payload exists to migrate.' }),
   surface('async-storage:lifesort-career', 'async-storage', 'Zustand key lifesort-career', 'device', ['career.applications', 'career.skills'], ['store/useCareerStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useCareerStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-cv', 'async-storage', 'Zustand key lifesort-cv', 'device', ['career.cv'], ['store/useCVStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useCVStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-skill-categories', 'async-storage', 'Zustand key lifesort-skill-categories', 'device', ['career.skills'], ['store/useSkillCategoriesStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useSkillCategoriesStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
@@ -638,7 +654,7 @@ export const PERSISTENCE_SURFACES = [
   surface('secure-store:lifesort-app-pin-hash', 'secure-store', 'App-lock PIN hash', 'device', ['account.app-lock'], ['utils/auth/pinAuth.ts'], { kind: 'external', owner: 'utils/auth/pinAuth.ts', reason: 'PIN verification upgrades legacy SHA-256 to PBKDF2 v2 using the supplied PIN; cannot run deterministically at startup.' }),
   surface('secure-store:lifesort-pin-lockout', 'secure-store', 'App-lock failed-attempt lockout counter', 'device', ['account.app-lock'], ['utils/auth/pinLockout.ts'], { kind: 'external', owner: 'utils/auth/pinLockout.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('secure-store:lifesort-cycle-health-key', 'secure-store', 'AES-GCM key for encrypted cycle health persistence', 'device', ['cycle.user-health'], ['core/storage/cycleHealthEncryptedStorage.ts'], { kind: 'immutable/no-schema', owner: 'core/storage/cycleHealthEncryptedStorage.ts', reason: 'Opaque crypto material; adapter owns creation and deletion, never generic transforms.' }),
-  surface('secure-store:lifesort-document-cache-key', 'secure-store', 'AES-GCM key for encrypted document cache files and metadata', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['core/storage/documentCacheStorage.ts'], { kind: 'immutable/no-schema', owner: 'core/storage/documentCacheStorage.ts', reason: 'Opaque crypto material; adapter owns creation and deletion, never generic transforms.' }),
+  surface('secure-store:lifesort-document-cache-key', 'secure-store', 'AES-GCM key for encrypted document cache files and metadata', 'device', ['documents.files', 'economy.attachments', 'travel.attachments', 'warranties.attachments'], ['core/storage/documentCacheStorage.ts'], { kind: 'immutable/no-schema', owner: 'core/storage/documentCacheStorage.ts', reason: 'Opaque crypto material; adapter owns creation and deletion, never generic transforms.' }),
   surface('filesystem:document-directory/attachments', 'filesystem', 'Encrypted local attachment directory', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['utils/shared/attachmentStorage.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
   surface('filesystem:cache-directory/lifesort-decrypted-attachments', 'filesystem', 'Temporary decrypted attachment interoperability cache', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['core/storage/documentCacheStorage.ts'], { kind: 'cleanup-only', owner: 'core/storage/documentCacheStorage.ts', reason: 'Ephemeral viewer/share files; adapter cleanup, never a migration backup.' }),
   surface('filesystem:document-directory/lifesort-backup-json', 'filesystem', 'Local backup export JSON', 'device', ['core.local-backup-archive'], ['utils/shared/dataBackup.ts'], { kind: 'external', owner: 'utils/shared/dataBackup.ts', reason: 'User export/import format owned by backupValidation; APP-097 policy is separate from app hydration.' }),
@@ -680,6 +696,7 @@ export const PERSISTENCE_SURFACES = [
   surface('supabase-table:trip_packing_items', 'supabase-table', 'public.trip_packing_items', 'supabase', ['travel.trips'], ['store/useTripsStore.ts']),
   surface('supabase-table:trip_participants', 'supabase-table', 'public.trip_participants', 'supabase', ['travel.trips'], ['store/useTripsStore.ts']),
   surface('supabase-table:warranties', 'supabase-table', 'public.warranties', 'supabase', ['warranties.records'], ['store/useWarrantiesStore.ts']),
+  surface('supabase-table:documents', 'supabase-table', 'public.documents', 'supabase', ['documents.files'], ['core/documents/documentSync.ts', 'supabase/migrations/20260925090000_private_document_bucket.sql']),
   surface('supabase-table:job_applications', 'supabase-table', 'public.job_applications', 'supabase', ['career.applications'], ['store/useCareerStore.ts']),
   surface('supabase-table:skills', 'supabase-table', 'public.skills', 'supabase', ['career.skills'], ['store/useCareerStore.ts']),
   surface('supabase-table:cv_personal_info', 'supabase-table', 'public.cv_personal_info', 'supabase', ['career.cv'], ['store/useCVStore.ts']),
@@ -693,6 +710,7 @@ export const PERSISTENCE_SURFACES = [
   surface('supabase-table:health_conditions', 'supabase-table', 'public.health_conditions', 'supabase', ['cycle.reference-content'], ['store/useCycleStore.ts']),
   surface('supabase-table:symptom_glossary', 'supabase-table', 'public.symptom_glossary', 'supabase', ['cycle.reference-content'], ['store/useCycleStore.ts']),
   surface('supabase-storage-bucket:attachments', 'supabase-storage-bucket', 'Storage bucket attachments', 'supabase', ['economy.attachments', 'warranties.attachments'], ['utils/shared/attachmentSync.ts', 'supabase/migrations/20260903075914_add_attachments_storage.sql']),
+  surface('supabase-storage-bucket:documents', 'supabase-storage-bucket', 'Storage bucket documents', 'supabase', ['documents.files'], ['core/documents/documentSync.ts', 'supabase/migrations/20260925090000_private_document_bucket.sql']),
   surface('supabase-storage-bucket:recipe-images', 'supabase-storage-bucket', 'Storage bucket recipe-images', 'supabase', ['food.global-catalogue'], ['supabase/migrations/20260903002859_add_activity_log_and_recipe_images.sql']),
   surface('bundled-source:data/seedRecipes', 'bundled-source', 'Bundled seed recipe source files', 'bundle', ['food.seed-recipes'], ['data/seedRecipes.ts']),
 ] as const satisfies readonly PersistenceSurface[];

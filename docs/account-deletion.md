@@ -19,9 +19,20 @@ while an account is being destroyed.
 
 ## The order, and why it cannot change
 
-1. **Files** — Storage objects, read from the `attachments` table rather than by
-   listing the bucket, because the files sit in nested paths and the table knows
-   exactly where.
+1. **Files** — Storage objects from both private buckets, before anything else.
+   - `attachments`: paths read from the `attachments` table rather than by
+     listing the bucket, because the files sit in nested paths and the table
+     knows exactly where.
+   - `documents` (APP-055): the account releases its own documents through
+     `release_my_documents_for_account_deletion()` — authorized by the password
+     just entered, via the server's own AMR claim — and is handed the complete
+     canonical manifest. The manifest is validated all-or-nothing; one entry that
+     cannot be accounted for aborts the deletion before any object is touched.
+     The metadata rows are **not** deleted here: they are the only record of
+     where the objects are, so they stay until the cascade takes them, which is
+     what lets a failed attempt be retried against the same paths.
+   A document Storage failure stops the whole deletion at this stage. The account
+   remains, and so do the paths.
 2. **Account** — `delete_my_account`, which cascades every user table from
    `auth.users`. One call rather than a list of tables that would go stale the
    next time a table is added.
@@ -42,7 +53,11 @@ it later.
 | Situation | What happens |
 | --- | --- |
 | Not signed in | Nothing is touched |
+| Document cleanup fails | Stops at the files stage. The account, its metadata rows and its paths all remain, so the next attempt finds the same objects |
 | Account deletion fails | Local data is **kept** — the account still exists, so wiping the phone would take data the user still owns |
+| Account deletion **answers with an error** after documents were removed | Said plainly: the account was not deleted and some uploaded documents are already gone. This outranks the shape of the error — an `admin_account` refusal says both facts, not just the support one |
+| Account deletion **throws** after documents were removed | The request may have reached the server before the connection died, so the page says the deletion could not be *confirmed* and that some documents are already gone, and suggests signing in again to see. It never claims the account survived |
+| Either of those with an empty manifest | Ordinary error copy. Nothing claims documents were removed when no Storage call happened |
 | Sign-out fails after deletion | Local data is cleared anyway — the account is gone, and a deleted user's data must not stay on the phone |
 | An admin account | Refused, with a message that says why |
 
@@ -77,6 +92,37 @@ Supabase client.
 address alone were enough, the page would be a weapon rather than a right. The
 address is typed twice as well, but that only guards against a mis-tap — the
 password is what proves anything.
+
+**The page cleans up APP-055 documents too**, in the same order and under the
+same rules as the app:
+
+```
+signInWithPassword
+  → release_my_documents_for_account_deletion()   (authorized by that sign-in)
+  → validate the COMPLETE canonical manifest      (all or nothing)
+  → storage.from('documents').remove(paths)       (skipped when the list is empty)
+  → confirm no error
+  → delete_my_account()
+  → metadata rows cascade from auth.users
+```
+
+It has to. `documents` Storage objects do not cascade with `auth.users`, and this
+repository establishes no scheduler for `orphaned_document_paths`, so deleting the
+account first would take the row that says where the object is and leave the bytes
+with nothing to find them by. Any failure — a refused release, a manifest with an
+entry that cannot be accounted for, a removal that reported an error — stops before
+`delete_my_account`, and the account survives so the user can simply try again.
+
+The page uses the ordinary Storage API under the caller's own RLS. It holds no
+service key, never displays or stores a path, and offers no per-document
+deletion — APP-056 still owns that.
+
+**Known gap, pre-existing:** the page does not remove `attachments` objects, and
+never has. That is APP-022/APP-023 behaviour from before APP-055 and is not
+changed here. The consequence differs by bucket: `orphaned_attachment_paths` is
+swept daily under the existing operational contract, so an attachment left this
+way is collected; no such sweep is established for documents, which is exactly
+why the document cleanup had to become explicit.
 
 It calls the **same** `delete_my_account` as the app, so the two can never end
 up deleting different things, and it gives the same answer for a wrong password

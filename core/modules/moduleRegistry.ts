@@ -26,6 +26,7 @@ export const MODULE_IDS = [
   'tasks',
   'travel',
   'warranties',
+  'documents',
   'career',
   'cycle',
 ] as const;
@@ -203,6 +204,17 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
     sensitivity: ['document', 'financial'],
     routeRoots: ['/warranties'],
     notificationCategory: 'personal',
+  },
+  documents: {
+    id: 'documents',
+    // APP-055 builds the private storage, the owner metadata and the signed read.
+    // APP-056 still owns the delete cascade, and a domain you can put a document
+    // into but not take one out of must not look finished to an ordinary user.
+    availability: 'internal',
+    titleKey: 'modules.names.documents',
+    descriptionKey: 'modules.descriptions.documents',
+    sensitivity: ['document'],
+    routeRoots: ['/documents'],
   },
   career: {
     id: 'career',

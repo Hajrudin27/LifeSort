@@ -2,6 +2,7 @@ import { withMigrationStorageCleanup } from '@/core/storage/migrations/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
+import { clearDocumentSignedUrlCache } from '@/core/documents/documentSync';
 import {
   clearCycleHealthEncryptionKey,
   withCycleHealthEncryptedStorageCleanup,
@@ -87,6 +88,7 @@ export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Pr
 
       // 5. Nøglerne.
       clearSignedUrlCache();
+      clearDocumentSignedUrlCache();
       clearVerification();
       await clearResendThrottle();
       await clearLocalPin();

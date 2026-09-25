@@ -1,0 +1,21 @@
+{
+  "title": "Dokumenter",
+  "intro": "Dine dokumenter ligger privat. Kun du kan åbne dem.",
+  "upload": "Tilføj dokument",
+  "uploadHint": "Vælg en fil fra din telefon",
+  "uploading": "Uploader …",
+  "loading": "Henter dine dokumenter …",
+  "empty": "Du har ingen dokumenter endnu.",
+  "emptyHint": "Tryk på Tilføj dokument for at gemme din første fil.",
+  "openLabel": "Åbn {{name}}, gemt {{date}}",
+  "opening": "Åbner …",
+  "savedOn": "Gemt {{date}}",
+  "retry": "Prøv igen",
+  "errors": {
+    "not-authenticated": "Du skal være logget ind for at gemme dokumenter.",
+    "invalid-file": "Filen kunne ikke bruges. Den skal have et navn og være under 25 MB.",
+    "upload-failed": "Dokumentet blev ikke gemt. Tjek din forbindelse, og prøv igen.",
+    "metadata-failed": "Dokumentet blev ikke gemt færdigt. Prøv igen.",
+    "open-failed": "Dokumentet kunne ikke åbnes lige nu. Prøv igen."
+  }
+}

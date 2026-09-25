@@ -1,3 +1,4 @@
+import { releaseOwnDocumentsForAccountDeletion } from '@/core/documents/documentSync';
 import { LOCAL_STORE_RESETS } from '@/features/localStores';
 import { supabase } from '@/lib/supabase';
 
@@ -11,8 +12,9 @@ import { clearLocalUserData } from './clearLocalUserData';
  * længere: policyen tillader kun en bruger at slette sine egne filer, og "sine
  * egne" er defineret ud fra en bruger, der lige er blevet slettet.
  *
- * Stierne læses fra attachments-tabellen frem for at liste bucket'en, fordi
- * filerne ligger i indlejrede mapper og tabellen ved præcis hvor.
+ * Stierne læses fra attachments- og documents-tabellerne frem for at liste
+ * bucket'erne, fordi filerne ligger i indlejrede mapper og tabellerne ved
+ * præcis hvor.
  *
  * Konsekvensen af den rækkefølge er værd at kende: fejler selve sletningen af
  * kontoen, er filerne allerede væk. Derfor melder funktionen tilbage, hvor den
@@ -36,6 +38,11 @@ export type DeleteAccountResult =
 
 const BUCKET = 'attachments';
 
+// APP-055 added a second private bucket. Storage objects do not cascade with the
+// account, so every bucket the user can write to has to be swept here — leaving
+// one out would quietly make the APP-022 promise false.
+const DOCUMENTS_BUCKET = 'documents';
+
 export async function deleteAccount(
   onStage?: (stage: DeleteAccountStage) => void,
 ): Promise<DeleteAccountResult> {
@@ -58,6 +65,34 @@ export async function deleteAccount(
 
   if (paths.length > 0) {
     await supabase.storage.from(BUCKET).remove(paths);
+    filesAlreadyDeleted = true;
+  }
+
+  // The documents half fails CLOSED. A read that did not answer is not an empty
+  // account, and a `.remove()` that resolved is not a file that is gone —
+  // Supabase reports refusals in `error` rather than by throwing. Continuing past
+  // either one would delete the account while its documents were still in the
+  // bucket, and the session that was allowed to remove them would be the thing we
+  // just destroyed. The orphan sweep is a backstop, not permission to proceed
+  // after a failure we already know about.
+  const filesFailed = (): DeleteAccountResult =>
+    ({ ok: false, reason: 'unknown', failedAt: 'files', filesAlreadyDeleted });
+
+  // Marks this account's documents as released for deletion and hands back their
+  // paths. The rows are NOT removed: they are the only record of where the
+  // objects are, so destroying them before the bytes are gone would strand any
+  // file whose removal failed and leave the next attempt nothing to retry with.
+  // They go with the account, through the cascade, once everything else worked.
+  const documentPaths = await releaseOwnDocumentsForAccountDeletion(userId);
+  if (documentPaths === null) return filesFailed();
+
+  if (documentPaths.length > 0) {
+    try {
+      const { error: removeError } = await supabase.storage.from(DOCUMENTS_BUCKET).remove(documentPaths);
+      if (removeError) return filesFailed();
+    } catch {
+      return filesFailed();
+    }
     filesAlreadyDeleted = true;
   }
 

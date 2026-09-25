@@ -24,6 +24,10 @@ import { LOCAL_STORE_RESETS } from '@/features/localStores';
 
 // PIN-modulet trækker en ESM-only krypto-pakke ind. En oprydningstest skal
 // ikke køre PBKDF2 — den skal se, at nøglen bliver slettet.
+jest.mock('@/core/documents/documentSync', () => ({
+  clearDocumentSignedUrlCache: jest.fn(),
+}));
+
 jest.mock('@/utils/auth/pinAuth', () => ({
   clearLocalPin: jest.fn(() => Promise.resolve()),
 }));
@@ -211,6 +215,16 @@ describe('log ud rydder faktisk op', () => {
     const { clearDocumentCacheEncryptionKey } = require('@/core/storage/documentCacheStorage');
     await clearLocalUserData([]);
     expect(clearDocumentCacheEncryptionKey).toHaveBeenCalled();
+  });
+
+  it('rydder dokumenternes cache af signerede URL\'er (APP-055)', async () => {
+    // A signed URL reaches a file without a login and cannot be withdrawn, so a
+    // cache that survived a logout would hand the next account the previous
+    // one's documents. APP-055 added a second such cache beside the attachment
+    // one, and forgetting the new one is exactly the way this goes wrong.
+    const { clearDocumentSignedUrlCache } = require('@/core/documents/documentSync');
+    await clearLocalUserData([]);
+    expect(clearDocumentSignedUrlCache).toHaveBeenCalled();
   });
 
   it('holder cykluslagerets oprydningsvindue rundt om nulstilling, diskfejning og nøglesletning', async () => {

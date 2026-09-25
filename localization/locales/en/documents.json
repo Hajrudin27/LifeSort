@@ -1,0 +1,21 @@
+{
+  "title": "Documents",
+  "intro": "Your documents are private. Only you can open them.",
+  "upload": "Add document",
+  "uploadHint": "Choose a file from your phone",
+  "uploading": "Uploading …",
+  "loading": "Loading your documents …",
+  "empty": "You have no documents yet.",
+  "emptyHint": "Tap Add document to save your first file.",
+  "openLabel": "Open {{name}}, saved {{date}}",
+  "opening": "Opening …",
+  "savedOn": "Saved {{date}}",
+  "retry": "Try again",
+  "errors": {
+    "not-authenticated": "You need to be signed in to save documents.",
+    "invalid-file": "That file could not be used. It needs a name and must be under 25 MB.",
+    "upload-failed": "The document was not saved. Check your connection and try again.",
+    "metadata-failed": "The document was not saved completely. Please try again.",
+    "open-failed": "The document could not be opened right now. Please try again."
+  }
+}

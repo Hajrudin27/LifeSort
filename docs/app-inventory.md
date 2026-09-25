@@ -90,6 +90,7 @@ itself is APP-005 and is **not** implemented here.
 | `tasks` | – (spec has no `tasks` id; see §8-F3) | available | `/todos/*` | `useTodoStore` | ordinary | Hajrudin Kardasevic |
 | `travel` | `travel` | available | `/travel/*` | `useTripsStore` | personal, financial, document | Hajrudin Kardasevic |
 | `warranties` | `warranties` | available | `/warranties/*` | `useWarrantiesStore` | document, financial | Hajrudin Kardasevic |
+| `documents` | `documents` | internal — APP-055 delivers private storage, owner metadata and signed reads; APP-056 still owns the delete cascade | `/documents` | `useDocumentsStore` | document | Hajrudin Kardasevic |
 | `career` | `career` | available | `/career/*` | `useCareerStore`, `useCVStore`, `useSkillCategoriesStore` | ordinary, personal, document | Hajrudin Kardasevic |
 | `cycle` | `cycle` | available — but tab visibility is gated on `profile.gender === 'female'` (see §8-F2) | `/cycle`, `/cycle/*` | `useCycleStore` | health | Hajrudin Kardasevic |
 
@@ -105,7 +106,6 @@ carries the same classification, and a test keeps the two in step.
 
 | Spec `ModuleId` | State in repo |
 | --- | --- |
-| `documents` | No dedicated module. Document/receipt files exist as *attachments* owned by `economy`, `warranties` and `travel` (`utils/shared/attachmentStorage.ts`, `utils/shared/attachmentSync.ts`, Storage bucket `attachments`). |
 | `pregnancy` | Not implemented. |
 | `gifts` | Not implemented. |
 
@@ -157,6 +157,7 @@ to Supabase tables in §3.
 | `/cycle/settings` | `app/cycle/settings.tsx` | `cycle` | `useCycleStore`<br>`useToastStore` | health | Hajrudin Kardasevic |
 | `/cycle/symptoms` | `app/cycle/symptoms.tsx` | `cycle` | `useCycleStore` | health | Hajrudin Kardasevic |
 | `/economy/affordability` | `app/economy/affordability.tsx` | `economy` | `useExpensesStore`<br>`useIncomeStore` | financial | Hajrudin Kardasevic |
+| `/documents` | `app/documents/index.tsx` | `documents` | `useDocumentsStore` | document | Hajrudin Kardasevic |
 | `/economy/insights` | `app/economy/insights.tsx` | `economy` | `useExpensesStore`<br>`useIncomeStore`<br>`useSavingsGoalsStore` | financial | Hajrudin Kardasevic |
 | `/expenses/[category]` | `app/expenses/[category].tsx` | `economy` | `useExpensesStore` | financial | Hajrudin Kardasevic |
 | `/expenses/edit/[id]` | `app/expenses/edit/[id].tsx` | `economy` | `useExpensesStore` | financial, document | Hajrudin Kardasevic |
@@ -259,6 +260,7 @@ the key material in SecureStore.
 | `useTodoStore` | `store/useTodoStore.ts` | `tasks` | `lifesort-todos` | AsyncStorage (plain) | `todos` | ordinary | Hajrudin Kardasevic |
 | `useTripsStore` | `store/useTripsStore.ts` | `travel` | `lifesort-trips` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `trips`, `trip_expenses`, `trip_packing_items`, `trip_participants` | personal, financial, document | Hajrudin Kardasevic |
 | `useWarrantiesStore` | `store/useWarrantiesStore.ts` | `warranties` | `lifesort-warranties` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `warranties` | document, financial | Hajrudin Kardasevic |
+| `useDocumentsStore` | `store/useDocumentsStore.ts` | `documents` | `lifesort-documents` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `documents` | document | Hajrudin Kardasevic |
 | `useCareerStore` | `store/useCareerStore.ts` | `career` | `lifesort-career` | AsyncStorage (plain) | `job_applications`, `skills` | personal | Hajrudin Kardasevic |
 | `useCVStore` | `store/useCVStore.ts` | `career` | `lifesort-cv` | AsyncStorage (plain) | `cv_personal_info`, `cv_education`, `cv_experience`, `cv_languages`, `cv_versions` | personal, document | Hajrudin Kardasevic |
 | `useSkillCategoriesStore` | `store/useSkillCategoriesStore.ts` | `career` | `lifesort-skill-categories` | AsyncStorage (plain) | – | ordinary | Hajrudin Kardasevic |
@@ -314,6 +316,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `trip_participants` | `travel` | `store/useTripsStore.ts` | personal | Hajrudin Kardasevic |
 | `warranties` | `warranties` | `store/useWarrantiesStore.ts` | document, financial | Hajrudin Kardasevic |
 | `attachments` | shared (`economy`, `warranties`, `travel`) | `utils/shared/attachmentSync.ts`, `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
+| `documents` | `documents` | `core/documents/documentSync.ts`, `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
 | `job_applications` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
 | `skills` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
 | `cv_personal_info` | `career` | `store/useCVStore.ts` | personal | Hajrudin Kardasevic |

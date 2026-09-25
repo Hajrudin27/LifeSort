@@ -5,6 +5,7 @@ import { useCVStore } from '@/store/useCVStore';
 import { useCareerStore } from '@/store/useCareerStore';
 import { useCategoriesStore } from '@/store/useCategoriesStore';
 import { useCycleStore } from '@/store/useCycleStore';
+import { useDocumentsStore } from '@/store/useDocumentsStore';
 import { useEnabledModulesStore } from '@/store/useEnabledModulesStore';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useFoodStore } from '@/store/useFoodStore';
@@ -60,6 +61,10 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
     reset: () => useSavingsGoalsStore.setState({ goals: [], history: [], extraSavings: ZERO_MINOR_UNITS }),
   },
   { key: 'lifesort-warranties', reset: () => useWarrantiesStore.setState({ warranties: [] }) },
+  {
+    key: 'lifesort-documents',
+    reset: () => useDocumentsStore.setState({ documents: [], uploading: false, uploadError: null }),
+  },
   {
     key: 'lifesort-trips',
     reset: () =>

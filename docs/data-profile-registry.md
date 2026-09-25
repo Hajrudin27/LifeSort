@@ -50,7 +50,7 @@ or production CRUD flow changes. Runtime execution remains deferred.
 
 ## Logical Domains
 
-Counts are enforced in tests: **A = 24, B = 6, C = 2, D = 4, total = 36**.
+Counts are enforced in tests: **A = 24, B = 7, C = 2, D = 4, total = 37**.
 
 | Domain | Profile | Module | Current physical surfaces | Notes |
 | --- | --- | --- | --- | --- |
@@ -85,6 +85,7 @@ Counts are enforced in tests: **A = 24, B = 6, C = 2, D = 4, total = 36**.
 | `travel.attachments` | B | travel | `async-storage:lifesort-trips`, `filesystem:document-directory/attachments`, `filesystem:cache-directory/lifesort-decrypted-attachments`, `secure-store:lifesort-document-cache-key` | Trip documents are local-only today. Local bytes and metadata are encrypted; temporary decrypted copies are cache-only interoperability files. |
 | `warranties.records` | A | warranties | `async-storage:lifesort-warranties`, `supabase-table:warranties` | Warranty/insurance records excluding attached files. |
 | `warranties.attachments` | B | warranties | `async-storage:lifesort-warranties`, `supabase-table:attachments`, `supabase-storage-bucket:attachments`, `filesystem:document-directory/attachments`, `filesystem:cache-directory/lifesort-decrypted-attachments`, `secure-store:lifesort-document-cache-key` | Receipt, warranty and insurance files plus metadata. Local bytes and metadata are encrypted; temporary decrypted copies are cache-only interoperability files. |
+| `documents.files` | B | documents | `async-storage:lifesort-documents`, `supabase-table:documents`, `supabase-storage-bucket:documents`, `secure-store:lifesort-document-cache-key` | APP-055 standalone private documents. Metadata only on the device and encrypted at rest; bytes stay in the private `documents` bucket and are reached through short-lived signed URLs that are never persisted. |
 | `career.applications` | A | career | `async-storage:lifesort-career`, `supabase-table:job_applications` | Ambiguous: application notes may later need Profile B review. |
 | `career.skills` | A | career | `async-storage:lifesort-career`, `async-storage:lifesort-skill-categories`, `supabase-table:skills` | Skills and skill-category labels. |
 | `career.cv` | A | career | `async-storage:lifesort-cv`, `supabase-table:cv_personal_info`, `supabase-table:cv_education`, `supabase-table:cv_experience`, `supabase-table:cv_languages`, `supabase-table:cv_versions` | Ambiguous: document-like career data; review before APP-029. |
@@ -118,7 +119,8 @@ Document-cache physical surfaces added by APP-029:
 | --- | --- | --- | --- |
 | `filesystem:document-directory/attachments` | B | encrypted-required | Persistent cached attachment bytes are AES-GCM encrypted `*.lsenc` files. Legacy plaintext files referenced by attachment metadata are encrypted during metadata migration, then removed after the encrypted metadata write succeeds. |
 | `filesystem:cache-directory/lifesort-decrypted-attachments` | B | encrypted-required | Temporary plaintext copies exist only for native image/share/upload interoperability and are deleted on explicit cleanup/logout. This is not the canonical persistent cache. |
-| `secure-store:lifesort-document-cache-key` | B | encrypted-required | Device-local AES-256-GCM key material for document-cache files and attachment metadata; separate from the cycle-health key. |
+| `async-storage:lifesort-documents` | B | encrypted-required | APP-055 standalone document metadata. Born encrypted: there is no historical plaintext payload, so no local migration exists. |
+| `secure-store:lifesort-document-cache-key` | B | encrypted-required | Device-local AES-256-GCM key material for document-cache files, attachment metadata and APP-055 document metadata; separate from the cycle-health key. |
 
 Unknown physical surfaces fail closed in the API: plaintext local persistence is
 not allowed, Profile B is assumed possible, and the strongest protection result

@@ -172,6 +172,9 @@
         wrong: 'E-mail eller adgangskode passer ikke.',
         admin: 'Denne konto kan ikke slettes herfra. Skriv til support.',
         failed: 'Noget gik galt. Prøv igen.',
+        failedAfterFiles: 'Kontoen blev ikke slettet, men nogle af dine uploadede dokumenter er allerede fjernet. Prøv igen — eller skriv til support.',
+        adminAfterFiles: 'Denne konto kan ikke slettes herfra — skriv til support. Bemærk, at nogle af dine uploadede dokumenter allerede er fjernet.',
+        unknownAfterFiles: 'Vi kunne ikke bekræfte, om kontosletningen blev gennemført, og nogle af dine uploadede dokumenter er allerede fjernet. Prøv at logge ind igen. Findes kontoen stadig, kan du prøve igen eller skrive til support.',
         done: 'Din konto er slettet. Du kan lukke siden.'
       },
       en: {
@@ -191,6 +194,9 @@
         wrong: 'That email or password is not right.',
         admin: 'This account cannot be deleted here. Please contact support.',
         failed: 'Something went wrong. Try again.',
+        failedAfterFiles: 'Your account was not deleted, but some of your uploaded documents have already been removed. Please try again — or contact support.',
+        adminAfterFiles: 'This account cannot be deleted here — please contact support. Note that some of your uploaded documents have already been removed.',
+        unknownAfterFiles: 'We could not confirm whether account deletion completed, and some of your uploaded documents have already been removed. Try signing in again. If the account still exists, try again or contact support.',
         done: 'Your account has been deleted. You can close this page.'
       }
     };
@@ -214,6 +220,85 @@
     });
 
     applyLanguage();
+
+    // APP-055: standalone documents live in their own private bucket, and Storage
+    // objects do NOT cascade with auth.users. Deleting the account first would
+    // take the metadata row that says where the object is and leave the bytes —
+    // and this repository establishes no scheduler for the orphan backstop. So
+    // the documents go first, exactly as the app does it.
+    var DOCUMENTS_BUCKET = 'documents';
+    var UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    /**
+     * The manifest is all or nothing: the complete list, or null.
+     *
+     * One entry we cannot account for rejects the whole thing. A filtered
+     * manifest is indistinguishable from a complete one, so the page would
+     * remove what it understood, believe the cleanup was finished and destroy
+     * the account — leaving behind whatever the discarded entry described.
+     * Same contract as the app's decoder; the canonical form is the only form.
+     */
+    function canonicalDocumentManifest(data, userId) {
+      if (!Array.isArray(data)) return null;
+      if (typeof userId !== 'string' || !UUID_PATTERN.test(userId)) return null;
+
+      var manifest = [];
+      var seen = {};
+
+      for (var index = 0; index < data.length; index++) {
+        var value = data[index];
+        if (typeof value !== 'string') return null;
+
+        var parts = value.split('/');
+        if (parts.length !== 2) return null;
+        if (parts[0] !== userId) return null;
+        if (!UUID_PATTERN.test(parts[0]) || !UUID_PATTERN.test(parts[1])) return null;
+        if (parts[0] + '/' + parts[1] !== value) return null;
+
+        // One canonical path per document is the server's contract; a repeat
+        // means this is not that response, and guessing is what must not happen.
+        if (Object.prototype.hasOwnProperty.call(seen, value)) return null;
+        seen[value] = true;
+
+        manifest.push(value);
+      }
+
+      return manifest;
+    }
+
+    /**
+     * Release this account's documents and remove their objects.
+     *
+     * The release is authorized by the password sign-in that just happened: the
+     * server reads its own AMR claim, so the page proves nothing itself and
+     * sends nothing to vouch for the user.
+     *
+     * `removed` says whether bytes actually went, so the failure copy can be
+     * truthful instead of guessing.
+     */
+    async function removeOwnDocuments(client, userId) {
+      var release;
+      try {
+        release = await client.rpc('release_my_documents_for_account_deletion');
+      } catch (error) {
+        return { ok: false, removed: false };
+      }
+      if (!release || release.error) return { ok: false, removed: false };
+
+      var manifest = canonicalDocumentManifest(release.data, userId);
+      if (manifest === null) return { ok: false, removed: false };
+      if (manifest.length === 0) return { ok: true, removed: false };
+
+      var removal;
+      try {
+        removal = await client.storage.from(DOCUMENTS_BUCKET).remove(manifest);
+      } catch (error) {
+        return { ok: false, removed: false };
+      }
+      if (!removal || removal.error) return { ok: false, removed: false };
+
+      return { ok: true, removed: true };
+    }
 
     var form = document.getElementById('form');
     var status = document.getElementById('status');
@@ -242,6 +327,11 @@
       submit.disabled = true;
       say(strings.working);
 
+      // Declared out here so the outer catch can still say what is true. Set only
+      // after a Storage removal actually reported success, so it is never a guess
+      // about what happened.
+      var documentsRemoved = false;
+
       try {
         var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
           auth: { persistSession: false }
@@ -256,19 +346,59 @@
           return;
         }
 
+        // The user id comes from the session the password just produced; it is
+        // never typed, and a missing one fails the manifest check below.
+        var userId = signIn.data && signIn.data.user && signIn.data.user.id;
+
+        // Documents before the account. If anything here is unclear — a refused
+        // release, a manifest we cannot account for, a removal that reported an
+        // error — the account stays, so nothing is destroyed on a half-known
+        // cleanup and the user can simply try again.
+        var documents = await removeOwnDocuments(client, userId);
+        if (!documents.ok) {
+          say(strings.failed, 'error');
+          submit.disabled = false;
+          return;
+        }
+        documentsRemoved = documents.removed;
+
         var deletion = await client.rpc('delete_my_account');
         if (deletion.error) {
-          var message = deletion.error.message || '';
-          say(message.indexOf('admin_account') !== -1 ? strings.admin : strings.failed, 'error');
+          // The server answered, so the account definitely still exists. What the
+          // user also needs to know — and would otherwise never learn — is that
+          // some of their documents are already gone. That fact outranks the
+          // shape of the error, including admin_account.
+          var isAdmin = (deletion.error.message || '').indexOf('admin_account') !== -1;
+          say(
+            documentsRemoved
+              ? (isAdmin ? strings.adminAfterFiles : strings.failedAfterFiles)
+              : (isAdmin ? strings.admin : strings.failed),
+            'error'
+          );
           submit.disabled = false;
           return;
         }
 
-        await client.auth.signOut();
+        // The account is gone. From here nothing may downgrade that: signing out
+        // is tidying up a session that is already invalid, and whether it works
+        // says nothing about a deletion the server has already confirmed.
+        try {
+          await client.auth.signOut();
+        } catch (signOutError) {
+          // Deliberately ignored, as is a returned { error }: the deletion
+          // succeeded, and reporting a cleanup problem as a failed deletion
+          // would send the user back to retry something already done.
+        }
+
         form.hidden = true;
         say(strings.done);
       } catch (error) {
-        say(COPY[lang].failed, 'error');
+        // A throw is not an answer. The request may have reached the server and
+        // deleted the account before the connection died, so the page must not
+        // claim the account survived — only that it could not confirm either way.
+        // When no document bytes went, nothing extra is known and the ordinary
+        // message is the honest one.
+        say(documentsRemoved ? COPY[lang].unknownAfterFiles : COPY[lang].failed, 'error');
         submit.disabled = false;
       }
     });

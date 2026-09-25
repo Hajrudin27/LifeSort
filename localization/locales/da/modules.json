@@ -32,6 +32,7 @@
     "tasks": "To-do",
     "travel": "Rejser",
     "warranties": "Garantier",
+    "documents": "Dokumenter",
     "career": "Karriere",
     "cycle": "Cyklus"
   },
@@ -46,6 +47,7 @@
     "tasks": "Din to-do-liste",
     "travel": "Rejser, budget og pakkeliste",
     "warranties": "Garantier, kvitteringer og forsikringer",
+    "documents": "Dine private dokumenter, gemt sikkert",
     "career": "Jobansøgninger og CV",
     "cycle": "Cyklus og symptomer"
   },

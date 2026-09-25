@@ -726,6 +726,28 @@ async function upgradeInnerPayloadInMemory(storageName: string, plaintext: strin
   return (await migrateLocalStore(definition, inMemory)).raw ?? plaintext;
 }
 
+/**
+ * Stores whose current bytes may still be the plaintext Zustand payload written
+ * before the encrypted envelope existed, and which the adapter is therefore
+ * allowed to upgrade in place.
+ *
+ * The list is closed. A store created after APP-029 is born encrypted and has no
+ * historical plaintext to recognise, so plaintext under its key is not an old
+ * version of anything — it is an unexplained value, and the only safe reading of
+ * an unexplained value in a protected store is to refuse it.
+ */
+const LEGACY_PLAINTEXT_MIGRATABLE_STORES: ReadonlySet<string> = new Set([
+  'lifesort-expenses',
+  'lifesort-warranties',
+  'lifesort-trips',
+]);
+
+/**
+ * Shape recognition for a payload that has ALREADY been authenticated — either
+ * decrypted out of the envelope, or about to be written into one. Knowing the
+ * shape says nothing about where the bytes came from, which is why the legacy
+ * question below is asked separately rather than inferred from this.
+ */
 function looksLikeKnownDocumentMetadataPayload(
   storageName: string,
   parsed: Record<string, unknown>,
@@ -747,12 +769,33 @@ function looksLikeKnownDocumentMetadataPayload(
   if (storageName === 'lifesort-trips') {
     return Array.isArray(state.trips) && Array.isArray(state.expenses) && Array.isArray(state.packingItems);
   }
+  // APP-055. Recognised here so a decrypted envelope can be validated; NOT
+  // recognised as a legacy plaintext payload, because none has ever existed.
+  if (storageName === 'lifesort-documents') {
+    return Array.isArray(state.documents);
+  }
   return false;
+}
+
+/**
+ * The separate question the legacy path must ask: is this raw plaintext a known
+ * historical payload that this adapter is allowed to encrypt in place?
+ *
+ * Only a store that predates encryption can answer yes. For anything else the
+ * answer is no even when the shape is perfectly recognisable, so raw plaintext
+ * under a born-encrypted key fails closed instead of being silently adopted.
+ */
+function looksLikeMigratableLegacyPlaintextPayload(
+  storageName: string,
+  parsed: Record<string, unknown>,
+): boolean {
+  if (!LEGACY_PLAINTEXT_MIGRATABLE_STORES.has(storageName)) return false;
+  return looksLikeKnownDocumentMetadataPayload(storageName, parsed);
 }
 
 async function prepareLegacyPayloadMigration(storageName: string, value: string): Promise<PreparedPayloadMigration> {
   const parsed = parseStoredJson(value);
-  if (!looksLikeKnownDocumentMetadataPayload(storageName, parsed)) {
+  if (!looksLikeMigratableLegacyPlaintextPayload(storageName, parsed)) {
     throw new DocumentCacheProtectedDataError(
       'legacy-plaintext-malformed',
       'Existing document metadata storage is not a known legacy attachment payload.',

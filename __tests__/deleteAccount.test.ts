@@ -45,6 +45,12 @@ jest.mock('@/lib/supabase', () => ({
     },
     rpc: jest.fn(async (name: string) => {
       mockCalls.push(`rpc.${name}`);
+      // APP-055 added a second RPC to this flow: the account releases its own
+      // documents for deletion — marking them, not removing them — before their
+      // objects can be deleted. These fixtures seed attachments only, so the
+      // honest answer here is an account with no documents: an empty list, not
+      // an error.
+      if (name === 'release_my_documents_for_account_deletion') return { data: [], error: null };
       return { error: mockRpcError };
     }),
   },

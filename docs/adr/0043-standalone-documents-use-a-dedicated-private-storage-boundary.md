@@ -217,6 +217,14 @@ Because only metadata is cached locally, the document list requires a network
 read to populate on a new device, and an offline user sees the last known list
 without being able to open anything in it.
 
+Post-Staging maintenance of this decision, not a new one:
+`document_release_reauth_window()` and `document_release_window()` now pin their
+function-level `search_path` to `pg_catalog`. Both resolve no application object —
+each body is a single built-in `interval` literal — so this removes the
+mutable-search-path exposure and its advisor warning without touching behaviour.
+The 5-minute reauthentication window and the 15-minute release window are
+unchanged.
+
 ## Alternatives considered
 
 - **Add `'document'` to `AttachmentOwnerType` and reuse `public.attachments`.**

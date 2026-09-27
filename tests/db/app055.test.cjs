@@ -27,6 +27,12 @@ const ALICE_DOC = '20000000-0000-4000-8000-000000000001';
 const BOB_DOC = '20000000-0000-4000-8000-000000000002';
 const DOOMED_DOC = '20000000-0000-4000-8000-000000000003';
 
+/** Applied in this order; the second only alters what the first created. */
+const APP055_MIGRATIONS = [
+  '20260925090000_private_document_bucket.sql',
+  '20260925225633_app055_harden_document_window_search_path.sql',
+];
+
 let started = false;
 
 function sql(source) {
@@ -159,8 +165,12 @@ before(() => {
       ('${BOB}', 'bob@example.test'),
       ('${DOOMED}', 'doomed@example.test');`);
 
-  // The migration under test, exactly as it will be applied.
-  sql(fs.readFileSync(path.join(root, 'supabase/migrations/20260925090000_private_document_bucket.sql'), 'utf8'));
+  // The migrations under test, in the order they reach a database. The second is
+  // post-Staging hardening, so the cluster must see it applied ON TOP of the
+  // first — the same way Staging and Production will.
+  for (const migration of APP055_MIGRATIONS) {
+    sql(fs.readFileSync(path.join(root, 'supabase/migrations', migration), 'utf8'));
+  }
 
   // Seed one object + row per user through the service role, so the read tests
   // start from data that already exists rather than from their own writes.
@@ -600,6 +610,40 @@ test('RETRY: a failed Storage removal leaves the same path rediscoverable, and t
 
 test('the release window is one explicit constant', () => {
   assert.equal(sql(`select public.document_release_window()::text`), '00:15:00');
+});
+
+test('both window constants keep their value AND resolve on a pinned search_path', () => {
+  // Two facts together, because the hardening is only correct if it changed
+  // nothing: a pinned path on a function that started returning something else
+  // would be a worse outcome than the warning it closed.
+  const windows = {
+    document_release_reauth_window: '00:05:00',
+    document_release_window: '00:15:00',
+  };
+
+  for (const [name, expected] of Object.entries(windows)) {
+    assert.equal(sql(`select public.${name}()::text`), expected, `${name} changed value`);
+
+    // Read from catalog metadata rather than the migration text, so this proves
+    // the database's own state and not what a file happens to say.
+    const config = sql(`select coalesce(array_to_string(p.proconfig, ','), '')
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = '${name}' and p.pronargs = 0`);
+    assert.equal(config, 'search_path=pg_catalog', `${name} has no pinned search_path`);
+  }
+
+  // The hardening alters; it does not recreate. Volatility, ownership and the
+  // grants written by the first migration therefore have to be untouched.
+  assert.equal(sql(`select string_agg(p.provolatile::text, ',' order by p.proname)
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname='public' and p.proname in ('document_release_reauth_window','document_release_window')`),
+    'i,i');
+  assert.equal(sql(`select count(*) from information_schema.role_routine_grants
+    where routine_schema='public' and grantee='anon'
+      and routine_name in ('document_release_reauth_window','document_release_window')`), '0');
+  assert.equal(sql(`select count(distinct routine_name) from information_schema.role_routine_grants
+    where routine_schema='public' and grantee='authenticated'
+      and routine_name in ('document_release_reauth_window','document_release_window')`), '2');
 });
 
 test('EXPIRY: a release older than the window protects the document again', () => {

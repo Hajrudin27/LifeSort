@@ -150,7 +150,18 @@ oracle for whether someone else has a document at a guessed path. It takes a pat
 as a *question*, never as authorization — the authorization is the release state
 on the row.
 
-There is no delete action in the UI.
+APP-055 shipped no delete action in the UI.
+
+> **Current policy (APP-056).** The two reasons above are APP-055 as decided. APP-056
+> deliberately adds a reviewed third: a row whose per-document deletion request
+> (`deletion_requested_at`) is inside its own 15-minute window. Everything else —
+> own prefix only, `NULL` never authorizing, the constant `false` for a foreign
+> prefix — is unchanged. The INSERT policy above is also no longer own-prefix alone:
+> since APP-056 it refuses a path already claimed by an active row or one of the
+> caller's own deletion tombstones. The upload described below — fresh id, object
+> first, row second — is never refused by it. See
+> [APP-056](./app-056-document-delete-cascade.md) and
+> [ADR-0044](./adr/0044-per-document-deletion-uses-prepare-remove-finalize-with-retained-tombstones.md).
 
 ## Upload, and the two failure orders
 
@@ -235,9 +246,11 @@ persistence surface.
 ## Module maturity — `internal`
 
 `documents` is registered with `availability: 'internal'`, `sensitivity: ['document']`
-and route root `/documents`. APP-055 delivers storage, metadata and reads; APP-056
-still owns deletion, and a domain a user can put a document into but not take one
-out of must not look production-ready. `ModuleGate` therefore covers `/documents`
+and route root `/documents`. APP-055 delivers storage, metadata and reads; at the
+time APP-056 still owned deletion, and a domain a user can put a document into but
+not take one out of must not look production-ready. (APP-056 has since added
+deletion; the module stays `internal` until the Production rollout and activation
+gate.) `ModuleGate` therefore covers `/documents`
 for an ordinary viewer with the existing internal-only state — no special bypass,
 and no weakening of the maturity evaluator. Data rights are unaffected
 (ADR-0004): export and delete stay `true` in every maturity state.
@@ -262,7 +275,11 @@ Two things close it:
   `public.release_my_documents_for_account_deletion()` — a SECURITY DEFINER
   function that takes no arguments and touches only `auth.uid()`'s own rows. It
   sets `account_deletion_released_at` and returns every path the account still
-  owns.
+  owns. (Since APP-056 it returns only the owned paths whose objects still exist —
+  active rows' paths and the canonical paths of the account's own deletion
+  tombstones — so a per-document deletion interrupted after its bytes went is not
+  sent for again, and anomalous bytes under a deleted document's path are still
+  removed; see [APP-056](./app-056-document-delete-cascade.md).)
 - The release is **temporary**. Authorization lasts 15 minutes from the
   timestamp, measured by the database; after that the ordinary protection returns
   on its own. Without an expiry, one failed or abandoned deletion attempt would
@@ -383,7 +400,7 @@ here.
 | --- | --- |
 | Cross-user metadata IDOR | RLS SELECT restricted to `auth.uid() = user_id`; proven by two-user reads, including a predicate-free listing |
 | Cross-user Storage object access | Object policies compare `(storage.foldername(name))[1]` to `auth.uid()`; proven by two-user read, insert and delete |
-| Destroying a stored document's bytes | DELETE has two reasons and no third: no row (failed-upload compensation), or a row carrying a fresh authorized account-deletion release. A stored, unreleased document is refused — proven by deleting the row and watching the same object become removable |
+| Destroying a stored document's bytes | In APP-055, DELETE had two reasons and no third: no row (failed-upload compensation), or a row carrying a fresh authorized account-deletion release. A stored, unreleased document is refused — proven by deleting the row and watching the same object become removable. APP-056 adds a reviewed third reason, a fresh per-document deletion request (ADR-0044) |
 | Ambiguous insert result used to delete a committed file | Same control — a committed row makes the compensating delete impossible |
 | Client-chosen creation time | Column-level INSERT grant excludes `created_at`; supplying it is refused at the privilege layer |
 | Pre-existing misconfigured bucket | `ON CONFLICT DO UPDATE` asserts private/25 MiB/no MIME allowlist, proven against a bucket pre-created public, 500 MiB and MIME-restricted |
@@ -415,7 +432,8 @@ here.
 APP-056 owns the **user-facing per-document** delete cascade — choosing one
 document and removing its metadata, its object and anything derived from it, with
 a deletion preview and tombstones. There is no delete button, no rename, no OCR,
-no thumbnails, no AI, no tags, no search indexing and no sharing here.
+no thumbnails, no AI, no tags, no search indexing and no sharing here. (APP-056 is
+now implemented: [docs/app-056-document-delete-cascade.md](./app-056-document-delete-cascade.md).)
 
 APP-055 does remove document objects, in exactly two situations, neither of which
 is a user choosing a document:
@@ -441,8 +459,9 @@ limits the exposure of that window until APP-056 completes the domain.
 ## Known limitations
 
 - The module is `internal`, so an ordinary user cannot reach `/documents` yet.
-- A user cannot delete a document. That is APP-056, and it is the reason for the
-  maturity state.
+- A user could not delete a document in APP-055. APP-056 resolves this; the
+  module remains `internal` because the Production rollout and activation are
+  still pending, not because deletion is missing.
 - The document list needs a network read to populate on a new device; offline, the
   last known list is shown and nothing in it can be opened.
 - Metadata is immutable: no rename, and no UPDATE policy exists.

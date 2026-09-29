@@ -11,11 +11,25 @@
   "opening": "Opening …",
   "savedOn": "Saved {{date}}",
   "retry": "Try again",
+  "deleteLabel": "Delete {{name}}",
+  "deleteHint": "You will be asked to confirm before anything is deleted.",
+  "deleteConfirmTitle": "Delete document?",
+  "deleteConfirmBody": "“{{name}}” will be permanently deleted. The stored file and the information the app keeps about the document are removed and cannot be restored.",
+  "cancel": "Cancel",
+  "deleteConfirm": "Delete permanently",
+  "deleting": "Deleting …",
+  "deleted": "The document was deleted.",
   "errors": {
     "not-authenticated": "You need to be signed in to save documents.",
     "invalid-file": "That file could not be used. It needs a name and must be under 25 MB.",
     "upload-failed": "The document was not saved. Check your connection and try again.",
     "metadata-failed": "The document was not saved completely. Please try again.",
     "open-failed": "The document could not be opened right now. Please try again."
+  },
+  "deleteErrors": {
+    "not-authenticated": "You need to be signed in to delete documents.",
+    "not-found": "That document could not be found.",
+    "invalid-response": "The document was not deleted. Please try again.",
+    "delete-incomplete": "The deletion could not be confirmed. The document is still in your list — please try again."
   }
 }

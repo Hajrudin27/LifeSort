@@ -45,8 +45,15 @@ from their own data without making anyone safer.
   belongs where data leaves the app.
 - The window is in memory, so a fresh launch always asks. That is the correct
   default: a relaunch is exactly when a phone may have changed hands.
-- Two screens use the hook today. Adding a third is one line plus rendering the
+- Three call sites use the hook today: export, attachment sharing and — since
+  APP-056 — document deletion. Adding another is one line plus rendering the
   prompt, and the tests assert each gated call site actually calls it.
+- APP-056 extends the covered actions with `delete-document`: permanently deleting
+  one stored document. The threat is the same unlocked phone, so the proof is the
+  same local ladder, placed after an explicit confirmation. The server's own
+  boundary for that action is ownership of the one document — not a new password
+  check, which stays reserved for account deletion
+  ([ADR-0044](./0044-per-document-deletion-uses-prepare-remove-finalize-with-retained-tombstones.md)).
 - A clock moved forward cannot extend a proof: a timestamp in the future is
   treated as expired rather than as valid for hours.
 

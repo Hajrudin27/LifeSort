@@ -32,7 +32,10 @@ const BACKEND_ONLY_TABLES = [
   'timeline_events',
   'waitlist_signups',
 ];
-const MOBILE_ADJACENT_MIGRATION_TABLES = ['global_recipes', 'products'];
+// Registered in the mobile registry although no client code calls .from() on them.
+// APP-056's document_deletion_tombstones holds documents.files data but is
+// reachable only through the two deletion functions the client calls.
+const MOBILE_ADJACENT_MIGRATION_TABLES = ['document_deletion_tombstones', 'global_recipes', 'products'];
 
 // These are compile-time checks. If the discriminated profile contracts ever
 // accept these shapes, tsc will fail because the @ts-expect-error is unused.
@@ -212,7 +215,7 @@ describe('APP-027 logical domain contracts', () => {
 
 describe('APP-027 physical persistence surfaces', () => {
   it('has no duplicate physical surface ids and no dangling domain references', () => {
-    expect(PERSISTENCE_SURFACES).toHaveLength(91);
+    expect(PERSISTENCE_SURFACES).toHaveLength(92);
     expect(new Set(registeredSurfaceIds).size).toBe(PERSISTENCE_SURFACES.length);
 
     for (const surface of PERSISTENCE_SURFACES) {

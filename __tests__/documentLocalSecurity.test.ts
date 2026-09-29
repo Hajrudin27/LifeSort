@@ -235,12 +235,14 @@ describe('klassificeringen', () => {
     expect(localStorageProtectionForSurface('async-storage:lifesort-documents')).toBe('encrypted-required');
   });
 
-  it('registrerer præcis de fysiske flader APP-055 faktisk opretter', () => {
+  it('registrerer præcis de fysiske flader APP-055 og APP-056 faktisk opretter', () => {
     const domain = DATA_DOMAINS.find((d) => d.id === 'documents.files')!;
     expect([...domain.storageSurfaces].sort()).toEqual([
       'async-storage:lifesort-documents',
       'secure-store:lifesort-document-cache-key',
       'supabase-storage-bucket:documents',
+      // APP-056's tombstones: server-only, and never cached on the device.
+      'supabase-table:document_deletion_tombstones',
       'supabase-table:documents',
     ]);
     // The picker's temporary copy is transient interoperability data, not a

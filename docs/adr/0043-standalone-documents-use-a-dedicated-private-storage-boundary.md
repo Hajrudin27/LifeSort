@@ -225,6 +225,21 @@ mutable-search-path exposure and its advisor warning without touching behaviour.
 The 5-minute reauthentication window and the 15-minute release window are
 unchanged.
 
+Extended — not superseded — by
+[ADR-0044](./0044-per-document-deletion-uses-prepare-remove-finalize-with-retained-tombstones.md)
+(APP-056). The Storage DELETE policy above now has a deliberate, reviewed third
+reason: a row whose per-document deletion request (`deletion_requested_at`) is
+inside its own 15-minute window. "Two legitimate reasons and no third" therefore
+describes APP-055 as decided, not the current policy. The Storage INSERT policy is
+also no longer own-prefix alone: it refuses a path already claimed by an active
+`documents` row or one of the caller's own deletion tombstones, which a fresh
+upload never is. The account-deletion release also now returns only the owned
+paths whose objects still exist — active rows' paths and the canonical paths of the
+account's own deletion tombstones — so a per-document deletion interrupted after
+its bytes went does not send account deletion after them again, and anomalous bytes
+under a deleted document's path are not stranded; its authorization and
+all-or-nothing manifest are unchanged. Everything else in this record stands.
+
 ## Alternatives considered
 
 - **Add `'document'` to `AttachmentOwnerType` and reuse `public.attachments`.**

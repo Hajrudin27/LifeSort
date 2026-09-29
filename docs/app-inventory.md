@@ -90,7 +90,7 @@ itself is APP-005 and is **not** implemented here.
 | `tasks` | – (spec has no `tasks` id; see §8-F3) | available | `/todos/*` | `useTodoStore` | ordinary | Hajrudin Kardasevic |
 | `travel` | `travel` | available | `/travel/*` | `useTripsStore` | personal, financial, document | Hajrudin Kardasevic |
 | `warranties` | `warranties` | available | `/warranties/*` | `useWarrantiesStore` | document, financial | Hajrudin Kardasevic |
-| `documents` | `documents` | internal — APP-055 delivers private storage, owner metadata and signed reads; APP-056 still owns the delete cascade | `/documents` | `useDocumentsStore` | document | Hajrudin Kardasevic |
+| `documents` | `documents` | internal — APP-055 delivers private storage, owner metadata and signed reads; APP-056 adds the per-document delete cascade; Production rollout and activation pending | `/documents` | `useDocumentsStore` | document | Hajrudin Kardasevic |
 | `career` | `career` | available | `/career/*` | `useCareerStore`, `useCVStore`, `useSkillCategoriesStore` | ordinary, personal, document | Hajrudin Kardasevic |
 | `cycle` | `cycle` | available — but tab visibility is gated on `profile.gender === 'female'` (see §8-F2) | `/cycle`, `/cycle/*` | `useCycleStore` | health | Hajrudin Kardasevic |
 
@@ -317,6 +317,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `warranties` | `warranties` | `store/useWarrantiesStore.ts` | document, financial | Hajrudin Kardasevic |
 | `attachments` | shared (`economy`, `warranties`, `travel`) | `utils/shared/attachmentSync.ts`, `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
 | `documents` | `documents` | `core/documents/documentSync.ts`, `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
+| `document_deletion_tombstones` | `documents` (server-only; no client grant) | written only by `finalize_my_document_deletion()`, called from `core/documents/documentSync.ts` | document | Hajrudin Kardasevic |
 | `job_applications` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
 | `skills` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
 | `cv_personal_info` | `career` | `store/useCVStore.ts` | personal | Hajrudin Kardasevic |
@@ -337,6 +338,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | Bucket | Module | Access point | Sensitivity | Owner |
 | --- | --- | --- | --- | --- |
 | `attachments` | shared (`economy`, `warranties`, `travel`) | `utils/shared/attachmentSync.ts` (upload / remove / short-lived signed URL), `core/auth/deleteAccount.ts` (delete on account deletion) | document | Hajrudin Kardasevic |
+| `documents` | `documents` | `core/documents/documentSync.ts` (upload / failed-upload compensation / short-lived signed URL / APP-056 per-document remove inside a server-opened window), `core/auth/deleteAccount.ts` (remove on account deletion) | document | Hajrudin Kardasevic |
 
 ## §5 Shared component inventory
 

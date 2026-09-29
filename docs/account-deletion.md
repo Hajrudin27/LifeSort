@@ -26,8 +26,13 @@ while an account is being destroyed.
    - `documents` (APP-055): the account releases its own documents through
      `release_my_documents_for_account_deletion()` — authorized by the password
      just entered, via the server's own AMR claim — and is handed the complete
-     canonical manifest. The manifest is validated all-or-nothing; one entry that
-     cannot be accounted for aborts the deletion before any object is touched.
+     canonical manifest of objects that still exist (since APP-056: a document
+     whose own deletion stopped after its bytes went is not listed again, and any
+     anomalous bytes under a deleted document's path — which ordinary clients can no
+     longer upload — are listed through the account's own tombstone for that
+     document). The manifest is validated all-or-nothing;
+     one entry that cannot be accounted for aborts the deletion before any object
+     is touched.
      The metadata rows are **not** deleted here: they are the only record of
      where the objects are, so they stay until the cascade takes them, which is
      what lets a failed attempt be retried against the same paths.
@@ -115,7 +120,7 @@ entry that cannot be accounted for, a removal that reported an error — stops b
 
 The page uses the ordinary Storage API under the caller's own RLS. It holds no
 service key, never displays or stores a path, and offers no per-document
-deletion — APP-056 still owns that.
+deletion — that lives in the app ([APP-056](./app-056-document-delete-cascade.md)).
 
 **Known gap, pre-existing:** the page does not remove `attachments` objects, and
 never has. That is APP-022/APP-023 behaviour from before APP-055 and is not

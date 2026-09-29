@@ -207,9 +207,10 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
   },
   documents: {
     id: 'documents',
-    // APP-055 builds the private storage, the owner metadata and the signed read.
-    // APP-056 still owns the delete cascade, and a domain you can put a document
-    // into but not take one out of must not look finished to an ordinary user.
+    // APP-055 builds the private storage, the owner metadata and the signed read;
+    // APP-056 adds the per-document delete cascade. It stays internal because the
+    // schema both stories need has not been rolled out to Production, and making
+    // the module visible is its own activation gate, not a side effect of either.
     availability: 'internal',
     titleKey: 'modules.names.documents',
     descriptionKey: 'modules.descriptions.documents',

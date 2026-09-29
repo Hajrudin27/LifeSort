@@ -3,13 +3,16 @@
  *
  * Truslen er ikke en fjern angriber — det er en ulåst telefon, der ligger på et
  * bord. Har man den i hånden, er man allerede "logget ind". Eksport af alt til
- * én fil, eller deling af en kvittering, er derfor de handlinger, hvor et
- * enkelt ekstra bevis er billigt for ejeren og dyrt for alle andre.
+ * én fil, deling af en kvittering og permanent sletning af et dokument (APP-056)
+ * er derfor de handlinger, hvor et enkelt ekstra bevis er billigt for ejeren og
+ * dyrt for alle andre.
  *
  * Bemærk hvad der IKKE står her: at bekræftelsen erstatter serverens kontrol.
  * Den gør den ikke. Det lokale bevis dækker den lokale trussel (ADR-0007), og
  * sletning af konto bruger fortsat kontoens adgangskode, fordi den handling
- * sker på serveren.
+ * sker på serveren. Sletning af ét dokument bruger det lokale bevis: truslen er
+ * den samme ulåste telefon, og serverens egen grænse er ejerskab af netop det
+ * dokument — ikke en ny adgangskodekontrol (ADR-0044).
  */
 
 /**
@@ -25,6 +28,7 @@ export const REAUTH_WINDOW_MS = 5 * 60_000;
 export const SENSITIVE_ACTIONS = {
   'export-data': 'Lægger hele indholdet i én fil, brugeren derefter selv deler.',
   'share-file': 'Sender en kvittering eller et dokument ud af appen.',
+  'delete-document': 'Sletter et gemt dokument og dets metadata permanent — det kan ikke fortrydes.',
 } as const;
 
 export type SensitiveAction = keyof typeof SENSITIVE_ACTIONS;

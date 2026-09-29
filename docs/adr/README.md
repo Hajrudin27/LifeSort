@@ -62,6 +62,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0041](./0041-shopping-lists-are-editable-snapshots-with-durable-source-trace.md) | Shopping lists are editable snapshots with durable source trace | Accepted | 2026-09-21 | APP-052 |
 | [0042](./0042-offer-aware-planning-requires-explicit-family-mapping-and-eligibility.md) | Offer-aware planning requires explicit family mapping and eligibility | Accepted | 2026-09-24 | APP-053 |
 | [0043](./0043-standalone-documents-use-a-dedicated-private-storage-boundary.md) | Standalone documents use a dedicated private storage boundary | Accepted | 2026-09-25 | APP-055 |
+| [0044](./0044-per-document-deletion-uses-prepare-remove-finalize-with-retained-tombstones.md) | Per-document deletion uses prepare-remove-finalize with retained tombstones | Accepted | 2026-09-27 | APP-056 |
 
 ## When an ADR is required
 

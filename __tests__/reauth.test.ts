@@ -68,8 +68,10 @@ describe('beviset kan glemmes', () => {
 });
 
 describe('hvilke handlinger der er dækket', () => {
-  it('dækker eksport og deling, og hver med en grund', () => {
-    expect(Object.keys(SENSITIVE_ACTIONS).sort()).toEqual(['export-data', 'share-file']);
+  it('dækker eksport, deling og sletning af et dokument, og hver med en grund', () => {
+    // Master-specifikationen nævner eksport, sletning og deling. APP-056 er den
+    // første sletning af et enkelt dokument, og den er dækket fra første dag.
+    expect(Object.keys(SENSITIVE_ACTIONS).sort()).toEqual(['delete-document', 'export-data', 'share-file']);
     for (const reason of Object.values(SENSITIVE_ACTIONS)) {
       expect(reason.length).toBeGreaterThan(20);
     }
@@ -87,6 +89,22 @@ describe('hvilke handlinger der er dækket', () => {
     expect(component).toContain('runSensitive(async () => {');
     expect(component).toContain('Sharing.shareAsync');
     expect(component).toContain('{reauthPrompt}');
+  });
+
+  it('sletning af et dokument er faktisk spærret — og det er selve sletningen, der ligger bag beviset', () => {
+    const screen = read('app/documents/index.tsx');
+    expect(screen).toContain('useSensitiveAction');
+    expect(screen).toContain('{reauthPrompt}');
+
+    // The destructive call sits inside the gated action, not beside it.
+    const gated = screen.slice(screen.indexOf('runSensitive(async () => {'));
+    expect(screen).toContain('runSensitive(async () => {');
+    expect(gated.slice(0, 120)).toContain('deleteDocument(document.id)');
+
+    // Et lokalt bevis for en lokal trussel: ingen ny adgangskodekontrol, og
+    // kontosletningens frigivelse genbruges ikke som dokumentsletning (ADR-0044).
+    expect(screen).not.toContain('signInWithPassword');
+    expect(screen).not.toContain('release_my_documents_for_account_deletion');
   });
 
   it('sletning af konto bruger fortsat kontoens adgangskode', () => {

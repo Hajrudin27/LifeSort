@@ -63,7 +63,8 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
   { key: 'lifesort-warranties', reset: () => useWarrantiesStore.setState({ warranties: [] }) },
   {
     key: 'lifesort-documents',
-    reset: () => useDocumentsStore.setState({ documents: [], uploading: false, uploadError: null }),
+    reset: () =>
+      useDocumentsStore.setState({ documents: [], uploading: false, uploadError: null, deletingId: null, deleteError: null }),
   },
   {
     key: 'lifesort-trips',

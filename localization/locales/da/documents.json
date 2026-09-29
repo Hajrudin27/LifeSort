@@ -11,11 +11,25 @@
   "opening": "Åbner …",
   "savedOn": "Gemt {{date}}",
   "retry": "Prøv igen",
+  "deleteLabel": "Slet {{name}}",
+  "deleteHint": "Du bliver bedt om at bekræfte, før noget slettes.",
+  "deleteConfirmTitle": "Slet dokument?",
+  "deleteConfirmBody": "»{{name}}« bliver slettet permanent. Den gemte fil og de oplysninger, appen har om dokumentet, fjernes og kan ikke gendannes.",
+  "cancel": "Annuller",
+  "deleteConfirm": "Slet permanent",
+  "deleting": "Sletter …",
+  "deleted": "Dokumentet er slettet.",
   "errors": {
     "not-authenticated": "Du skal være logget ind for at gemme dokumenter.",
     "invalid-file": "Filen kunne ikke bruges. Den skal have et navn og være under 25 MB.",
     "upload-failed": "Dokumentet blev ikke gemt. Tjek din forbindelse, og prøv igen.",
     "metadata-failed": "Dokumentet blev ikke gemt færdigt. Prøv igen.",
     "open-failed": "Dokumentet kunne ikke åbnes lige nu. Prøv igen."
+  },
+  "deleteErrors": {
+    "not-authenticated": "Du skal være logget ind for at slette dokumenter.",
+    "not-found": "Dokumentet kunne ikke findes.",
+    "invalid-response": "Dokumentet blev ikke slettet. Prøv igen.",
+    "delete-incomplete": "Sletningen kunne ikke bekræftes. Dokumentet står stadig på listen – prøv igen."
   }
 }

@@ -13,16 +13,18 @@ import {
 } from './documents';
 
 /**
- * The remote half of standalone documents (APP-055).
+ * The remote half of standalone documents (APP-055, APP-056).
  *
  * The security shape is taken from utils/shared/attachmentSync.ts, which is the
  * audited one: private bucket, user-prefixed object name, metadata row carrying
  * only the path, and a short-lived signed URL minted at the moment the file is
  * opened. What is NOT taken from it is the parent-oriented data model.
  *
- * Upload is online and authenticated. There is no offline queue: queuing would
- * mean keeping document bytes in plaintext somewhere until the network returned,
- * and the generic outbox (APP-031) does not own Profile B payloads.
+ * Upload and deletion are online and authenticated. There is no offline queue:
+ * queuing an upload would mean keeping document bytes in plaintext somewhere until
+ * the network returned, queuing a deletion would run a destructive write later
+ * against state the user can no longer see, and the generic outbox (APP-031) does
+ * not own Profile B payloads.
  */
 
 // Written as literals at every call site on purpose: the APP-001/APP-027
@@ -300,9 +302,149 @@ export function clearDocumentSignedUrlCache(): void {
   signedUrlCache.clear();
 }
 
+export type DocumentDeleteFailure =
+  /** No session. Nothing was asked of the server. */
+  | 'not-authenticated'
+  /** The server knows no document of this account by that id. Nothing was touched. */
+  | 'not-found'
+  /**
+   * The server answered in a shape that cannot be trusted — an unknown status, or a
+   * path that is not exactly this account's canonical path for this id. Storage
+   * was never asked to remove anything.
+   */
+  | 'invalid-response'
+  /**
+   * The deletion was not confirmed. It may never have started, or the object may
+   * already be gone while the row remains; either way nothing is claimed, the row
+   * keeps its canonical path, and running the deletion again is how it finishes.
+   */
+  | 'delete-incomplete';
+
+export type DocumentDeleteResult =
+  | { ok: true; outcome: 'deleted' | 'already-deleted' }
+  | { ok: false; reason: DocumentDeleteFailure };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** A server refusal. Only a missing session is worth telling apart; the rest is retryable. */
+function deleteFailureFrom(error: { message?: unknown }): DocumentDeleteFailure {
+  return typeof error.message === 'string' && error.message.includes('not_authenticated')
+    ? 'not-authenticated'
+    : 'delete-incomplete';
+}
+
+/**
+ * Open this account's deletion window on one document, and check what came back.
+ *
+ * The server's path has to be exactly the one derived here from the session and
+ * the id. Anything else — another account's prefix, another document, an extra
+ * segment — is refused before Storage is touched: this is the step just before
+ * bytes are destroyed, and a path that does not match is not something to reason
+ * about there.
+ */
+async function beginDocumentDeletion(
+  documentId: string,
+  storagePath: string,
+): Promise<'ready' | 'already-deleted' | DocumentDeleteFailure> {
+  let data: unknown;
+  try {
+    const response = await supabase.rpc('begin_my_document_deletion', { p_document_id: documentId });
+    if (response.error) return deleteFailureFrom(response.error);
+    data = response.data;
+  } catch {
+    return 'delete-incomplete';
+  }
+
+  if (!isRecord(data)) return 'invalid-response';
+  switch (data.status) {
+    case 'ready':
+      return data.storage_path === storagePath ? 'ready' : 'invalid-response';
+    case 'already-deleted':
+      return 'already-deleted';
+    case 'not-found':
+      return 'not-found';
+    default:
+      return 'invalid-response';
+  }
+}
+
+/**
+ * The server has confirmed there is nothing left to reach. This document's cached
+ * URL — only this one — goes, so the app itself never hands out a way to it again.
+ */
+function confirmDocumentDeleted(storagePath: string, outcome: 'deleted' | 'already-deleted'): DocumentDeleteResult {
+  signedUrlCache.delete(storagePath);
+  return { ok: true, outcome };
+}
+
+/**
+ * Delete one document: its object, then its metadata (APP-056).
+ *
+ * begin → remove → finalize, with the server deciding every step that matters:
+ *
+ * 1. `begin_my_document_deletion` opens a short deletion window on this account's
+ *    own row and hands back its canonical path, which must match the path derived
+ *    here or nothing further happens. For an id this account already deleted it
+ *    says `already-deleted` only if nothing is stored at that path; if anomalous
+ *    bytes are found there (ordinary clients can no longer upload to it), it hands
+ *    back the same path so they are removed first.
+ * 2. The object is removed through the Storage API. What that call reports is
+ *    advisory only — a removal can return an error and have worked, or throw after
+ *    the request already reached the server — so whatever it says, finalize is
+ *    asked next.
+ * 3. `finalize_my_document_deletion` reads storage.objects itself. Only once the
+ *    object is gone does it write the tombstone and delete the row, together.
+ *
+ * Success is reported only when the server says so: `deleted`, or `already-deleted`
+ * when an earlier attempt finished but its answer was lost. Every other outcome
+ * leaves the row — and with it the canonical path — where it was, so calling this
+ * again is the retry.
+ *
+ * The caller has already confirmed the deletion with the user and passed the APP-024
+ * proof; this function neither asks nor assumes either. It takes the document id and
+ * nothing else: no filename, no path, no cached record.
+ */
+export async function deleteDocument(documentId: string): Promise<DocumentDeleteResult> {
+  const userId = await getUserId();
+  if (!userId) return { ok: false, reason: 'not-authenticated' };
+
+  // Re-derived from the session and the id. An id that cannot form a canonical
+  // path names nothing this account could own.
+  const storagePath = documentStoragePath(userId, documentId);
+  if (storagePath === null) return { ok: false, reason: 'not-found' };
+
+  const begun = await beginDocumentDeletion(documentId, storagePath);
+  if (begun === 'already-deleted') return confirmDocumentDeleted(storagePath, 'already-deleted');
+  if (begun !== 'ready') return { ok: false, reason: begun };
+
+  try {
+    await supabase.storage.from(BUCKET).remove([storagePath]);
+  } catch {
+    // The request may still have reached the server. Finalize decides.
+  }
+
+  let status: unknown;
+  try {
+    const response = await supabase.rpc('finalize_my_document_deletion', { p_document_id: documentId });
+    if (response.error) return { ok: false, reason: deleteFailureFrom(response.error) };
+    status = response.data;
+  } catch {
+    return { ok: false, reason: 'delete-incomplete' };
+  }
+
+  if (status === 'deleted' || status === 'already-deleted') return confirmDocumentDeleted(storagePath, status);
+  // No row and no tombstone of this account's: not something it deleted, so not
+  // something to report as deleted.
+  if (status === 'not-found') return { ok: false, reason: 'not-found' };
+  // 'object-present', 'not-requested', or anything unrecognised: not confirmed.
+  return { ok: false, reason: 'delete-incomplete' };
+}
+
 /**
  * Mark this account's documents as released for account deletion, and report the
- * object paths that still belong to it (APP-022).
+ * object paths that still need removing (APP-022).
  *
  * Nothing is destroyed here. The rows — and with them the canonical paths — stay
  * until `auth.users` cascades them away, which is what makes a failed Storage
@@ -313,9 +455,13 @@ export function clearDocumentSignedUrlCache(): void {
  *
  * Every call refreshes `account_deletion_released_at` for this account's rows, so
  * a retry after the 15-minute release window has closed can open a new one. The
- * rows themselves are untouched and the return is every path the account still
- * owns, so repeating the call yields the same manifest — idempotent in what it
- * says, deliberately not in the timestamp it sets.
+ * rows themselves are untouched. Since APP-056 the return is every owned path
+ * whose object still exists — an active row's path, or the path of one of this
+ * account's deletion tombstones where anomalous bytes remain; a document whose
+ * per-document deletion stopped after its bytes went is not sent for a second
+ * time — so repeating the call yields the same manifest until objects are
+ * actually removed: idempotent in what it says, deliberately not in the timestamp
+ * it sets.
  *
  * `null` means the manifest is unusable. It is deliberately not `[]`: an account
  * with no documents and an account whose manifest could not be trusted are

@@ -449,15 +449,23 @@ export const DATA_DOMAINS = [
     id: 'travel.trips',
     title: 'Trips, budgets, packing and participants',
     module: 'travel',
-    description: 'Trip records, budget, packing items, trip expenses and participant invite state.',
+    description: 'Trip records with destination and dates, budget, packing items, trip expenses, participant invite state, and owner-only links (ids only) to the user\'s own standalone documents (APP-058).',
     storageSurfaces: [
       'async-storage:lifesort-trips',
       'supabase-table:trips',
       'supabase-table:trip_expenses',
       'supabase-table:trip_packing_items',
       'supabase-table:trip_participants',
+      'supabase-table:trip_document_references',
+      // TEMPORARY legacy-client compatibility (APP-058): a server-only holding table for
+      // packing rows that reach the server before their trip. Not product storage.
+      'supabase-table:trip_packing_compat_queue',
     ],
-    evidence: ['store/useTripsStore.ts'],
+    evidence: [
+      'store/useTripsStore.ts',
+      'utils/trip/tripRemote.ts',
+      'supabase/migrations/20260930141858_app058_trip_canonical_entity.sql',
+    ],
     ...profileA({ expectsServerSync: true }),
   },
   {
@@ -702,6 +710,8 @@ export const PERSISTENCE_SURFACES = [
   surface('supabase-table:trip_expenses', 'supabase-table', 'public.trip_expenses', 'supabase', ['travel.trips'], ['store/useTripsStore.ts']),
   surface('supabase-table:trip_packing_items', 'supabase-table', 'public.trip_packing_items', 'supabase', ['travel.trips'], ['store/useTripsStore.ts']),
   surface('supabase-table:trip_participants', 'supabase-table', 'public.trip_participants', 'supabase', ['travel.trips'], ['store/useTripsStore.ts']),
+  surface('supabase-table:trip_packing_compat_queue', 'supabase-table', 'public.trip_packing_compat_queue', 'supabase', ['travel.trips'], ['supabase/migrations/20260930141858_app058_trip_canonical_entity.sql']),
+  surface('supabase-table:trip_document_references', 'supabase-table', 'public.trip_document_references', 'supabase', ['travel.trips'], ['utils/trip/tripRemote.ts', 'supabase/migrations/20260930141858_app058_trip_canonical_entity.sql']),
   surface('supabase-table:warranties', 'supabase-table', 'public.warranties', 'supabase', ['warranties.records'], ['store/useWarrantiesStore.ts', 'supabase/migrations/20260930122303_app057_warranty_domain.sql']),
   surface('supabase-table:documents', 'supabase-table', 'public.documents', 'supabase', ['documents.files'], ['core/documents/documentSync.ts', 'core/documents/documentReferences.ts', 'supabase/migrations/20260925090000_private_document_bucket.sql']),
   surface('supabase-table:document_deletion_tombstones', 'supabase-table', 'public.document_deletion_tombstones', 'supabase', ['documents.files'], ['supabase/migrations/20260927204302_app056_document_delete_cascade.sql', 'core/documents/documentSync.ts']),

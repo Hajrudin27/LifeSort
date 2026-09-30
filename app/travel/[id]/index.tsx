@@ -6,6 +6,8 @@ import { Alert, Modal, Pressable, ScrollView, TextInput } from "react-native";
 
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+import TripDeleteFlow from "@/components/TripDeleteFlow";
+import TripDocumentsSection from "@/components/TripDocumentsSection";
 import DatePickerField from "@/components/DatePickerField";
 import Kicker from "@/components/Kicker";
 import { Text, useThemeColor, View } from "@/components/Themed";
@@ -13,6 +15,7 @@ import { sharedStyles } from "@/constants/sharedStyles";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useTripsStore } from "@/store/useTripsStore";
+import { MAX_TRIP_DESTINATION_LENGTH, normalizeDestination, tripProblem } from "@/utils/trip/tripDomain";
 
 export default function TripDetailScreen() {
   const { t } = useTranslation();
@@ -27,13 +30,12 @@ export default function TripDetailScreen() {
 
   const trip = useTripsStore((s) => s.trips.find((tr) => tr.id === id));
   const updateTrip = useTripsStore((s) => s.updateTrip);
-  const removeTrip = useTripsStore((s) => s.removeTrip);
   const allParticipants = useTripsStore((s) => s.participants);
   const participants = useMemo(
     () => allParticipants.filter((p) => p.tripId === id),
     [allParticipants, id]
   );
-  const myUserId = useTripsStore((s) => s.myUserId);
+  const sessionUserId = useAuthStore((s) => s.session?.user.id);
   const inviteParticipant = useTripsStore((s) => s.inviteParticipant);
   const isEmailVerified = useAuthStore((s) => s.isEmailVerified);
   const removeParticipant = useTripsStore((s) => s.removeParticipant);
@@ -44,6 +46,9 @@ export default function TripDetailScreen() {
   }, [id]);
 
   const [name, setName] = useState(trip?.name ?? "");
+  const [destination, setDestination] = useState(trip?.destination ?? "");
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   const [startDate, setStartDate] = useState(trip?.startDate ?? "");
   const [endDate, setEndDate] = useState(trip?.endDate ?? "");
   const [budget, setBudget] = useState(trip?.budget?.toString() ?? "");
@@ -62,36 +67,37 @@ export default function TripDetailScreen() {
     );
   }
 
-  const isOwner = participants.every((p) => p.ownerId === myUserId) || participants.length === 0
-    ? true // hvis ingen deltagere-data endnu, antag ejer (dækkes af RLS uanset)
-    : participants[0].ownerId === myUserId;
+  // Ownership is a positive fact or it is nothing (APP-058). The trip carries the owner
+  // the server named (`trips.user_id`), and I am the owner only when that is me. A trip
+  // whose owner is not known yet — still loading, the fetch failed, or it predates the
+  // field — offers no owner-only control, and neither does one that is someone else's.
+  // Missing or late participant data never makes anyone an owner. This only decides what
+  // is SHOWN: the server still refuses every owner-only action to anyone else.
+  const isOwner = !!sessionUserId && trip.ownerId === sessionUserId;
 
-  const canSave = name.trim().length > 0 && startDate.length > 0 && endDate.length > 0;
+  // A trip from before destinations may stay without one; once it has one it stays.
+  const problem = tripProblem(
+    { destination, startDate, endDate },
+    { destinationRequired: normalizeDestination(trip.destination) !== undefined },
+  );
+  const canSave = name.trim().length > 0 && problem === null;
 
   const save = () => {
-    updateTrip(trip.id, {
+    const saved = updateTrip(trip.id, {
       name: name.trim(),
+      destination: destination.trim(),
       startDate,
       endDate,
       budget:
         budget.trim().length > 0 && !isNaN(parseFloat(budget)) ? parseFloat(budget) : null,
     });
+    if (!saved) {
+      setSaveFailed(true);
+      return;
+    }
+    setSaveFailed(false);
     setShowEdit(false);
     router.back();
-  };
-
-  const confirmDelete = () => {
-    Alert.alert(t("travel.deleteConfirmTitle"), t("travel.deleteConfirmMessage"), [
-      { text: t("warranties.cancel"), style: "cancel" },
-      {
-        text: t("warranties.delete"),
-        style: "destructive",
-        onPress: () => {
-          removeTrip(trip.id);
-          router.back();
-        },
-      },
-    ]);
   };
 
   const sendInvite = async () => {
@@ -158,6 +164,7 @@ export default function TripDetailScreen() {
       />
 
       <Card style={styles.summaryCard}>
+        <Text style={styles.destination}>{trip.destination ?? t("travel.destinationNotSet")}</Text>
         <Text style={styles.dates}>
           {trip.startDate} → {trip.endDate}
         </Text>
@@ -177,6 +184,8 @@ export default function TripDetailScreen() {
         variant="secondary"
         onPress={() => router.push(`/travel/${trip.id}/packing`)}
       />
+
+      {isOwner && <TripDocumentsSection tripId={trip.id} />}
 
       <Kicker
         label={t('travel.participantsLabel')}
@@ -230,11 +239,26 @@ export default function TripDetailScreen() {
                   onChangeText={setName}
                 />
 
+                <Text style={sharedStyles.fieldLabel}>{t("travel.destinationLabel")}</Text>
+                <TextInput
+                  style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
+                  placeholder={t("travel.destinationPlaceholder")}
+                  placeholderTextColor={borderColor}
+                  accessibilityLabel={t("travel.destinationLabel")}
+                  maxLength={MAX_TRIP_DESTINATION_LENGTH}
+                  value={destination}
+                  onChangeText={setDestination}
+                />
+
                 <Text style={sharedStyles.fieldLabel}>{t("travel.startDateLabel")}</Text>
                 <DatePickerField value={startDate} onChange={setStartDate} />
 
                 <Text style={sharedStyles.fieldLabel}>{t("travel.endDateLabel")}</Text>
                 <DatePickerField value={endDate} onChange={setEndDate} />
+
+                {problem && (
+                  <Text accessibilityRole="alert" style={{ color: danger }}>{t(`travel.problems.${problem}`)}</Text>
+                )}
 
                 <TextInput
                   style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
@@ -246,12 +270,22 @@ export default function TripDetailScreen() {
                 />
               </Card>
 
+              {saveFailed && <Text accessibilityRole="alert" style={{ color: danger }}>{t("travel.saveFailed")}</Text>}
               <Button label={t("travel.save")} disabled={!canSave} onPress={save} />
-              <Button label={t("warranties.delete")} variant="danger" onPress={confirmDelete} />
+              {isOwner && (
+                <Button label={t("warranties.delete")} variant="danger" onPress={() => { setShowEdit(false); setShowDelete(true); }} />
+              )}
             </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
+
+      <TripDeleteFlow
+        tripId={trip.id}
+        visible={showDelete}
+        onClose={() => setShowDelete(false)}
+        onDeleted={() => { setShowDelete(false); router.back(); }}
+      />
 
       <Modal visible={showInvite} animationType="slide" transparent onRequestClose={() => setShowInvite(false)}>
         <Pressable accessible={false} style={styles.modalBackdrop} onPress={() => setShowInvite(false)}>
@@ -288,6 +322,7 @@ export default function TripDetailScreen() {
 const styles = {
   kickerSpacing: { marginTop: 8 },
   summaryCard: { alignItems: "center" as const, gap: 4 },
+  destination: { fontWeight: "800" as const, fontSize: 18, textAlign: "center" as const },
   dates: { fontWeight: "700" as const },
   editButton: {
     flexDirection: "row" as const,

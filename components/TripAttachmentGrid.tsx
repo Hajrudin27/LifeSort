@@ -11,7 +11,7 @@ import { Alert, Pressable, StyleSheet } from "react-native";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useSensitiveAction } from "@/components/useSensitiveAction";
 import { useAttachmentUri } from "@/hooks/useAttachmentUri";
-import { TripAttachment } from "@/types/trip";
+import { Attachment } from "@/types/attachment";
 import { persistFile } from "@/utils/shared/attachmentStorage";
 import {
   deleteCachedAttachmentFile,
@@ -24,15 +24,15 @@ import {
 } from "@/utils/shared/attachmentViewerSource";
 
 type Props = {
-  attachments: TripAttachment[];
-  onAdd: (attachment: TripAttachment) => void;
+  attachments: Attachment[];
+  onAdd: (attachment: Attachment) => void;
   onRemove: (attachmentId: string) => void;
 };
 
 type ThumbProps = {
-  attachment: TripAttachment;
+  attachment: Attachment;
   borderColor: string;
-  onOpen: (attachment: TripAttachment) => void;
+  onOpen: (attachment: Attachment) => void;
   onRemove: () => void;
 };
 
@@ -112,7 +112,7 @@ export default function TripAttachmentGrid({
     });
   };
 
-  const openAttachment = async (attachment: TripAttachment) => {
+  const openAttachment = async (attachment: Attachment) => {
     if (attachment.kind === "image") {
       // At se billedet inde i appen sender ingenting ud af den.
       const sourceId = registerAttachmentViewerSource({

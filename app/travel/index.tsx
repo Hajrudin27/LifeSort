@@ -28,7 +28,6 @@ export default function TravelScreen() {
   const textMuted = useThemeColor({}, 'textMuted');
   const success = useThemeColor({}, 'success');
   const trips = useTripsStore((s) => s.trips);
-  const removeTrip = useTripsStore((s) => s.removeTrip);
   const packingItems = useTripsStore((s) => s.packingItems);
   const tripExpenses = useTripsStore((s) => s.expenses);
   const [search, setSearch] = useState('');

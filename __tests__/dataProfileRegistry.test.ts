@@ -35,7 +35,9 @@ const BACKEND_ONLY_TABLES = [
 // Registered in the mobile registry although no client code calls .from() on them.
 // APP-056's document_deletion_tombstones holds documents.files data but is
 // reachable only through the two deletion functions the client calls.
-const MOBILE_ADJACENT_MIGRATION_TABLES = ['document_deletion_tombstones', 'global_recipes', 'products'];
+// APP-058's trip_packing_compat_queue is likewise registered (it holds packing labels) although no client
+// can call it: it is server-only, temporary compatibility for pre-APP-058 clients.
+const MOBILE_ADJACENT_MIGRATION_TABLES = ['document_deletion_tombstones', 'global_recipes', 'products', 'trip_packing_compat_queue'];
 
 // These are compile-time checks. If the discriminated profile contracts ever
 // accept these shapes, tsc will fail because the @ts-expect-error is unused.
@@ -215,7 +217,7 @@ describe('APP-027 logical domain contracts', () => {
 
 describe('APP-027 physical persistence surfaces', () => {
   it('has no duplicate physical surface ids and no dangling domain references', () => {
-    expect(PERSISTENCE_SURFACES).toHaveLength(92);
+    expect(PERSISTENCE_SURFACES).toHaveLength(94);
     expect(new Set(registeredSurfaceIds).size).toBe(PERSISTENCE_SURFACES.length);
 
     for (const surface of PERSISTENCE_SURFACES) {

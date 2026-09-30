@@ -1,14 +1,13 @@
 import { randomUUID } from 'expo-crypto';
 
 import type { Attachment } from '@/types/attachment';
-import type { TripAttachment } from '@/types/trip';
 
-export type AttachmentViewerSource = Pick<Attachment | TripAttachment, 'id' | 'uri' | 'name' | 'kind'> & {
+export type AttachmentViewerSource = Pick<Attachment, 'id' | 'uri' | 'name' | 'kind'> & {
   kind: 'image';
   storagePath?: string;
 };
 
-type ImageAttachment = Pick<Attachment | TripAttachment, 'id' | 'uri' | 'name'> & {
+type ImageAttachment = Pick<Attachment, 'id' | 'uri' | 'name'> & {
   kind: 'image';
   storagePath?: string;
 };

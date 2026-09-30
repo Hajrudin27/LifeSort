@@ -43,7 +43,7 @@ import { scheduleTripPackingReminder } from '@/utils/trip/tripReminder';
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const expenseInput = { name: 'Synthetic rent', amount: minorUnits(10_000), category: 'bill', nextPaymentDate: '2026-09-01', isRecurring: true, recurrenceFrequency: 'monthly' as const };
-const tripInput = { name: 'Synthetic trip', startDate: '2027-01-01', endDate: '2027-01-03', budget: null };
+const tripInput = { name: 'Synthetic trip', destination: 'Synthetic city', startDate: '2027-01-01', endDate: '2027-01-03', budget: null };
 
 function expectFreshIds(records: { id: string }[]) {
   expect(records.length).toBeGreaterThan(0);
@@ -108,8 +108,8 @@ it('mints fresh recurrence instance IDs, preserves series/month deduplication an
 
 it('keeps trip references and reminder IDs, while copied packing items get new IDs', async () => {
   const store = useTripsStore.getState();
-  const firstId = store.addTrip(tripInput, [{ label: 'Passport', category: 'other' }]);
-  const copiedId = store.addTrip(tripInput, [], firstId);
+  const firstId = store.addTrip(tripInput, [{ label: 'Passport', category: 'other' }])!;
+  const copiedId = store.addTrip(tripInput, [], firstId)!;
   store.addPackingItem(copiedId, 'Coat', 'other');
   const expenseId = await store.addTripExpense({ tripId: copiedId, name: 'Train', amount: 25, category: 'transport' });
   const state = useTripsStore.getState();

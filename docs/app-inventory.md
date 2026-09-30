@@ -318,6 +318,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `attachments` | shared (`economy`, `warranties`, `travel`) | `utils/shared/attachmentSync.ts`, `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
 | `documents` | `documents` | `core/documents/documentSync.ts`, `core/documents/documentReferences.ts` (APP-057 id/name/date reference read; no path), `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
 | `document_deletion_tombstones` | `documents` (server-only; no client grant) | written only by `finalize_my_document_deletion()`, called from `core/documents/documentSync.ts` | document | Hajrudin Kardasevic |
+| `trip_document_references` | `travel` | `utils/trip/tripRemote.ts` (owner-only ids linking a trip to a standalone document; APP-058) | document | Hajrudin Kardasevic |
 | `job_applications` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
 | `skills` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
 | `cv_personal_info` | `career` | `store/useCVStore.ts` | personal | Hajrudin Kardasevic |
@@ -395,6 +396,8 @@ module that owns it.
 | `HabitMonthCalendar` | `components/HabitMonthCalendar.tsx` | `habits` | Hajrudin Kardasevic |
 | `HabitWeekRow` | `components/HabitWeekRow.tsx` | `habits` | Hajrudin Kardasevic |
 | `TripAttachmentGrid` | `components/TripAttachmentGrid.tsx` | `travel` | Hajrudin Kardasevic |
+| `TripDeleteFlow` | `components/TripDeleteFlow.tsx` | `travel` | Hajrudin Kardasevic |
+| `TripDocumentsSection` | `components/TripDocumentsSection.tsx` | `travel` | Hajrudin Kardasevic |
 | `SkillCategoryPicker` | `components/SkillCategoryPicker.tsx` | `career` | Hajrudin Kardasevic |
 | `CycleInsightsCard` | `components/CycleInsightsCard.tsx` | `cycle` | Hajrudin Kardasevic |
 | `CycleMonthCalendar` | `components/CycleMonthCalendar.tsx` | `cycle` | Hajrudin Kardasevic |

@@ -64,6 +64,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0043](./0043-standalone-documents-use-a-dedicated-private-storage-boundary.md) | Standalone documents use a dedicated private storage boundary | Accepted | 2026-09-25 | APP-055 |
 | [0044](./0044-per-document-deletion-uses-prepare-remove-finalize-with-retained-tombstones.md) | Per-document deletion uses prepare-remove-finalize with retained tombstones | Accepted | 2026-09-27 | APP-056 |
 | [0045](./0045-warranty-receipts-are-owner-bound-document-references.md) | Warranty receipts are owner-bound document references, and the legacy columns keep their names | Accepted | 2026-09-30 | APP-057 |
+| [0046](./0046-trips-are-canonical-parents-and-reference-standalone-documents.md) | Trips are canonical parents and reference standalone documents | Accepted | 2026-09-30 | APP-058 |
 
 ## When an ADR is required
 

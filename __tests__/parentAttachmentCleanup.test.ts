@@ -1,7 +1,7 @@
 import { minorUnits } from '@/core/money/minorUnits';
 import { Attachment } from '@/types/attachment';
 import { Expense } from '@/types/expense';
-import { Trip, TripAttachment, TripExpense } from '@/types/trip';
+import { Trip, TripExpense } from '@/types/trip';
 import { Warranty } from '@/types/warranty';
 
 jest.mock('@/core/storage/documentCacheStorage', () => {
@@ -107,7 +107,7 @@ function warranty(id: string, attachments: Attachment[] = []): Warranty {
   };
 }
 
-function tripAttachment(id: string, uri = `file:///doc/attachments/${id}.lsenc`): TripAttachment {
+function tripAttachment(id: string, uri = `file:///doc/attachments/${id}.lsenc`): Attachment {
   return {
     id,
     uri,
@@ -116,7 +116,7 @@ function tripAttachment(id: string, uri = `file:///doc/attachments/${id}.lsenc`)
   };
 }
 
-function trip(id: string, documents: TripAttachment[] = []): Trip {
+function trip(id: string, documents: Attachment[] = []): Trip {
   return {
     id,
     name: id,
@@ -128,7 +128,7 @@ function trip(id: string, documents: TripAttachment[] = []): Trip {
   };
 }
 
-function tripExpense(id: string, tripId: string, attachments: TripAttachment[] = []): TripExpense {
+function tripExpense(id: string, tripId: string, attachments: Attachment[] = []): TripExpense {
   return {
     id,
     tripId,
@@ -229,7 +229,7 @@ describe('APP-029 parent attachment cache cleanup', () => {
     expect(mockDeleteCachedAttachmentFile).not.toHaveBeenCalledWith('file:///doc/attachments/trip-expense-other.lsenc');
   });
 
-  it('removeTrip cleans trip documents and removed trip-expense attachments only', () => {
+  it('removeTripFromDevice cleans trip documents and removed trip-expense attachments only', () => {
     const targetTrip = trip('trip-1', [tripAttachment('trip-doc-1'), tripAttachment('trip-doc-2')]);
     const otherTrip = trip('trip-2', [tripAttachment('other-trip-doc')]);
     const removedExpense = tripExpense('expense-1', 'trip-1', [tripAttachment('trip-expense-doc')]);
@@ -241,7 +241,7 @@ describe('APP-029 parent attachment cache cleanup', () => {
       participants: [{ tripId: 'trip-1', ownerId: 'owner', userId: 'user', invitedEmail: 'x@example.com', status: 'accepted', invitedAt: '2026-09-01T00:00:00.000Z' }],
     });
 
-    useTripsStore.getState().removeTrip(targetTrip.id);
+    useTripsStore.getState().removeTripFromDevice(targetTrip.id);
 
     expect(useTripsStore.getState().trips.map((tr) => tr.id)).toEqual([otherTrip.id]);
     expect(useTripsStore.getState().expenses.map((e) => e.id)).toEqual([otherExpense.id]);

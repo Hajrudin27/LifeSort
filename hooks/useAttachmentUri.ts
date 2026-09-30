@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 
 import { Attachment } from '@/types/attachment';
-import { TripAttachment } from '@/types/trip';
 import { resolveAttachmentUri } from '@/utils/shared/attachmentSync';
 import {
   deleteCachedAttachmentFile,
@@ -12,7 +11,7 @@ type UseAttachmentUriOptions = {
   enabled?: boolean;
 };
 
-type ResolvableAttachment = Attachment | TripAttachment | null | undefined;
+type ResolvableAttachment = Attachment | null | undefined;
 
 function cleanupOwnedTemporaryUri(uri: string | null): void {
   if (uri && isTemporaryDecryptedAttachmentUri(uri)) {

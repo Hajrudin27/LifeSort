@@ -31,8 +31,11 @@ const REMINDER_MODULES = [
   'utils/warranty/warrantyReminder.ts',
 ];
 
-/** Typer med en vedhæftnings-form. To i dag; den ene mangler storagePath. */
-const ATTACHMENT_TYPE_FILES = ['types/attachment.ts', 'types/trip.ts'];
+/**
+ * Typer med en vedhæftnings-form. APP-058 fjernede TripAttachment, så der er kun én;
+ * listen er en skralde og må kun blive kortere.
+ */
+const ATTACHMENT_TYPE_FILES = ['types/attachment.ts'];
 
 /**
  * Skærme der formaterer beløb selv, i stedet for gennem et Money-primitiv.

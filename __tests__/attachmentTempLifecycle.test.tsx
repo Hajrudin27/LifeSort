@@ -11,7 +11,6 @@ import ViewImageScreen from '@/app/warranties/view-image';
 import { useAttachmentUri } from '@/hooks/useAttachmentUri';
 import { registerAttachmentViewerSource } from '@/utils/shared/attachmentViewerSource';
 import { Attachment } from '@/types/attachment';
-import { TripAttachment } from '@/types/trip';
 import { resolveAttachmentUri } from '@/utils/shared/attachmentSync';
 import {
   deleteCachedAttachmentFile,
@@ -135,7 +134,7 @@ function HookProbe({
   enabled = true,
   onUri,
 }: {
-  attachment: Attachment | TripAttachment;
+  attachment: Attachment;
   enabled?: boolean;
   onUri: (uri: string | null) => void;
 }) {
@@ -166,7 +165,7 @@ const documentAttachment: Attachment = {
   kind: 'document',
 };
 
-const tripDocument: TripAttachment = {
+const tripDocument: Attachment = {
   id: 'trip-doc-1',
   uri: 'file:///doc/attachments/trip-doc.lsenc',
   name: 'boarding-pass.pdf',

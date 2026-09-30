@@ -12,6 +12,7 @@ import { sharedStyles } from '@/constants/sharedStyles';
 import { useTripsStore } from '@/store/useTripsStore';
 import { PackingCategory } from '@/types/trip';
 import { todayIso } from '@/utils/shared/localDate';
+import { MAX_TRIP_DESTINATION_LENGTH, normalizeDestination, tripProblem } from '@/utils/trip/tripDomain';
 
 const DEFAULT_PACKING_ITEMS: { key: string; category: PackingCategory }[] = [
   { key: 'passport', category: 'essentials' },
@@ -28,25 +29,33 @@ export default function NewTripScreen() {
   const borderColor = useThemeColor({}, 'border');
   const surface = useThemeColor({}, 'surface');
   const backgroundColor = useThemeColor({}, 'background');
+  const danger = useThemeColor({}, 'danger');
 
   const today = todayIso();
 
   const [name, setName] = useState('');
+  const [destination, setDestination] = useState('');
+  const [saveFailed, setSaveFailed] = useState(false);
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [budget, setBudget] = useState('');
   const [copyFromTripId, setCopyFromTripId] = useState<string | null>(null);
 
-  const canSave = name.trim().length > 0;
+  // A new trip names its destination and its dates are calendar dates in order.
+  // "Destination required" is said by the field, not by an error on an empty form.
+  const problem = tripProblem({ destination, startDate, endDate }, { destinationRequired: true });
+  const dateProblem = problem !== null && problem !== 'destination-required' ? problem : null;
+  const canSave = name.trim().length > 0 && normalizeDestination(destination) !== undefined && problem === null;
 
   const save = () => {
     const defaultItems = DEFAULT_PACKING_ITEMS.map(({ key, category }) => ({
       label: t(`travel.defaultPackingItems.${key}`),
       category,
     }));
-    addTrip(
+    const id = addTrip(
       {
         name: name.trim(),
+        destination: destination.trim(),
         startDate,
         endDate,
         budget: budget.trim().length > 0 && !isNaN(parseFloat(budget)) ? parseFloat(budget) : null,
@@ -54,6 +63,10 @@ export default function NewTripScreen() {
       defaultItems,
       copyFromTripId
     );
+    if (!id) {
+      setSaveFailed(true);
+      return;
+    }
     router.back();
   };
 
@@ -68,11 +81,25 @@ export default function NewTripScreen() {
           onChangeText={setName}
         />
 
+        <Text style={sharedStyles.fieldLabel}>{t('travel.destinationLabel')}</Text>
+        <TextInput
+          style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
+          placeholder={t('travel.destinationPlaceholder')}
+          placeholderTextColor={borderColor}
+          accessibilityLabel={t('travel.destinationLabel')}
+          maxLength={MAX_TRIP_DESTINATION_LENGTH}
+          value={destination}
+          onChangeText={setDestination}
+        />
+
         <Text style={sharedStyles.fieldLabel}>{t('travel.startDateLabel')}</Text>
         <DatePickerField value={startDate} onChange={setStartDate} />
 
         <Text style={sharedStyles.fieldLabel}>{t('travel.endDateLabel')}</Text>
         <DatePickerField value={endDate} onChange={setEndDate} />
+        {dateProblem && (
+          <Text accessibilityRole="alert" style={{ color: danger }}>{t(`travel.problems.${dateProblem}`)}</Text>
+        )}
 
         <TextInput
           style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
@@ -96,6 +123,7 @@ export default function NewTripScreen() {
         )}
       </Card>
 
+      {saveFailed && <Text accessibilityRole="alert" style={{ color: danger }}>{t('travel.saveFailed')}</Text>}
       <Button label={t('travel.save')} disabled={!canSave} onPress={save} />
     </ScrollView>
   );

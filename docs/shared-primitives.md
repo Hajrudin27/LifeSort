@@ -162,10 +162,21 @@ URI and nothing else: it does not survive a reinstall or a new phone, and it
 never appears in the `attachments` table. The missing field is why, and the
 duplicated type is why the missing field went unnoticed.
 
-**Plan (APP-058):** delete `TripAttachment`, use `Attachment`, and add `'trip'`
-to `AttachmentOwnerType`. Existing local-only trip files need a one-time upload
-on next open, or they stay local for good — that backfill is the part that needs
-care, and it is why this is a story rather than a rename.
+**Plan (APP-058) — superseded by the implemented decision.** This section
+originally planned to delete `TripAttachment`, use `Attachment`, and add `'trip'` to
+`AttachmentOwnerType`, with a one-time upload of existing local files. That was a
+planning note, not a decision. APP-058 took half of it and replaced the other half
+([ADR-0046](./adr/0046-trips-are-canonical-parents-and-reference-standalone-documents.md)):
+
+- **Done:** `TripAttachment` is deleted and `Attachment` is the one attachment type.
+  Trip-expense attachments and the legacy on-device `Trip.documents` use it; its
+  optional `storagePath` is backwards compatible with old objects.
+- **Not done, deliberately:** `AttachmentOwnerType` is still `'warranty' | 'expense'`.
+  A trip's documents are references to standalone APP-055 Documents
+  (`trip_document_references`), not a third kind of parent-owned blob. Existing
+  local trip files are **not** uploaded on next open; the user moves each one to
+  Documents explicitly, and it is deleted locally only after the upload and the link
+  both succeeded.
 
 ## The freeze
 

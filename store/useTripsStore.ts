@@ -6,16 +6,19 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { documentMetadataEncryptedStorage } from "@/core/storage/documentCacheStorage";
 import { supabase } from "@/lib/supabase";
 import { trackSync } from '@/store/useSyncStatusStore';
+import { Attachment } from "@/types/attachment";
 import {
   PackingCategory,
   PackingItem,
   Trip,
-  TripAttachment,
   TripExpense,
   TripExpenseCategory,
   TripParticipant,
 } from "@/types/trip";
 import { fetchExchangeRate } from "@/utils/trip/currencyConversion";
+import { normalizeDestination, tripProblem } from "@/utils/trip/tripDomain";
+import { deleteTripRemote, fetchTripDeletionPreview, type TripDeleteResult, type TripDependencyCounts } from "@/utils/trip/tripRemote";
+import { isTripGone, markTripGone, runInTripLane } from "@/utils/trip/tripWriteLane";
 import { cleanupAttachments, deleteCachedAttachmentFile } from "@/utils/shared/attachmentStorage";
 import {
   cancelTripPackingReminder,
@@ -29,22 +32,40 @@ interface TripsState {
   participants: TripParticipant[];
   myUserId: string | null;
 
+  /**
+   * A new trip must name a destination and have ordered calendar dates (APP-058).
+   * Returns the new id, or null when the trip breaks a rule — nothing is stored.
+   */
   addTrip: (
     input: {
       name: string;
+      destination: string;
       startDate: string;
       endDate: string;
       budget: number | null;
     },
     defaultPackingItems: { label: string; category: PackingCategory }[],
     copyFromTripId?: string | null,
-  ) => string;
+  ) => string | null;
+  /**
+   * false when the trip is unknown or the change breaks a rule. A trip that predates
+   * destinations may stay without one; once it has one it cannot be blanked.
+   */
   updateTrip: (
     id: string,
-    updates: Partial<Pick<Trip, "name" | "startDate" | "endDate" | "budget">>,
-  ) => void;
-  removeTrip: (id: string) => void;
-  addTripDocument: (tripId: string, attachment: TripAttachment) => void;
+    updates: Partial<Pick<Trip, "name" | "destination" | "startDate" | "endDate" | "budget">>,
+  ) => boolean;
+  /**
+   * Deletes the canonical trip on the server — only if its dependencies are still exactly
+   * `confirmed`, the counts the user was shown; otherwise nothing is deleted and the result
+   * is `changed` with the fresh counts. The database cascades every child and link. Local
+   * state, files and the reminder are cleared ONLY after the server confirmed — on any
+   * failure everything stays exactly as it was.
+   */
+  deleteTrip: (id: string, confirmed: TripDependencyCounts) => Promise<TripDeleteResult>;
+  /** Removes this device's copy only, for a trip the server confirms it does not have. */
+  removeTripFromDevice: (id: string) => void;
+  addTripDocument: (tripId: string, attachment: Attachment) => void;
   removeTripDocument: (tripId: string, attachmentId: string) => void;
 
   addTripExpense: (input: {
@@ -59,7 +80,7 @@ interface TripsState {
     updates: Partial<Pick<TripExpense, "name" | "amount" | "category">>,
   ) => void;
   removeTripExpense: (id: string) => void;
-  addExpenseAttachment: (expenseId: string, attachment: TripAttachment) => void;
+  addExpenseAttachment: (expenseId: string, attachment: Attachment) => void;
   removeExpenseAttachment: (expenseId: string, attachmentId: string) => void;
 
   addPackingItem: (tripId: string, label: string, category: PackingCategory) => void;
@@ -84,6 +105,7 @@ function tripToRow(userId: string, tr: Trip) {
     id: tr.id,
     user_id: userId,
     name: tr.name,
+    destination: tr.destination ?? null,
     start_date: tr.startDate,
     end_date: tr.endDate,
     budget: tr.budget,
@@ -116,19 +138,33 @@ function expenseToRow(userId: string, e: TripExpense) {
   };
 }
 
-async function syncUpsertTrip(trip: Trip) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from("trips").upsert(tripToRow(userId, trip));
-}
-
-async function syncDeleteTrip(id: string) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from("trips").delete().eq("user_id", userId).eq("id", id);
-  await supabase.from("trip_expenses").delete().eq("user_id", userId).eq("trip_id", id);
-  await supabase.from("trip_packing_items").delete().eq("user_id", userId).eq("trip_id", id);
-  await supabase.from("trip_participants").delete().eq("trip_id", id);
+/**
+ * Sends the trip row, in order with every other remote write of this trip.
+ *
+ * It sends the LATEST local state when its turn comes rather than the state it was
+ * asked about, skips entirely if the trip has been deleted meanwhile (a queued upsert
+ * must never recreate a deleted trip), and — because the trip row is the parent —
+ * runs `afterSaved` inside the same turn, so a packing list can only follow a trip the
+ * server accepted. Resolves true when the server accepted the row.
+ *
+ * A row the server accepted under my user id is proof that I own the trip, so an
+ * unknown owner is recorded from it.
+ */
+function syncTrip(tripId: string, afterSaved?: () => Promise<void>): Promise<boolean> {
+  return runInTripLane(tripId, async () => {
+    if (isTripGone(tripId)) return false;
+    const trip = useTripsStore.getState().trips.find((tr) => tr.id === tripId);
+    if (!trip) return false;
+    const userId = await getUserId();
+    if (!userId) return false;
+    const result = await supabase.from("trips").upsert(tripToRow(userId, trip));
+    if (result?.error) return false;
+    useTripsStore.setState((state) => ({
+      trips: state.trips.map((tr) => (tr.id === tripId && !tr.ownerId ? { ...tr, ownerId: userId } : tr)),
+    }));
+    if (afterSaved) await afterSaved();
+    return true;
+  }).catch(() => false);
 }
 
 async function syncUpsertPackingItems(items: PackingItem[]) {
@@ -165,12 +201,17 @@ export const useTripsStore = create<TripsState>()(
       myUserId: null,
 
       addTrip: (input, defaultPackingItems, copyFromTripId) => {
+        if (tripProblem(input, { destinationRequired: true }) !== null) return null;
         const id = newEntityId();
         const newTrip: Trip = {
           id,
           documents: [],
           createdAt: new Date().toISOString(),
           ...input,
+          destination: normalizeDestination(input.destination),
+          // Known only if a session was already established on this device; otherwise it
+          // is recorded when the server accepts the trip. Never guessed.
+          ...(get().myUserId ? { ownerId: get().myUserId as string } : {}),
         };
         set((state) => ({ trips: [...state.trips, newTrip] }));
 
@@ -194,26 +235,46 @@ export const useTripsStore = create<TripsState>()(
         }));
 
         scheduleTripPackingReminder(id, input.name, input.startDate);
-        syncUpsertTrip(newTrip);
-        syncUpsertPackingItems(newPackingItems);
+        // The trip row first: its children reference it, so a packing list that
+        // reached the server before its trip would be refused by the foreign key.
+        void syncTrip(id, () => syncUpsertPackingItems(newPackingItems));
         return id;
       },
 
       updateTrip: (id, updates) => {
-        set((state) => {
-          const updated = state.trips.map((tr) =>
-            tr.id === id ? { ...tr, ...updates } : tr,
-          );
-          const target = updated.find((tr) => tr.id === id);
-          if (target)
-            scheduleTripPackingReminder(id, target.name, target.startDate);
-          return { trips: updated };
-        });
-        const target = get().trips.find((tr) => tr.id === id);
-        if (target) syncUpsertTrip(target);
+        const current = get().trips.find((tr) => tr.id === id);
+        if (!current) return false;
+        const next = { ...current, ...updates };
+        const problem = tripProblem(next, { destinationRequired: normalizeDestination(current.destination) !== undefined });
+        if (problem !== null) return false;
+        const target: Trip = { ...next, destination: normalizeDestination(next.destination) };
+        set((state) => ({ trips: state.trips.map((tr) => (tr.id === id ? target : tr)) }));
+        scheduleTripPackingReminder(id, target.name, target.startDate);
+        void syncTrip(id);
+        return true;
       },
 
-      removeTrip: (id) => {
+      deleteTrip: (id, confirmed) =>
+        // Behind every earlier write of this trip, so none of them can land after the delete.
+        runInTripLane(id, async () => {
+          let result = await deleteTripRemote(id, confirmed);
+          // The server may have committed the delete while the answer was lost, or the trip
+          // may already be gone (another device, an earlier attempt). "No row matched" and a
+          // failed call are then indistinguishable from a real failure, so ask the server.
+          // Only a definite "there is no such trip for you" turns a failure into success;
+          // anything else — still there, not yours, or no answer — stays a failure.
+          if (!result.ok && (result.reason === 'failed' || result.reason === 'not-confirmed')) {
+            const recheck = await fetchTripDeletionPreview(id);
+            if (recheck.ok && recheck.preview.status === 'not-found') result = { ok: true };
+          }
+          if (!result.ok) return result;
+          get().removeTripFromDevice(id);
+          return result;
+        }),
+
+      removeTripFromDevice: (id) => {
+        // Before anything else: a write still waiting for this trip must not run.
+        markTripGone(id);
         const targetTrip = get().trips.find((tr) => tr.id === id);
         const removedExpenses = get().expenses.filter((e) => e.tripId === id);
         cancelTripPackingReminder(id);
@@ -225,7 +286,6 @@ export const useTripsStore = create<TripsState>()(
         }));
         cleanupAttachments(targetTrip?.documents);
         for (const expense of removedExpenses) cleanupAttachments(expense.attachments);
-        syncDeleteTrip(id);
       },
 
       addTripDocument: (tripId, attachment) =>
@@ -409,6 +469,8 @@ export const useTripsStore = create<TripsState>()(
 
         if (!trackSync('trips', 'fetchParticipants', { error })) return;
         if (!data) return;
+        // The trip may have been deleted while this request was in flight.
+        if (isTripGone(tripId)) return;
 
         set((state) => {
           const others = state.participants.filter((p) => p.tripId !== tripId);
@@ -430,7 +492,7 @@ export const useTripsStore = create<TripsState>()(
         set({ myUserId: userId });
 
         const [tripsResult, packingResult, expensesResult, myInvitationsResult] = await Promise.all([
-          supabase.from("trips").select("id, name, start_date, end_date, budget, created_at").eq("user_id", userId),
+          supabase.from("trips").select("id, user_id, name, destination, start_date, end_date, budget, created_at").eq("user_id", userId),
           supabase.from("trip_packing_items").select("id, trip_id, label, checked, category").eq("user_id", userId),
           supabase.from("trip_expenses").select("id, trip_id, name, amount, category, currency, original_amount, exchange_rate").eq("user_id", userId),
           supabase.from("trip_participants").select("trip_id, owner_id, user_id, invited_email, status, invited_at").eq("user_id", userId),
@@ -446,7 +508,7 @@ export const useTripsStore = create<TripsState>()(
 
         if (acceptedTripIds.length > 0) {
           const [sharedTrips, sharedExpenses, sharedPacking] = await Promise.all([
-            supabase.from("trips").select("id, name, start_date, end_date, budget, created_at").in("id", acceptedTripIds),
+            supabase.from("trips").select("id, user_id, name, destination, start_date, end_date, budget, created_at").in("id", acceptedTripIds),
             supabase.from("trip_expenses").select("id, trip_id, name, amount, category, currency, original_amount, exchange_rate").in("trip_id", acceptedTripIds),
             supabase.from("trip_packing_items").select("id, trip_id, label, checked, category").in("trip_id", acceptedTripIds),
           ]);
@@ -459,10 +521,16 @@ export const useTripsStore = create<TripsState>()(
           const allTripRows = [...(tripsResult.data ?? []), ...sharedTripsData];
           const existingTripIds = new Set(state.trips.map((tr) => tr.id));
           const fetchedTrips: Trip[] = allTripRows
-            .filter((row) => !existingTripIds.has(row.id))
+            // A response that was already in flight when a trip was deleted must not bring it back.
+            .filter((row) => !existingTripIds.has(row.id) && !isTripGone(row.id))
             .map((row) => ({
               id: row.id,
+              // The canonical owner, from the server. Only a positive answer from here (or
+              // from a row the server accepted under my id) ever makes someone an owner.
+              ownerId: row.user_id ?? undefined,
               name: row.name,
+              // APP-058: trips from before destinations stay without one.
+              destination: row.destination ?? undefined,
               startDate: row.start_date,
               endDate: row.end_date,
               budget: row.budget !== null ? Number(row.budget) : null,
@@ -477,7 +545,8 @@ export const useTripsStore = create<TripsState>()(
           const allPackingRows = [...(packingResult.data ?? []), ...sharedPackingData];
           const existingPackingIds = new Set(state.packingItems.map((p) => p.id));
           const fetchedPackingItems: PackingItem[] = allPackingRows
-            .filter((row) => !existingPackingIds.has(row.id))
+            // A stale response must not put back what a delete just removed.
+            .filter((row) => !existingPackingIds.has(row.id) && !isTripGone(row.trip_id))
             .map((row) => ({
               id: row.id,
               tripId: row.trip_id,
@@ -490,7 +559,7 @@ export const useTripsStore = create<TripsState>()(
           const allExpenseRows = [...(expensesResult.data ?? []), ...sharedExpensesData];
           const existingExpenseIds = new Set(state.expenses.map((e) => e.id));
           const fetchedExpenses: TripExpense[] = allExpenseRows
-            .filter((row) => !existingExpenseIds.has(row.id))
+            .filter((row) => !existingExpenseIds.has(row.id) && !isTripGone(row.trip_id))
             .map((row) => ({
               id: row.id,
               tripId: row.trip_id,
@@ -506,7 +575,7 @@ export const useTripsStore = create<TripsState>()(
 
           const existingParticipantKeys = new Set(state.participants.map((p) => `${p.tripId}-${p.userId}`));
           const fetchedParticipants: TripParticipant[] = (myInvitationsResult.data ?? [])
-            .filter((row) => !existingParticipantKeys.has(`${row.trip_id}-${row.user_id}`))
+            .filter((row) => !existingParticipantKeys.has(`${row.trip_id}-${row.user_id}`) && !isTripGone(row.trip_id))
             .map((row) => ({
               tripId: row.trip_id,
               ownerId: row.owner_id,
@@ -517,7 +586,16 @@ export const useTripsStore = create<TripsState>()(
             }));
 
           return {
-            trips: [...state.trips, ...fetchedTrips],
+            // Trips kept from before the owner was recorded learn it here; nothing else about a
+            // known trip changes (the merge stays append-only).
+            trips: [
+              ...state.trips.map((tr) => {
+                if (tr.ownerId) return tr;
+                const ownerId = allTripRows.find((row) => row.id === tr.id)?.user_id;
+                return ownerId ? { ...tr, ownerId } : tr;
+              }),
+              ...fetchedTrips,
+            ],
             packingItems: [...state.packingItems, ...fetchedPackingItems],
             expenses: [...state.expenses, ...fetchedExpenses],
             participants: [...state.participants, ...fetchedParticipants],

@@ -51,8 +51,11 @@ jobs:
       - name: Install local PostgreSQL binaries
         run: |
           sudo apt-get update
-          sudo apt-get install --yes postgresql-16
-          echo '/usr/lib/postgresql/16/bin' >> "$GITHUB_PATH"
+          sudo apt-get install --yes postgresql-common ca-certificates
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-17
+          echo '/usr/lib/postgresql/17/bin' >> "$GITHUB_PATH"
       - name: Run isolated database harnesses
         # Each harness starts/stops its own scratch cluster; no hosted DB or secrets.
         run: node --test tests/db/*.test.cjs

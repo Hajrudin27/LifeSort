@@ -9,11 +9,13 @@ import Button from '@/components/Button';
 import DatePickerField from '@/components/DatePickerField';
 import { Text, useThemeColor } from '@/components/Themed';
 import Hero, { HeroBadge, HeroBadgeText } from '@/components/Hero';
+import WarrantyReceiptField from '@/components/WarrantyReceiptField';
 import { useAccentTints } from '@/hooks/useAccentTints';
 import { useBrandTints } from '@/hooks/useBrandTints';
 import { useToastStore } from '@/store/useToastStore';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
 import { WarrantyType } from '@/types/warranty';
+import { warrantyDateProblem } from '@/utils/warranty/warrantyDomain';
 import { getWarrantyTypeIconName } from '@/utils/warranty/warrantyTypeIcon';
 
 const TYPES: WarrantyType[] = ['warranty', 'receipt', 'insurance', 'rental', 'other'];
@@ -50,6 +52,7 @@ export default function NewWarrantyScreen() {
   const surfaceMuted = useThemeColor({}, 'surfaceMuted');
   const textMuted = useThemeColor({}, 'textMuted');
   const backgroundColor = useThemeColor({}, 'background');
+  const danger = useThemeColor({}, 'danger');
 
   const defaultExpiry = useMemo(() => addYears(2), []);
   const [name, setName] = useState('');
@@ -57,9 +60,14 @@ export default function NewWarrantyScreen() {
   const [expiryDate, setExpiryDate] = useState(defaultExpiry);
   const [expiryMode, setExpiryMode] = useState<'month' | 'year' | 'twoYears' | 'custom'>('twoYears');
   const [notes, setNotes] = useState('');
+  const [seller, setSeller] = useState('');
+  // '' = not recorded. Optional, and never defaulted to anything.
+  const [purchaseDate, setPurchaseDate] = useState('');
+  const [receiptDocumentId, setReceiptDocumentId] = useState<string | undefined>(undefined);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
-  const canSave = name.trim().length > 0;
+  const dateProblem = warrantyDateProblem({ expiryDate, purchaseDate: purchaseDate || undefined });
+  const canSave = name.trim().length > 0 && dateProblem === null;
   const createdWarranty = allWarranties.find((w) => w.id === createdId);
   const expiryShortcuts = [
     { key: 'month', label: t('warranties.expiryMonth'), value: addDays(30) },
@@ -79,7 +87,19 @@ export default function NewWarrantyScreen() {
 
   const save = () => {
     if (!canSave) return;
-    const id = addWarranty({ name: name.trim(), type, expiryDate, notes: notes.trim() || undefined });
+    const id = addWarranty({
+      name: name.trim(),
+      type,
+      expiryDate,
+      notes: notes.trim() || undefined,
+      purchaseDate: purchaseDate || undefined,
+      seller: seller.trim() || undefined,
+      receiptDocumentId,
+    });
+    if (!id) {
+      showToast(t('warranties.saveFailed'));
+      return;
+    }
     showToast(t('warranties.createdToast'));
     setCreatedId(id);
   };
@@ -132,6 +152,23 @@ export default function NewWarrantyScreen() {
             onChangeText={setNotes}
             multiline
           />
+
+          <Text style={styles.sectionEyebrow}>{t('warranties.sellerLabel')}</Text>
+          <TextInput
+            style={[styles.textInput, { borderColor, backgroundColor: surface }]}
+            placeholder={t('warranties.sellerPlaceholder')}
+            placeholderTextColor={textMuted}
+            value={seller}
+            onChangeText={setSeller}
+          />
+
+          <Text style={styles.sectionEyebrow}>{t('warranties.purchaseDateLabel')}</Text>
+          <DatePickerField value={purchaseDate} onChange={setPurchaseDate} yearsBack={30} yearsForward={0} />
+          {purchaseDate !== '' && (
+            <Pressable accessibilityRole="button" style={styles.clearDate} onPress={() => setPurchaseDate('')}>
+              <Text style={[styles.customDateText, { color: accentTints.accent }]}>{t('warranties.clearDate')}</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.optionSection}>
@@ -203,7 +240,15 @@ export default function NewWarrantyScreen() {
           {expiryMode === 'custom' && (
             <DatePickerField value={expiryDate} onChange={setExpiryDate} yearsBack={0} yearsForward={15} />
           )}
+
+          {dateProblem && (
+            <Text accessibilityRole="alert" style={[styles.problem, { color: danger }]}>
+              {t(`warranties.dateProblems.${dateProblem}`)}
+            </Text>
+          )}
         </View>
+
+        <WarrantyReceiptField value={receiptDocumentId} onChange={setReceiptDocumentId} />
 
         <View style={[styles.reminderCard, { backgroundColor: surface, borderColor }]}>
           <View style={[styles.reminderIcon, { backgroundColor: surfaceMuted }]}>
@@ -260,6 +305,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 15,
   },
+  textInput: {
+    borderWidth: 1,
+    borderRadius: 18,
+    fontSize: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  clearDate: { alignSelf: 'flex-start', minHeight: 34, justifyContent: 'center' },
+  problem: { fontSize: 13, fontWeight: '700' },
   notesInput: {
     borderWidth: 1,
     borderRadius: 18,

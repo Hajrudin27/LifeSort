@@ -41,6 +41,11 @@ function isUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID.test(value);
 }
 
+/** Whether a value has the shape of a document id. Says nothing about ownership or existence. */
+export function isDocumentId(value: unknown): value is string {
+  return isUuid(value);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

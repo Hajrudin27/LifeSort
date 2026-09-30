@@ -316,7 +316,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `trip_participants` | `travel` | `store/useTripsStore.ts` | personal | Hajrudin Kardasevic |
 | `warranties` | `warranties` | `store/useWarrantiesStore.ts` | document, financial | Hajrudin Kardasevic |
 | `attachments` | shared (`economy`, `warranties`, `travel`) | `utils/shared/attachmentSync.ts`, `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
-| `documents` | `documents` | `core/documents/documentSync.ts`, `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
+| `documents` | `documents` | `core/documents/documentSync.ts`, `core/documents/documentReferences.ts` (APP-057 id/name/date reference read; no path), `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
 | `document_deletion_tombstones` | `documents` (server-only; no client grant) | written only by `finalize_my_document_deletion()`, called from `core/documents/documentSync.ts` | document | Hajrudin Kardasevic |
 | `job_applications` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
 | `skills` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
@@ -385,6 +385,7 @@ module that owns it.
 | `PrivacyOverlay` | `components/PrivacyOverlay.tsx` | `account` | Hajrudin Kardasevic |
 | `VerifyEmailBanner` | `components/VerifyEmailBanner.tsx` | `account` | Hajrudin Kardasevic |
 | `AttachmentList` | `components/AttachmentList.tsx` | shared (attachments: `economy`, `warranties`) | Hajrudin Kardasevic |
+| `WarrantyReceiptField` | `components/WarrantyReceiptField.tsx` | `warranties` | Hajrudin Kardasevic |
 | `CategoryPicker` | `components/CategoryPicker.tsx` | `economy` | Hajrudin Kardasevic |
 | `ExpensePieChart` | `components/ExpensePieChart.tsx` | `economy` | Hajrudin Kardasevic |
 | `TrendLineChart` | `components/TrendLineChart.tsx` | `economy` | Hajrudin Kardasevic |

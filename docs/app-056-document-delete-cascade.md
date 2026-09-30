@@ -336,4 +336,6 @@ APP-055 migrations, and before any client build that calls the two new functions
 ## Not in scope
 
 No OCR, thumbnails, AI, rename, sharing, search indexing, warranty or trip linking,
-APP-098 work, or outbox integration.
+APP-098 work, or outbox integration. (APP-057 later adds an owner-bound warranty
+receipt reference that finalize clears without deleting the warranty — see
+[APP-057](./app-057-warranty-domain.md).)

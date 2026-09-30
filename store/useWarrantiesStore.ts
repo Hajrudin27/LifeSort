@@ -11,7 +11,13 @@ import { Warranty, WarrantyType } from "@/types/warranty";
 import { cleanupAttachments, deleteCachedAttachmentFile } from "@/utils/shared/attachmentStorage";
 import { deleteAttachmentRemote, fetchAttachmentsFor, uploadAttachment } from "@/utils/shared/attachmentSync";
 import {
+  isWarrantyReceiptReference,
+  normalizeWarrantySeller,
+  warrantyDateProblem,
+} from "@/utils/warranty/warrantyDomain";
+import {
   cancelWarrantyReminder,
+  refreshWarrantyReminders,
   scheduleWarrantyReminder,
 } from "@/utils/warranty/warrantyReminder";
 
@@ -25,21 +31,31 @@ function addOneYear(dateStr: string): string {
 
 interface WarrantiesState {
   warranties: Warranty[];
+  /** Returnerer det nye id, eller null hvis felterne bryder garantiens regler (APP-057). */
   addWarranty: (input: {
     name: string;
     type: WarrantyType;
     expiryDate: string;
     notes?: string;
-  }) => string
+    purchaseDate?: string;
+    seller?: string;
+    receiptDocumentId?: string;
+  }) => string | null;
+  /** false når garantien ikke findes, eller når ændringen ville bryde dens regler (APP-057). */
   updateWarranty: (
     id: string,
     updates: Partial<Omit<Warranty, "id" | "createdAt" | "attachments">>,
-  ) => void;
+  ) => boolean;
   renewWarranty: (id: string) => string | null; // returnerer den nye dato, eller null hvis garantien ikke findes
   removeWarranty: (id: string) => void;
   addAttachment: (warrantyId: string, attachment: Attachment) => void;
   removeAttachment: (warrantyId: string, attachmentId: string) => void;
   fetchFromSupabase: () => Promise<void>;
+  /**
+   * APP-057: erstatter påmindelser fra tidligere versioner med de generiske, ud fra
+   * den lokale liste. Spørger aldrig om tilladelse og kaster aldrig.
+   */
+  refreshReminders: () => Promise<void>;
 }
 
 async function getUserId(): Promise<string | null> {
@@ -47,8 +63,24 @@ async function getUserId(): Promise<string | null> {
   return userData.user?.id ?? null;
 }
 
+/**
+ * APP-057: felterne en garanti må skrives med, eller null hvis de bryder dens
+ * regler — en dato der ikke er en kanonisk kalenderdato, et køb efter
+ * dækningens slutning, eller en kvitteringsreference der ikke er et dokument-id.
+ * Intet repareres; en ugyldig ændring afvises og intet gemmes.
+ */
+function acceptWarrantyFields<T extends Pick<Warranty, "expiryDate" | "purchaseDate" | "seller" | "receiptDocumentId">>(
+  fields: T,
+): T | null {
+  if (warrantyDateProblem(fields) !== null) return null;
+  if (fields.receiptDocumentId !== undefined && !isWarrantyReceiptReference(fields.receiptDocumentId)) return null;
+  return { ...fields, seller: normalizeWarrantySeller(fields.seller) };
+}
+
 // Bemærk: "attachments" sendes ALDRIG med i selve warranty-raden — de synkroniseres
 // separat til den delte `attachments`-tabel + Storage-bucket (se utils/shared/attachmentSync.ts).
+// `name` er produktet og `expiry_date` dækningens slutdato; kolonnenavnene er
+// bevaret af hensyn til ældre klienter (APP-057, ADR-0045).
 function toRow(userId: string, w: Warranty) {
   return {
     id: w.id,
@@ -57,14 +89,42 @@ function toRow(userId: string, w: Warranty) {
     type: w.type,
     expiry_date: w.expiryDate,
     notes: w.notes ?? null,
+    purchase_date: w.purchaseDate ?? null,
+    seller: w.seller ?? null,
+    receipt_document_id: w.receiptDocumentId ?? null,
     created_at: w.createdAt,
   };
+}
+
+const RECEIPT_REFERENCE_CONSTRAINT = "warranties_receipt_document_fkey";
+
+/** Databasen kender ikke (længere) det dokument, kvitteringsreferencen peger på. */
+function isStaleReceiptReference(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const { code, message } = error as { code?: unknown; message?: unknown };
+  return code === "23503" && typeof message === "string" && message.includes(RECEIPT_REFERENCE_CONSTRAINT);
 }
 
 async function syncUpsertWarranty(warranty: Warranty) {
   const userId = await getUserId();
   if (!userId) return;
-  await supabase.from("warranties").upsert(toRow(userId, warranty));
+  const result = await supabase.from("warranties").upsert(toRow(userId, warranty));
+  if (!warranty.receiptDocumentId || !isStaleReceiptReference(result?.error)) return;
+
+  // APP-057: dokumentet findes ikke længere for denne konto — slettet her eller på
+  // en anden enhed, hvor databasen allerede har ryddet referencen. Den lokale kopi
+  // ryddes også, og garantien sendes igen uden den, så resten af ændringen ikke
+  // går tabt. Kun den reference der fejlede fjernes, og kun hvis den stadig er den.
+  const staleId = warranty.receiptDocumentId;
+  useWarrantiesStore.setState((state) => ({
+    warranties: state.warranties.map((w) =>
+      w.id === warranty.id && w.receiptDocumentId === staleId ? { ...w, receiptDocumentId: undefined } : w,
+    ),
+  }));
+  const healed = useWarrantiesStore.getState().warranties.find((w) => w.id === warranty.id);
+  if (healed && healed.receiptDocumentId === undefined) {
+    await supabase.from("warranties").upsert(toRow(userId, healed));
+  }
 }
 
 async function syncDeleteWarranty(id: string) {
@@ -78,32 +138,33 @@ export const useWarrantiesStore = create<WarrantiesState>()(
     (set, get) => ({
       warranties: [],
       addWarranty: (input) => {
+        const accepted = acceptWarrantyFields(input);
+        if (!accepted) return null;
         const id = newEntityId();
         const newWarranty: Warranty = {
           id,
           attachments: [],
           createdAt: new Date().toISOString(),
-          ...input,
+          ...accepted,
         };
         set((state) => ({
           warranties: [...state.warranties, newWarranty],
         }));
-        scheduleWarrantyReminder(id, input.name, input.expiryDate);
+        scheduleWarrantyReminder(id, newWarranty.expiryDate);
         syncUpsertWarranty(newWarranty);
         return id;
       },
       updateWarranty: (id, updates) => {
-        set((state) => {
-          const updated = state.warranties.map((w) =>
-            w.id === id ? { ...w, ...updates } : w,
-          );
-          const target = updated.find((w) => w.id === id);
-          if (target)
-            scheduleWarrantyReminder(id, target.name, target.expiryDate);
-          return { warranties: updated };
-        });
-        const target = get().warranties.find((w) => w.id === id);
-        if (target) syncUpsertWarranty(target);
+        const current = get().warranties.find((w) => w.id === id);
+        if (!current) return false;
+        const target = acceptWarrantyFields({ ...current, ...updates });
+        if (!target) return false;
+        set((state) => ({
+          warranties: state.warranties.map((w) => (w.id === id ? target : w)),
+        }));
+        scheduleWarrantyReminder(id, target.expiryDate);
+        syncUpsertWarranty(target);
+        return true;
       },
       renewWarranty: (id) => {
         const target = get().warranties.find((w) => w.id === id);
@@ -114,7 +175,7 @@ export const useWarrantiesStore = create<WarrantiesState>()(
             w.id === id ? { ...w, expiryDate: newExpiry } : w,
           ),
         }));
-        scheduleWarrantyReminder(id, target.name, newExpiry);
+        scheduleWarrantyReminder(id, newExpiry);
         const updated = get().warranties.find((w) => w.id === id);
         if (updated) syncUpsertWarranty(updated);
         return newExpiry;
@@ -172,13 +233,17 @@ export const useWarrantiesStore = create<WarrantiesState>()(
         deleteAttachmentRemote(attachmentId, attachment?.storagePath);
       },
 
+      refreshReminders: async () => {
+        await refreshWarrantyReminders(() => get().warranties);
+      },
+
       fetchFromSupabase: async () => {
         const userId = await getUserId();
         if (!userId) return;
 
         const { data, error } = await supabase
           .from("warranties")
-          .select("id, name, type, expiry_date, notes, created_at")
+          .select("id, name, type, expiry_date, notes, purchase_date, seller, receipt_document_id, created_at")
           .eq("user_id", userId);
 
         if (!trackSync('warranties', 'fetch', { error })) return;
@@ -196,12 +261,16 @@ export const useWarrantiesStore = create<WarrantiesState>()(
           type: row.type as WarrantyType,
           expiryDate: row.expiry_date,
           notes: row.notes ?? undefined,
+          // APP-057: tomme felter på ældre rækker forbliver tomme — intet opfindes.
+          purchaseDate: row.purchase_date ?? undefined,
+          seller: row.seller ?? undefined,
+          receiptDocumentId: row.receipt_document_id ?? undefined,
           attachments: [],
           createdAt: row.created_at,
         }));
 
         for (const w of fetched) {
-          scheduleWarrantyReminder(w.id, w.name, w.expiryDate);
+          scheduleWarrantyReminder(w.id, w.expiryDate);
         }
 
         set((state) => ({ warranties: [...state.warranties, ...fetched] }));

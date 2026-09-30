@@ -226,6 +226,13 @@ ADR-0043 is extended, not superseded: its boundary, its path invariant, its uplo
 ordering and its account-deletion release all stand. What changed is the third
 DELETE reason and the release's manifest, both reviewed here.
 
+Referenced — not superseded — by
+[ADR-0045](./0045-warranty-receipts-are-owner-bound-document-references.md)
+(APP-057). A warranty may now hold an owner-bound reference to a document, and
+finalize's row delete clears it in the same transaction through
+`ON DELETE SET NULL (receipt_document_id)`. A warranty is not a derived artifact:
+this lifecycle never deletes one, and the success invariant above is unchanged.
+
 ## Alternatives considered
 
 - **A metadata DELETE policy or grant, with the client deleting the row.**

@@ -138,6 +138,7 @@ function ReadyRootLayout() {
   const fetchExpenses = useExpensesStore((s) => s.fetchFromSupabase);
   const fetchSavingsGoals = useSavingsGoalsStore((s) => s.fetchFromSupabase);
   const fetchWarranties = useWarrantiesStore((s) => s.fetchFromSupabase);
+  const refreshWarrantyReminders = useWarrantiesStore((s) => s.refreshReminders);
   const fetchTrips = useTripsStore((s) => s.fetchFromSupabase);
   const fetchTodos = useTodoStore((s) => s.fetchFromSupabase);
   const fetchLifeGoals = useLifeGoalsStore((s) => s.fetchFromSupabase);
@@ -215,6 +216,21 @@ function ReadyRootLayout() {
       fetchCycle();
       fetchEnabledModules();
     }
+  }, [session?.user.id]);
+
+  // APP-057: tidligere versioner planlagde garantipåmindelser med produktnavnet i
+  // teksten, og de overlever en opdatering i OS'ets planlægger. Når den lokale,
+  // krypterede garantiliste er læst, erstattes de med generiske — uden netværk,
+  // uden at vente på hentningen ovenfor og uden nogen tilladelsesdialog.
+  useEffect(() => {
+    if (!session) return;
+    let active = true;
+    void whenStoreHydrated(useWarrantiesStore)
+      .then(() => (active ? refreshWarrantyReminders() : undefined))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
   }, [session?.user.id]);
 
   // Afgør ÉN GANG, med det samme al nødvendig data er kendt (auth afsluttet,

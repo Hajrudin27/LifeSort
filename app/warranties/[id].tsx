@@ -10,11 +10,13 @@ import Card from "@/components/Card";
 import Chip from "@/components/Chip";
 import DatePickerField from "@/components/DatePickerField";
 import { Text, useThemeColor, View } from "@/components/Themed";
+import WarrantyReceiptField from "@/components/WarrantyReceiptField";
 import { sharedStyles } from "@/constants/sharedStyles";
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useWarrantiesStore } from "@/store/useWarrantiesStore";
 import { WarrantyType } from "@/types/warranty";
 import { daysUntil } from "@/utils/shared/dateDays";
+import { warrantyDateProblem } from "@/utils/warranty/warrantyDomain";
 
 const TYPES: WarrantyType[] = [
   "insurance",
@@ -48,7 +50,12 @@ export default function WarrantyDetailScreen() {
   const [type, setType] = useState<WarrantyType>(warranty?.type ?? "other");
   const [expiryDate, setExpiryDate] = useState(warranty?.expiryDate ?? "");
   const [notes, setNotes] = useState(warranty?.notes ?? "");
+  const [seller, setSeller] = useState(warranty?.seller ?? "");
+  // "" = not recorded. Legacy warranties have none, and none is invented.
+  const [purchaseDate, setPurchaseDate] = useState(warranty?.purchaseDate ?? "");
+  const [receiptDocumentId, setReceiptDocumentId] = useState<string | undefined>(warranty?.receiptDocumentId);
   const [showEdit, setShowEdit] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   if (!warranty) {
     return (
@@ -58,17 +65,26 @@ export default function WarrantyDetailScreen() {
     );
   }
 
-  const canSave = name.trim().length > 0 && expiryDate.length > 0;
+  const dateProblem = warrantyDateProblem({ expiryDate, purchaseDate: purchaseDate || undefined });
+  const canSave = name.trim().length > 0 && dateProblem === null;
   const days = daysUntil(warranty.expiryDate);
   const isExpired = days < 0;
 
   const save = () => {
-    updateWarranty(warranty.id, {
+    const saved = updateWarranty(warranty.id, {
       name: name.trim(),
       type,
       expiryDate,
       notes: notes.trim() || undefined,
+      purchaseDate: purchaseDate || undefined,
+      seller: seller.trim() || undefined,
+      receiptDocumentId,
     });
+    if (!saved) {
+      setSaveFailed(true);
+      return;
+    }
+    setSaveFailed(false);
     setShowEdit(false);
     router.back();
   };
@@ -123,8 +139,23 @@ export default function WarrantyDetailScreen() {
             ? t("warranties.expired")
             : t("warranties.expiresIn", { days })}
         </Text>
-        <Text style={{ color: textMuted }}>{warranty.expiryDate}</Text>
+        <Text style={{ color: textMuted }}>
+          {t("warranties.expiryLabel")}: {warranty.expiryDate}
+        </Text>
       </Card>
+
+      <Card style={styles.detailsCard}>
+        <Text style={sharedStyles.fieldLabel}>{t("warranties.sellerLabel")}</Text>
+        <Text style={{ color: warranty.seller ? undefined : textMuted }}>
+          {warranty.seller ?? t("warranties.notSet")}
+        </Text>
+        <Text style={sharedStyles.fieldLabel}>{t("warranties.purchaseDateLabel")}</Text>
+        <Text style={{ color: warranty.purchaseDate ? undefined : textMuted }}>
+          {warranty.purchaseDate ?? t("warranties.notSet")}
+        </Text>
+      </Card>
+
+      <WarrantyReceiptField value={warranty.receiptDocumentId} />
 
       <Button
         label={t("warranties.renew")}
@@ -165,6 +196,9 @@ export default function WarrantyDetailScreen() {
           >
             <ScrollView>
               <Card style={sharedStyles.card}>
+                <Text style={sharedStyles.fieldLabel}>
+                  {t("warranties.nameLabel")}
+                </Text>
                 <TextInput
                   style={[
                     sharedStyles.input,
@@ -175,9 +209,43 @@ export default function WarrantyDetailScreen() {
                 />
 
                 <Text style={sharedStyles.fieldLabel}>
+                  {t("warranties.sellerLabel")}
+                </Text>
+                <TextInput
+                  style={[
+                    sharedStyles.input,
+                    { borderColor, backgroundColor: surface },
+                  ]}
+                  placeholder={t("warranties.sellerPlaceholder")}
+                  placeholderTextColor={borderColor}
+                  value={seller}
+                  onChangeText={setSeller}
+                />
+
+                <Text style={sharedStyles.fieldLabel}>
+                  {t("warranties.purchaseDateLabel")}
+                </Text>
+                <DatePickerField value={purchaseDate} onChange={setPurchaseDate} yearsBack={30} yearsForward={0} />
+                {purchaseDate !== "" && (
+                  <Pressable
+                    accessibilityRole="button"
+                    style={styles.clearDate}
+                    onPress={() => setPurchaseDate("")}
+                  >
+                    <Text style={{ color: tintColor }}>{t("warranties.clearDate")}</Text>
+                  </Pressable>
+                )}
+
+                <Text style={sharedStyles.fieldLabel}>
                   {t("warranties.expiryLabel")}
                 </Text>
                 <DatePickerField value={expiryDate} onChange={setExpiryDate} />
+
+                {dateProblem && (
+                  <Text accessibilityRole="alert" style={{ color: danger }}>
+                    {t(`warranties.dateProblems.${dateProblem}`)}
+                  </Text>
+                )}
 
                 <Text style={sharedStyles.fieldLabel}>
                   {t("warranties.typeLabel")}
@@ -203,7 +271,15 @@ export default function WarrantyDetailScreen() {
                   value={notes}
                   onChangeText={setNotes}
                 />
+
+                <WarrantyReceiptField value={receiptDocumentId} onChange={setReceiptDocumentId} />
               </Card>
+
+              {saveFailed && (
+                <Text accessibilityRole="alert" style={{ color: danger }}>
+                  {t("warranties.saveFailed")}
+                </Text>
+              )}
 
               <Button
                 label={t("warranties.save")}
@@ -225,6 +301,8 @@ export default function WarrantyDetailScreen() {
 
 const styles = {
   statusCard: { alignItems: "center" as const, gap: 4 },
+  detailsCard: { gap: 4 },
+  clearDate: { alignSelf: "flex-start" as const, minHeight: 34, justifyContent: "center" as const },
   daysText: { fontWeight: "700" as const, fontSize: 16 },
   editButton: {
     flexDirection: "row" as const,

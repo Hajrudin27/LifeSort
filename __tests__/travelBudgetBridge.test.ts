@@ -50,7 +50,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUser = null;
   useTripsStore.setState({
-    trips: [], expenses: [], packingItems: [], participants: [], myUserId: null,
+    trips: [], expenses: [], packingItems: [], appliedPackingTemplates: [], participants: [], myUserId: null,
     financialProjections: [], financialProjectionFreshAt: {}, financialProjectionStatus: {},
     pendingExpenseDrafts: {},
   });
@@ -58,8 +58,9 @@ beforeEach(() => {
 
 describe('APP-059 Travel persistence migration', () => {
   it('converts safe money, preserves the legacy row, and never invents a transaction date', () => {
-    const migrated = travelMoneyMigration.steps[0](v0(12.34)) as any;
-    expect(migrated.version).toBe(1);
+    const v1 = travelMoneyMigration.steps[0](v0(12.34)) as any;
+    const migrated = travelMoneyMigration.steps[1](v1) as any;
+    expect(migrated.version).toBe(2);
     expect(migrated.state.trips[0]).toMatchObject({ budget: 120_050 });
     expect(migrated.state.expenses[0]).toMatchObject({
       id: 'legacy', amount: 12.34, amountMinor: 1234,
@@ -68,11 +69,12 @@ describe('APP-059 Travel persistence migration', () => {
     });
     expect(migrated.state.expenses[0]).not.toHaveProperty('transactionDate');
     expect(migrated.state.pendingExpenseDrafts).toEqual({});
+    expect(migrated.state.appliedPackingTemplates).toEqual([]);
     expect(travelMoneyMigration.validateCurrent(migrated)).toBe(true);
   });
 
   it('preserves unsafe legacy money unresolved without rounding it', () => {
-    const migrated = travelMoneyMigration.steps[0](v0(12.345, 12.345)) as any;
+    const migrated = travelMoneyMigration.steps[1](travelMoneyMigration.steps[0](v0(12.345, 12.345))) as any;
     expect(migrated.state.expenses[0].amount).toBe(12.345);
     expect(migrated.state.expenses[0]).not.toHaveProperty('amountMinor');
     expect(migrated.state.trips[0]).toMatchObject({ budget: null, legacyBudgetMajor: 12.345 });

@@ -69,10 +69,21 @@ export type PackingCategory = 'essentials' | 'clothing' | 'electronics' | 'toile
 export interface PackingItem {
   id: string;
   tripId: string;
+  /** Server author when known; participant edits must not re-attribute the row. */
+  authorId?: string;
   label: string;
   checked: boolean;
   isDefault: boolean;
   category: PackingCategory;
+}
+
+/** Durable Trip-level record that one exact global template release was explicitly applied. */
+export interface AppliedPackingTemplate {
+  tripId: string;
+  templateId: string;
+  templateVersion: number;
+  appliedBy?: string;
+  appliedAt?: string;
 }
 
 export interface Trip {

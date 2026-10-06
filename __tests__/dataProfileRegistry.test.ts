@@ -37,7 +37,7 @@ const BACKEND_ONLY_TABLES = [
 // reachable only through the two deletion functions the client calls.
 // APP-058's trip_packing_compat_queue is likewise registered (it holds packing labels) although no client
 // can call it: it is server-only, temporary compatibility for pre-APP-058 clients.
-const MOBILE_ADJACENT_MIGRATION_TABLES = ['document_deletion_tombstones', 'global_recipes', 'products', 'trip_expense_links', 'trip_packing_compat_queue'];
+const MOBILE_ADJACENT_MIGRATION_TABLES = ['document_deletion_tombstones', 'global_recipes', 'products', 'trip_expense_links', 'trip_packing_compat_queue', 'trip_packing_template_applications'];
 
 // These are compile-time checks. If the discriminated profile contracts ever
 // accept these shapes, tsc will fail because the @ts-expect-error is unused.
@@ -211,13 +211,13 @@ describe('APP-027 logical domain contracts', () => {
       B: domainsByProfile('B').length,
       C: domainsByProfile('C').length,
       D: domainsByProfile('D').length,
-    }).toEqual({ A: 24, B: 7, C: 2, D: 4 });
+    }).toEqual({ A: 24, B: 7, C: 2, D: 5 });
   });
 });
 
 describe('APP-027 physical persistence surfaces', () => {
   it('has no duplicate physical surface ids and no dangling domain references', () => {
-    expect(PERSISTENCE_SURFACES).toHaveLength(95);
+    expect(PERSISTENCE_SURFACES).toHaveLength(97);
     expect(new Set(registeredSurfaceIds).size).toBe(PERSISTENCE_SURFACES.length);
 
     for (const surface of PERSISTENCE_SURFACES) {

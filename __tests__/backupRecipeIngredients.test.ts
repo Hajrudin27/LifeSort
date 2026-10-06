@@ -30,8 +30,8 @@ const food = (ingredients: unknown) => ({ food: { recipes: [recipe(ingredients)]
 const recipesOf = (result: ReturnType<typeof parseBackupFile>) => (result.ok ? result.data.food?.recipes : undefined);
 
 describe('APP-047 backup parsing', () => {
-  it('exports the current format 7 while keeping the format 4 ingredient contract', () => {
-    expect(BACKUP_VERSION).toBe(7);
+  it('exports the current format 8 while keeping the format 4 ingredient contract', () => {
+    expect(BACKUP_VERSION).toBe(8);
   });
 
   it.each([1, 2, 3])('format %i: keeps each { name, amount } verbatim as legacy, inferring no family', (version) => {
@@ -66,7 +66,7 @@ describe('APP-047 backup parsing', () => {
 
   it('rejects a recipe that is not an object, and a future format', () => {
     expect(parseBackupFile(backup(4, { food: { recipes: ['seed-1'] } }))).toEqual({ ok: false, error: 'invalid_format' });
-    expect(parseBackupFile(backup(8, food([])))).toEqual({ ok: false, error: 'unsupported_version' });
+    expect(parseBackupFile(backup(9, food([])))).toEqual({ ok: false, error: 'unsupported_version' });
   });
 
   it('never reports ingredient text', () => {
@@ -79,7 +79,7 @@ describe('APP-047 backup restore and export through the real Food store', () => 
     await useFoodStore.persist.rehydrate();
   });
 
-  it('restores a format 3 recipe as typed legacy data, and a format 7 re-export round-trips', async () => {
+  it('restores a format 3 recipe as typed legacy data, and a format 8 re-export round-trips', async () => {
     mockFileContent = backup(3, food([{ name: 'Æg', amount: '2 stk' }]));
     expect(await importBackup()).toMatchObject({ success: true });
     expect(useFoodStore.getState().recipes).toEqual([recipe([{ kind: 'legacy', name: 'Æg', amount: '2 stk' }])]);
@@ -89,7 +89,7 @@ describe('APP-047 backup restore and export through the real Food store', () => 
     const restored = JSON.stringify(useFoodStore.getState().recipes);
     await exportBackup();
     const exported = JSON.parse(mockWritten);
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(8);
 
     useFoodStore.setState({ recipes: [] });
     mockFileContent = mockWritten;
@@ -102,14 +102,14 @@ describe('APP-050 Pantry backup restore', () => {
   const old = { id: 'p', name: 'Synthetic pantry', quantity: 'ca. halvdelen',
     expiryDate: '2026-10-01', addedAt: '2026-09-01T08:00:00.000Z' };
 
-  it('imports format 4 text, exports format 7 and round-trips the canonical item', async () => {
+  it('imports format 4 text, exports format 8 and round-trips the canonical item', async () => {
     mockFileContent = backup(4, { food: { pantryItems: [old] } });
     expect(await importBackup()).toMatchObject({ success: true });
     const expected = [{ id: old.id, name: old.name, legacyQuantityText: old.quantity,
       expiryDate: old.expiryDate, addedAt: old.addedAt }];
     expect(useFoodStore.getState().pantryItems).toEqual(expected);
     await exportBackup();
-    expect(JSON.parse(mockWritten).version).toBe(7);
+    expect(JSON.parse(mockWritten).version).toBe(8);
     useFoodStore.setState({ pantryItems: [] });
     mockFileContent = mockWritten;
     expect(await importBackup()).toMatchObject({ success: true });
@@ -153,7 +153,7 @@ describe('APP-052 shopping backup v6', () => {
     await useFoodStore.persist.rehydrate();
     useFoodStore.setState({ shoppingItems: [derived] });
     await exportBackup();
-    expect(JSON.parse(mockWritten).version).toBe(7);
+    expect(JSON.parse(mockWritten).version).toBe(8);
     useFoodStore.setState({ shoppingItems: [] });
     mockFileContent = mockWritten;
     expect(await importBackup()).toMatchObject({ success: true });

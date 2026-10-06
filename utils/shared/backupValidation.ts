@@ -37,9 +37,11 @@ import { supportedMoney } from '@/core/money/supportedMoney';
  *  6 — APP-052: shopping items skelner manuelle og opskriftsafledte artefakter.
  *  7 — APP-059: Travel-budgetter er MinorUnits; gamle Travel-udgifter forbliver
  *      udaterede legacy-poster med en sikker, valgfri MinorUnits-konvertering.
- * Nye eksporter skriver altid 7.
+ *  8 — APP-060: Travel-backup bærer eksplicitte Trip-skabelonmarkører; pakkelabels
+ *      bruges aldrig til at udlede, om en skabelon allerede er anvendt.
+ * Nye eksporter skriver altid 8.
  */
-export const BACKUP_VERSION = 7;
+export const BACKUP_VERSION = 8;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString';
 
@@ -73,7 +75,7 @@ export const BACKUP_FIELD_SCHEMA = {
   income: { incomeByMonth: 'record' },
   savingsGoals: { goals: 'array', history: 'array', extraSavings: 'number' },
   warranties: { warranties: 'array' },
-  trips: { trips: 'array', expenses: 'array', packingItems: 'array', participants: 'array' },
+  trips: { trips: 'array', expenses: 'array', packingItems: 'array', appliedPackingTemplates: 'array', participants: 'array' },
   food: {
     monthlyBudgetByMonth: 'record',
     purchases: 'array',
@@ -285,8 +287,28 @@ function canonicalTravelMoney(
 ): { ok: true; value: Record<string, unknown> } | { ok: false; error: BackupParseError } {
   const trips = partial.trips;
   const expenses = partial.expenses;
+  const appliedPackingTemplates = partial.appliedPackingTemplates;
   if (trips !== undefined && !(trips as unknown[]).every(isPlainObject)) return { ok: false, error: 'invalid_format' };
   if (expenses !== undefined && !(expenses as unknown[]).every(isPlainObject)) return { ok: false, error: 'invalid_format' };
+  if (appliedPackingTemplates !== undefined) {
+    const keys = new Set<string>();
+    const tripIds = trips === undefined ? null : new Set((trips as Record<string, unknown>[])
+      .filter((trip) => typeof trip.id === 'string')
+      .map((trip) => trip.id as string));
+    for (const application of appliedPackingTemplates as unknown[]) {
+      if (!isPlainObject(application)
+        || typeof application.tripId !== 'string' || application.tripId.length === 0
+        || typeof application.templateId !== 'string' || application.templateId.trim().length === 0
+        || typeof application.templateVersion !== 'number'
+        || !Number.isInteger(application.templateVersion) || application.templateVersion <= 0
+        || (application.appliedBy !== undefined && typeof application.appliedBy !== 'string')
+        || (application.appliedAt !== undefined && typeof application.appliedAt !== 'string')
+        || (tripIds !== null && !tripIds.has(application.tripId))) return { ok: false, error: 'invalid_format' };
+      const key = `${application.tripId}\u0000${application.templateId}\u0000${application.templateVersion}`;
+      if (keys.has(key)) return { ok: false, error: 'invalid_format' };
+      keys.add(key);
+    }
+  }
 
   const nextTrips: Record<string, unknown>[] | undefined = trips === undefined ? undefined
     : (trips as Record<string, unknown>[]).map((trip) => {

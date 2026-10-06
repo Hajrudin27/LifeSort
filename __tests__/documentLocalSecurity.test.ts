@@ -181,17 +181,18 @@ describe('der findes ingen historisk plaintext lifesort-documents', () => {
       await AsyncStorage.setItem(legacyKey, legacyPayload);
       const read = await documentMetadataEncryptedStorage.getItem(legacyKey);
 
-      // Still migrated in place, and still encrypted afterwards. APP-059 now has
-      // an intentional inner trip v1; the other two shapes remain unchanged.
+      // Still migrated in place, and still encrypted afterwards. APP-059/060 now have
+      // an intentional inner trip v2; the other two shapes remain unchanged.
       const parsed = JSON.parse(read!);
       if (legacyKey === 'lifesort-trips') {
         expect(parsed).toEqual({
-          version: 1,
+          version: 2,
           state: {
             ...legacy,
             participants: [], myUserId: null,
             financialProjections: [], financialProjectionFreshAt: {}, financialProjectionStatus: {},
             pendingExpenseDrafts: {},
+            appliedPackingTemplates: [],
           },
         });
       } else {

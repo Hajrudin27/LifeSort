@@ -7,9 +7,11 @@ v1.0, page 21, APP-038. Its contents were treated as source material; the pasted
 story request controls scope. Expo SDK v57 documentation was read before code.
 
 This document explains existing entries in `core/storage/dataProfileRegistry.ts`;
-it is not a second runtime inventory. There are **35 device surfaces**, including
-**23 persisted Zustand stores**, plus 51 remote surfaces and one bundled surface
-in the existing 87-surface registry. Runtime coverage is derived from that registry.
+it is not a second runtime inventory. At the APP-038 audit baseline there were
+**35 device surfaces**, including **23 persisted Zustand stores**, plus 51 remote
+surfaces and one bundled surface in the then-current 87-surface registry. The live
+counts and coverage are derived from the code registry and its tests; APP-060 adds
+a second immutable bundled reference source and a Trip-scoped applied-template marker.
 
 ## Zustand surfaces
 
@@ -47,7 +49,7 @@ on logout. APP-038 adds delayed-write invalidation around this existing cleanup.
 | `lifesort-life-goals` | A | AsyncStorage / Z0 | goals[] | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useLifeGoalsStore.ts` | external; store/useLifeGoalsStore.ts | User sweep |
 | `lifesort-habits` | A | AsyncStorage / Z0 | habits[] (including logs) | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useHabitsStore.ts` | external; store/useHabitsStore.ts | User sweep |
 | `lifesort-todos` | A | AsyncStorage / Z0 | todos[] | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useTodoStore.ts` | external; store/useTodoStore.ts | User sweep |
-| `lifesort-trips` | A,B | AsyncStorage + secure AES-GCM / E1/Z1 | trips[] (MinorUnits budgets/documents), unresolved legacy expenses[] (attachments), financialProjections[], freshness/status (status is persisted only as stale; freshness is session-only), account-bound pendingExpenseDrafts{} for restart-safe APP-059 submission identity, packingItems[], participants[], myUserId | pre-0746c50 plaintext Zustand; 0746c50 encrypted metadata/files; APP-059 v0→v1 safe money + unresolved date state; current v1 accepts/validates the narrow draft field | `store/useTripsStore.ts` | external; `core/storage/documentCacheStorage.ts` runs `core/storage/migrations/travelMoney.ts` in memory before one encrypted commit; migration-gated set/remove mutations share one FIFO per key | User sweep |
+| `lifesort-trips` | A,B | AsyncStorage + secure AES-GCM / E1/Z2 | trips[] (MinorUnits budgets/documents), unresolved legacy expenses[] (attachments), financialProjections[], freshness/status (status is persisted only as stale; freshness is session-only), account-bound pendingExpenseDrafts{} for restart-safe APP-059 submission identity, packingItems[] (including independent APP-060 template copies), appliedPackingTemplates[] (Trip/template/version markers), participants[], myUserId | pre-0746c50 plaintext Zustand; 0746c50 encrypted metadata/files; APP-059 v0→v1 safe money + unresolved date state; APP-060 v1→v2 adds an empty explicit marker list without altering packing rows | `store/useTripsStore.ts` | external; `core/storage/documentCacheStorage.ts` runs `core/storage/migrations/travelMoney.ts` in memory before one encrypted commit; migration-gated set/remove mutations share one FIFO per key | User sweep |
 | `lifesort-documents` | B | AsyncStorage + secure AES-GCM / E1/Z0 | documents[] metadata only (id, storagePath, originalName, createdAt) | APP-055 baseline. Born encrypted: the key never existed as a plaintext Zustand store, so there is no legacy payload and no backfill. | `store/useDocumentsStore.ts` | external; core/storage/documentCacheStorage.ts | User sweep |
 | `lifesort-warranties` | A,B | AsyncStorage + secure AES-GCM / E1/Z0 | warranties[] including attachments; since APP-057 optional purchaseDate, seller and receiptDocumentId | pre-0746c50 plaintext Zustand; 0746c50 encrypted metadata/files; APP-057 adds three optional fields inside inner Zustand 0 — older payloads hydrate with them absent, so there is no version bump and no transform | `store/useWarrantiesStore.ts` | external; core/storage/documentCacheStorage.ts | User sweep |
 | `lifesort-career` | A | AsyncStorage / Z0 | applications[]; skills[] | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useCareerStore.ts` | external; store/useCareerStore.ts | User sweep |
@@ -76,11 +78,11 @@ v1-to-v2 feature migration or fixture was added.
 | secure-store:lifesort-document-cache-key | `lifesort-document-cache-key`, SecureStore | B | Base64 AES key bytes since 0746c50 | `core/storage/documentCacheStorage.ts` | Immutable/no-schema key material | Key-epoch-aware deletion on logout |
 | filesystem:document-directory/attachments | `documentDirectory/attachments/*`, filesystem | B | `LSATTACH` binary header + version 1 + IV/tag metadata + AES-GCM bytes in `.lsenc`; legacy plaintext files pre-0746c50 | `documentCacheStorage` on metadata migration/view/cache use | External specialized migration, encrypted pending-cleanup records | Parent attachment cleanup / persistent cache clear on logout |
 | filesystem:cache-directory/lifesort-decrypted-attachments | `cacheDirectory/lifesort-decrypted-attachments/*`, filesystem | B | Temporary plaintext interoperability copies, never canonical persisted schema | `documentCacheStorage` viewer/share/upload | Cleanup-only, not migration staging | Viewer/temp lifecycle and logout |
-| filesystem:document-directory/lifesort-backup-json | `documentDirectory/lifesort-backup-<date>.json`, filesystem | B | `{version:1,exportedAt,data}` since 49c4355; v2 APP-040 Economy MinorUnits; v3 APP-042 recurrence; v4 APP-047 ingredients; v5 APP-050 Pantry; v6 APP-052 shopping provenance; v7 APP-059 Travel budget MinorUnits and unresolved legacy-expense money; user-triggered archive | `utils/shared/dataBackup.ts` / `backupValidation.ts`; never startup hydrated | External export/import contract; APP-097 | Existing logout does not sweep these exports; unchanged audit finding |
+| filesystem:document-directory/lifesort-backup-json | `documentDirectory/lifesort-backup-<date>.json`, filesystem | B | `{version:1,exportedAt,data}` since 49c4355; v2 APP-040 Economy MinorUnits; v3 APP-042 recurrence; v4 APP-047 ingredients; v5 APP-050 Pantry; v6 APP-052 shopping provenance; v7 APP-059 Travel money; v8 APP-060 applied-template markers; user-triggered archive | `utils/shared/dataBackup.ts` / `backupValidation.ts`; never startup hydrated | External export/import contract; APP-097 | Existing logout does not sweep these exports; unchanged audit finding |
 
 Remote Supabase tables/auth/buckets remain server persistence, not locally
 hydrated keys. Cached remote data appears only within the local rows above.
-Bundled seed recipes are immutable app source. Notification scheduling, OS
+Bundled seed recipes and APP-060 packing templates are immutable app source. Notification scheduling, OS
 calendar export and share-sheet operations are integrations outside the existing
 persistence inventory; no migration work was added to them.
 

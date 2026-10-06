@@ -94,8 +94,40 @@
   "allCategories": "Alle",
   "expenseSaveFailed": "Udgiften blev ikke gemt. Tjek forbindelsen og prøv igen; den historiske post er bevaret.",
   "savingExpense": "Gemmer…",
-  "copyPackingFrom": "Kopiér pakkeliste fra",
-  "defaultPackingList": "Standard",
+  "packingStartWith": "Start pakkelisten med",
+  "packingStartEmpty": "Tom liste",
+  "packingCopyHint": "Skabeloner og andre rejser kopieres til en uafhængig liste, som du kan redigere.",
+  "packingTripCopyLabel": "Kopiér: {{name}}",
+  "packingTemplateSectionTitle": "Pakkeskabeloner",
+  "packingTemplateHint": "Vælg et versionsstyret sæt forslag. Det tilføjer kun manglende punkter og erstatter aldrig din liste.",
+  "packingTemplateLabel": "{{title}} · v{{version}}",
+  "packingTemplateApply": "Tilføj forslag",
+  "packingTemplateApplying": "Tilføjer…",
+  "packingTemplateApplied_one": "Tilføjede {{count}} forslag.",
+  "packingTemplateApplied_other": "Tilføjede {{count}} forslag.",
+  "packingTemplateNoNewItems": "Alle forslag findes allerede på listen.",
+  "packingTemplateApplyFailed": "Skabelonen kunne ikke anvendes for den konto, der er logget ind. Prøv igen, når rejsen er synkroniseret.",
+  "packingEditItem": "Redigér pakkepunkt",
+  "packingEditLabel": "Navn på pakkepunkt",
+  "packingEditSave": "Gem pakkepunkt",
+  "packingEditCancel": "Annuller redigering",
+  "packingTemplates": {
+    "titles": {
+      "travelEssentials": "Vigtige rejseting",
+      "weekendBasics": "Weekendbasis"
+    },
+    "items": {
+      "passport": "Pas",
+      "wallet": "Pung",
+      "charger": "Oplader",
+      "travelAdapter": "Rejseadapter",
+      "toothbrush": "Tandbørste",
+      "medication": "Medicin",
+      "tops": "Overdele",
+      "underwear": "Undertøj",
+      "socks": "Sokker"
+    }
+  },
   "save": "Gem",
   "emptyState": "Ingen rejser endnu",
   "ongoingOrPast": "I gang eller overstået",
@@ -112,13 +144,6 @@
   "addItem": "Tilføj",
   "packingReminderTitle": "Snart afsted til {{name}}",
   "packingReminderBody": "Har du tjekket din pakkeliste?",
-  "defaultPackingItems": {
-    "passport": "Pas",
-    "wallet": "Pung",
-    "charger": "Oplader",
-    "toothbrush": "Tandbørste",
-    "medication": "Medicin"
-  },
   "categories": {
     "flight": "Fly",
     "accommodation": "Ophold",
@@ -165,6 +190,9 @@
 "noPackingItems": "Ingen elementer på listen endnu.",
   "a11y": {
     "addPackingItem": "Tilføj til pakkeliste",
-    "selectCategory": "Kategori: {{category}}"
+    "selectCategory": "Kategori: {{category}}",
+    "togglePackingItem": "Markér {{item}} som pakket eller ikke pakket",
+    "editPackingItem": "Redigér {{item}}",
+    "removePackingItem": "Fjern {{item}}"
   }
 }

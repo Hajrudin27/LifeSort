@@ -12,6 +12,12 @@ import {
 } from '@/features/economy/travelFinancialBridge';
 import { canResolveLegacyTripExpense } from '@/features/travel/financialReadContract';
 import { registerEconomyMutationInvalidation } from '@/features/travel/economyMutationInvalidation';
+import {
+  copyPackingTemplate,
+  isPackingTemplateApplied,
+  type PackingTemplateIdentity,
+  type ResolvedPackingTemplate,
+} from '@/features/travel/packingTemplates';
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -20,6 +26,7 @@ import { supabase } from "@/lib/supabase";
 import { trackSync } from '@/store/useSyncStatusStore';
 import { Attachment } from "@/types/attachment";
 import {
+  AppliedPackingTemplate,
   PackingCategory,
   PackingItem,
   Trip,
@@ -56,6 +63,7 @@ interface TripsState {
   trips: Trip[];
   expenses: TripExpense[];
   packingItems: PackingItem[];
+  appliedPackingTemplates: AppliedPackingTemplate[];
   participants: TripParticipant[];
   myUserId: string | null;
   financialProjections: TripFinancialProjection[];
@@ -81,8 +89,9 @@ interface TripsState {
       endDate: string;
       budget: MinorUnits | null;
     },
-    defaultPackingItems: { label: string; category: PackingCategory }[],
+    initialPackingItems: { label: string; category: PackingCategory }[],
     copyFromTripId?: string | null,
+    appliedTemplate?: PackingTemplateIdentity | null,
   ) => string | null;
   /**
    * false when the trip is unknown or the change breaks a rule. A trip that predates
@@ -149,6 +158,11 @@ interface TripsState {
   refreshTripFinancialProjection: (tripId: string) => Promise<boolean>;
 
   addPackingItem: (tripId: string, label: string, category: PackingCategory) => void;
+  updatePackingItem: (id: string, label: string, category: PackingCategory) => boolean;
+  applyPackingTemplate: (
+    tripId: string,
+    template: ResolvedPackingTemplate,
+  ) => Promise<{ ok: true; added: number } | { ok: false; reason: 'failed' | 'stale' }>;
   togglePackingItem: (id: string) => void;
   removePackingItem: (id: string) => void;
 
@@ -160,7 +174,7 @@ interface TripsState {
   fetchFromSupabase: () => Promise<void>;
 
   /** Restores validated backup data. The restored trips never inherit the projection cache. */
-  restoreBackup: (data: Partial<Pick<TripsState, 'trips' | 'expenses' | 'packingItems' | 'participants'>>) => void;
+  restoreBackup: (data: Partial<Pick<TripsState, 'trips' | 'expenses' | 'packingItems' | 'appliedPackingTemplates' | 'participants'>>) => void;
   /** Logout / account switch (APP-021): every trace, including the projection cache. */
   clearLocal: () => void;
 }
@@ -204,7 +218,7 @@ function remoteBudget(value: unknown): Pick<Trip, 'budget' | 'legacyBudgetMajor'
 function packingItemToRow(userId: string, p: PackingItem) {
   return {
     id: p.id,
-    user_id: userId,
+    user_id: p.authorId ?? userId,
     trip_id: p.tripId,
     label: p.label,
     checked: p.checked,
@@ -238,19 +252,19 @@ function expenseToRow(userId: string, e: TripExpense) {
  * A row the server accepted under my user id is proof that I own the trip, so an
  * unknown owner is recorded from it.
  */
-function syncTrip(tripId: string, afterSaved?: () => Promise<void>): Promise<boolean> {
+function syncTrip(tripId: string, afterSaved?: (accountId: string) => Promise<void>, expectedAccountId?: string): Promise<boolean> {
   return runInTripLane(tripId, async () => {
     if (isTripGone(tripId)) return false;
     const trip = useTripsStore.getState().trips.find((tr) => tr.id === tripId);
     if (!trip) return false;
     const userId = await getUserId();
-    if (!userId) return false;
+    if (!userId || (expectedAccountId !== undefined && userId !== expectedAccountId)) return false;
     const result = await supabase.from("trips").upsert(tripToRow(userId, trip));
     if (result?.error) return false;
     useTripsStore.setState((state) => ({
       trips: state.trips.map((tr) => (tr.id === tripId && !tr.ownerId ? { ...tr, ownerId: userId } : tr)),
     }));
-    if (afterSaved) await afterSaved();
+    if (afterSaved) await afterSaved(userId);
     return true;
   }).catch(() => false);
 }
@@ -259,6 +273,152 @@ async function syncUpsertPackingItems(items: PackingItem[]) {
   const userId = await getUserId();
   if (!userId || items.length === 0) return;
   await supabase.from("trip_packing_items").upsert(items.map((p) => packingItemToRow(userId, p)));
+}
+
+async function syncPackingTemplateApplication(
+  accountId: string,
+  tripId: string,
+  packingTemplate: PackingTemplateIdentity,
+  items: readonly PackingItem[],
+): Promise<'applied' | 'already-applied' | 'failed'> {
+  if (await signedInUserId() !== accountId) return 'failed';
+  try {
+    const { data, error } = await supabase.rpc('apply_trip_packing_template', {
+      p_trip_id: tripId,
+      p_expected_account_id: accountId,
+      p_template_id: packingTemplate.id,
+      p_template_version: packingTemplate.version,
+      p_items: items.map((item) => ({ id: item.id, label: item.label, category: item.category })),
+    });
+    return !error && (data === 'applied' || data === 'already-applied') ? data : 'failed';
+  } catch {
+    return 'failed';
+  }
+}
+
+function isCurrentTemplateApplicationDataset(epoch: number, accountId: string, tripId: string): boolean {
+  const state = useTripsStore.getState();
+  return epoch === datasetEpoch
+    && state.myUserId === accountId
+    && state.trips.some((trip) => trip.id === tripId)
+    && !isTripGone(tripId);
+}
+
+function tripPackingTemplateApplicationKey(application: Pick<AppliedPackingTemplate, 'tripId' | 'templateId' | 'templateVersion'>): string {
+  return `${application.tripId}\u0000${application.templateId}\u0000${application.templateVersion}`;
+}
+
+/**
+ * Commits only rows the server has already accepted. The caller must have received
+ * `applied` from the atomic APP-060 RPC; nothing provisional enters persisted state.
+ */
+function commitConfirmedPackingTemplateApplication(input: {
+  epoch: number;
+  accountId: string;
+  tripId: string;
+  template: PackingTemplateIdentity;
+  items: readonly PackingItem[];
+}): boolean {
+  if (!isCurrentTemplateApplicationDataset(input.epoch, input.accountId, input.tripId)) return false;
+  const application: AppliedPackingTemplate = {
+    tripId: input.tripId,
+    templateId: input.template.id,
+    templateVersion: input.template.version,
+    appliedBy: input.accountId,
+    appliedAt: new Date().toISOString(),
+  };
+  useTripsStore.setState((state) => {
+    if (input.epoch !== datasetEpoch || state.myUserId !== input.accountId
+      || !state.trips.some((trip) => trip.id === input.tripId) || isTripGone(input.tripId)) return state;
+    const existingItemIds = new Set(state.packingItems.map((item) => item.id));
+    const applicationExists = isPackingTemplateApplied(
+      input.tripId,
+      input.template,
+      state.appliedPackingTemplates,
+    );
+    return {
+      packingItems: [
+        ...state.packingItems,
+        ...input.items.filter((item) => !existingItemIds.has(item.id)),
+      ],
+      appliedPackingTemplates: applicationExists
+        ? state.appliedPackingTemplates
+        : [...state.appliedPackingTemplates, application],
+    };
+  });
+  return true;
+}
+
+/**
+ * Recovers the canonical winner after `already-applied` or a lost response. Packing
+ * rows are merged by server id so ordinary local rows are never removed; markers for
+ * this Trip are replaced only after both authoritative reads succeed.
+ */
+async function reconcileConfirmedTripPackingState(
+  epoch: number,
+  accountId: string,
+  tripId: string,
+): Promise<boolean> {
+  if (!isCurrentTemplateApplicationDataset(epoch, accountId, tripId)
+    || await signedInUserId() !== accountId) return false;
+  const applicationKeysAtRequest = new Set(useTripsStore.getState().appliedPackingTemplates
+    .filter((application) => application.tripId === tripId)
+    .map(tripPackingTemplateApplicationKey));
+  try {
+    const [packingResult, applicationResult] = await Promise.all([
+      supabase.from('trip_packing_items')
+        .select('id, user_id, trip_id, label, checked, category')
+        .eq('trip_id', tripId),
+      supabase.rpc('list_trip_packing_template_applications', { p_trip_id: tripId }),
+    ]);
+    if (packingResult.error || applicationResult.error || !Array.isArray(applicationResult.data)) return false;
+    if (await signedInUserId() !== accountId
+      || !isCurrentTemplateApplicationDataset(epoch, accountId, tripId)) return false;
+
+    const packingItems: PackingItem[] = (packingResult.data ?? [])
+      .filter((row) => row.trip_id === tripId)
+      .map((row) => ({
+        id: row.id,
+        tripId: row.trip_id,
+        authorId: row.user_id ?? undefined,
+        label: row.label,
+        checked: row.checked,
+        isDefault: false,
+        category: (row.category as PackingCategory) ?? 'other',
+      }));
+    const applications: AppliedPackingTemplate[] = applicationResult.data.map((row) => ({
+      tripId,
+      templateId: row.template_id,
+      templateVersion: Number(row.template_version),
+      ...(typeof row.applied_by === 'string' ? { appliedBy: row.applied_by } : {}),
+      ...(typeof row.applied_at === 'string' ? { appliedAt: row.applied_at } : {}),
+    }));
+
+    useTripsStore.setState((state) => {
+      if (epoch !== datasetEpoch || state.myUserId !== accountId
+        || !state.trips.some((trip) => trip.id === tripId) || isTripGone(tripId)) return state;
+      const existingItemIds = new Set(state.packingItems.map((item) => item.id));
+      const preservedApplications = state.appliedPackingTemplates.filter((application) =>
+        application.tripId !== tripId
+        || !applicationKeysAtRequest.has(tripPackingTemplateApplicationKey(application)));
+      const preservedApplicationKeys = new Set(preservedApplications.map(tripPackingTemplateApplicationKey));
+      return {
+        packingItems: [
+          ...state.packingItems,
+          ...packingItems.filter((item) => !existingItemIds.has(item.id)),
+        ],
+        appliedPackingTemplates: [
+          ...preservedApplications,
+          ...applications.filter((application) => !preservedApplicationKeys.has(
+            tripPackingTemplateApplicationKey(application),
+          )),
+        ],
+      };
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function syncUpsertPackingItem(item: PackingItem) {
@@ -377,6 +537,7 @@ export const useTripsStore = create<TripsState>()(
       trips: [],
       expenses: [],
       packingItems: [],
+      appliedPackingTemplates: [],
       participants: [],
       myUserId: null,
       financialProjections: [],
@@ -384,8 +545,10 @@ export const useTripsStore = create<TripsState>()(
       financialProjectionStatus: {},
       pendingExpenseDrafts: {},
 
-      addTrip: (input, defaultPackingItems, copyFromTripId) => {
+      addTrip: (input, initialPackingItems, copyFromTripId, appliedTemplate) => {
         if (tripProblem(input, { destinationRequired: true }) !== null) return null;
+        const creatingAccountId = get().myUserId;
+        const creatingEpoch = datasetEpoch;
         const id = newEntityId();
         const newTrip: Trip = {
           id,
@@ -395,7 +558,7 @@ export const useTripsStore = create<TripsState>()(
           destination: normalizeDestination(input.destination),
           // Known only if a session was already established on this device; otherwise it
           // is recorded when the server accepts the trip. Never guessed.
-          ...(get().myUserId ? { ownerId: get().myUserId as string } : {}),
+          ...(creatingAccountId ? { ownerId: creatingAccountId } : {}),
         };
         set((state) => ({ trips: [...state.trips, newTrip] }));
 
@@ -403,25 +566,51 @@ export const useTripsStore = create<TripsState>()(
           ? get()
               .packingItems.filter((p) => p.tripId === copyFromTripId)
               .map((p) => ({ label: p.label, category: p.category }))
-          : defaultPackingItems;
+          : initialPackingItems;
 
         const newPackingItems: PackingItem[] = itemsToCreate.map(({ label, category }) => ({
           id: newEntityId(),
           tripId: id,
+          ...(creatingAccountId ? { authorId: creatingAccountId } : {}),
           label,
           checked: false,
-          isDefault: !copyFromTripId,
+          // Initial suggestions and Trip-to-Trip copies are immediately ordinary,
+          // independently editable user rows; no live source identity survives.
+          isDefault: false,
           category,
         }));
 
         set((state) => ({
-          packingItems: [...state.packingItems, ...newPackingItems],
+          // A template application is remote-confirmed, not an offline mutation.
+          // Trip-to-Trip copies keep their existing local-first behavior.
+          packingItems: appliedTemplate
+            ? state.packingItems
+            : [...state.packingItems, ...newPackingItems],
         }));
 
         scheduleTripPackingReminder(id, input.name, input.startDate);
         // The trip row first: its children reference it, so a packing list that
         // reached the server before its trip would be refused by the foreign key.
-        void syncTrip(id, () => syncUpsertPackingItems(newPackingItems));
+        void syncTrip(id, async (savedAccountId) => {
+          if (appliedTemplate) {
+            const result = await syncPackingTemplateApplication(savedAccountId, id, appliedTemplate, newPackingItems);
+            if (await signedInUserId() !== savedAccountId
+              || !isCurrentTemplateApplicationDataset(creatingEpoch, savedAccountId, id)) return;
+            if (result === 'applied') {
+              commitConfirmedPackingTemplateApplication({
+                epoch: creatingEpoch,
+                accountId: savedAccountId,
+                tripId: id,
+                template: appliedTemplate,
+                items: newPackingItems,
+              });
+            } else if (result === 'already-applied') {
+              await reconcileConfirmedTripPackingState(creatingEpoch, savedAccountId, id);
+            }
+            return;
+          }
+          await syncUpsertPackingItems(newPackingItems);
+        }, creatingAccountId ?? undefined);
         return id;
       },
 
@@ -469,6 +658,7 @@ export const useTripsStore = create<TripsState>()(
           trips: state.trips.filter((tr) => tr.id !== id),
           expenses: state.expenses.filter((e) => e.tripId !== id),
           packingItems: state.packingItems.filter((p) => p.tripId !== id),
+          appliedPackingTemplates: state.appliedPackingTemplates.filter((application) => application.tripId !== id),
           participants: state.participants.filter((p) => p.tripId !== id),
           financialProjections: state.financialProjections.filter((projection) => projection.tripId !== id),
           financialProjectionFreshAt: Object.fromEntries(
@@ -745,11 +935,62 @@ export const useTripsStore = create<TripsState>()(
       },
 
       addPackingItem: (tripId, label, category) => {
-        const newItem: PackingItem = { id: newEntityId(), tripId, label, checked: false, isDefault: false, category };
+        const trimmed = label.trim();
+        if (trimmed.length === 0 || !get().trips.some((trip) => trip.id === tripId)) return;
+        const newItem: PackingItem = {
+          id: newEntityId(), tripId,
+          ...(get().myUserId ? { authorId: get().myUserId as string } : {}),
+          label: trimmed, checked: false, isDefault: false, category,
+        };
         set((state) => ({
           packingItems: [...state.packingItems, newItem],
         }));
-        syncUpsertPackingItem(newItem);
+        void syncUpsertPackingItem(newItem);
+      },
+      updatePackingItem: (id, label, category) => {
+        const trimmed = label.trim();
+        const current = get().packingItems.find((item) => item.id === id);
+        if (!current || trimmed.length === 0) return false;
+        const updated = { ...current, label: trimmed, category };
+        set((state) => ({
+          packingItems: state.packingItems.map((item) => (item.id === id ? updated : item)),
+        }));
+        void syncUpsertPackingItem(updated);
+        return true;
+      },
+      applyPackingTemplate: async (tripId, packingTemplate) => {
+        const epoch = datasetEpoch;
+        const accountId = await signedInUserId();
+        if (!accountId || epoch !== datasetEpoch || get().myUserId !== accountId
+          || !get().trips.some((trip) => trip.id === tripId)) return { ok: false, reason: 'failed' };
+        if (isPackingTemplateApplied(tripId, packingTemplate, get().appliedPackingTemplates)) {
+          return { ok: true, added: 0 };
+        }
+
+        const copies = copyPackingTemplate({
+          tripId,
+          template: packingTemplate,
+          existingItems: get().packingItems,
+          authorId: accountId,
+        });
+        // Copies live only on this async stack until the atomic server operation is
+        // confirmed. Zustand persistence and backup therefore never see provisional data.
+        const result = await syncPackingTemplateApplication(accountId, tripId, packingTemplate, copies);
+        if (await signedInUserId() !== accountId
+          || !isCurrentTemplateApplicationDataset(epoch, accountId, tripId)) {
+          return { ok: false, reason: 'stale' };
+        }
+        if (result === 'applied') {
+          return commitConfirmedPackingTemplateApplication({
+            epoch, accountId, tripId, template: packingTemplate, items: copies,
+          }) ? { ok: true, added: copies.length } : { ok: false, reason: 'stale' };
+        }
+        if (result === 'already-applied') {
+          return await reconcileConfirmedTripPackingState(epoch, accountId, tripId)
+            ? { ok: true, added: 0 }
+            : { ok: false, reason: 'failed' };
+        }
+        return { ok: false, reason: 'failed' };
       },
       togglePackingItem: (id) => {
         set((state) => ({
@@ -853,29 +1094,39 @@ export const useTripsStore = create<TripsState>()(
         const previousAccount = get().myUserId;
         if (previousAccount !== null && previousAccount !== userId) {
           // The session switched accounts without the normal local cleanup (another
-          // account's password-recovery link calls setSession in place). The projection
-          // cache is the previous account's: it is dropped, and nothing that account
-          // still has in flight may land. Only APP-059 state is reset here; the rest of
-          // the local data is the general auth cleanup's concern, not this store's.
+          // account's password-recovery link calls setSession in place). Every Travel
+          // row is the previous account's local dataset, including packing copies; drop
+          // all of it before fetching B so no A content can render under B. The normal
+          // auth path still performs the broader all-store/file sweep.
+          const previousTrips = get().trips;
+          const previousExpenses = get().expenses;
+          for (const trip of previousTrips) {
+            cancelTripPackingReminder(trip.id);
+            cleanupAttachments(trip.documents);
+          }
+          for (const expense of previousExpenses) cleanupAttachments(releasableAttachments(expense.attachments));
           datasetEpoch += 1;
           latestProjectionRequest.clear();
           epoch = datasetEpoch;
-          set((state) => ({
+          set({
+            trips: [],
+            expenses: [],
+            packingItems: [],
+            appliedPackingTemplates: [],
+            participants: [],
             myUserId: userId,
             financialProjections: [],
             financialProjectionFreshAt: {},
             financialProjectionStatus: {},
-            pendingExpenseDrafts: Object.fromEntries(
-              Object.entries(state.pendingExpenseDrafts).filter(([, draft]) => draft.accountId === userId),
-            ),
-          }));
+            pendingExpenseDrafts: {},
+          });
         } else {
           set({ myUserId: userId });
         }
 
         const [tripsResult, packingResult, expensesResult, myInvitationsResult] = await Promise.all([
           supabase.from("trips").select("id, user_id, name, destination, start_date, end_date, budget, created_at").eq("user_id", userId),
-          supabase.from("trip_packing_items").select("id, trip_id, label, checked, category").eq("user_id", userId),
+          supabase.from("trip_packing_items").select("id, user_id, trip_id, label, checked, category").eq("user_id", userId),
           supabase.from("trip_expenses").select("id, user_id, trip_id, name, amount, category, currency, original_amount, exchange_rate").eq("user_id", userId),
           supabase.from("trip_participants").select("trip_id, owner_id, user_id, invited_email, status, invited_at").eq("user_id", userId),
         ]);
@@ -892,7 +1143,7 @@ export const useTripsStore = create<TripsState>()(
           const [sharedTrips, sharedExpenses, sharedPacking] = await Promise.all([
             supabase.from("trips").select("id, user_id, name, destination, start_date, end_date, budget, created_at").in("id", acceptedTripIds),
             supabase.from("trip_expenses").select("id, user_id, trip_id, name, amount, category, currency, original_amount, exchange_rate").in("trip_id", acceptedTripIds),
-            supabase.from("trip_packing_items").select("id, trip_id, label, checked, category").in("trip_id", acceptedTripIds),
+            supabase.from("trip_packing_items").select("id, user_id, trip_id, label, checked, category").in("trip_id", acceptedTripIds),
           ]);
           sharedTripsData = sharedTrips.data ?? [];
           sharedExpensesData = sharedExpenses.data ?? [];
@@ -1000,6 +1251,53 @@ export const useTripsStore = create<TripsState>()(
             participants: [...state.participants, ...fetchedParticipants],
           };
         });
+
+        const applicationKeysAtRequest = new Set(get().appliedPackingTemplates
+          .map(tripPackingTemplateApplicationKey));
+        const applicationResults = await Promise.all(get().trips.map(async (trip) => {
+          try {
+            const { data, error } = await supabase.rpc('list_trip_packing_template_applications', {
+              p_trip_id: trip.id,
+            });
+            if (error || !Array.isArray(data)) return { tripId: trip.id, ok: false as const, applications: [] };
+            return {
+              tripId: trip.id,
+              ok: true as const,
+              applications: data.map((row): AppliedPackingTemplate => ({
+                tripId: trip.id,
+                templateId: row.template_id,
+                templateVersion: Number(row.template_version),
+                ...(typeof row.applied_by === 'string' ? { appliedBy: row.applied_by } : {}),
+                ...(typeof row.applied_at === 'string' ? { appliedAt: row.applied_at } : {}),
+              })),
+            };
+          } catch {
+            return { tripId: trip.id, ok: false as const, applications: [] };
+          }
+        }));
+        if (epoch !== datasetEpoch || await signedInUserId() !== userId || get().myUserId !== userId) return;
+        const successfulTripIds = new Set(applicationResults
+          .filter((result) => result.ok)
+          .map((result) => result.tripId));
+        const fetchedApplications = applicationResults.flatMap((result) => result.applications);
+        set((state) => {
+          const currentTripIds = new Set(state.trips
+            .filter((trip) => !isTripGone(trip.id))
+            .map((trip) => trip.id));
+          const replaceableTripIds = new Set([...successfulTripIds]
+            .filter((tripId) => currentTripIds.has(tripId)));
+          const preservedApplications = state.appliedPackingTemplates.filter((application) =>
+            !replaceableTripIds.has(application.tripId)
+            || !applicationKeysAtRequest.has(tripPackingTemplateApplicationKey(application)));
+          const preservedApplicationKeys = new Set(preservedApplications.map(tripPackingTemplateApplicationKey));
+          return {
+            appliedPackingTemplates: [
+              ...preservedApplications,
+              ...fetchedApplications.filter((application) => replaceableTripIds.has(application.tripId)
+                && !preservedApplicationKeys.has(tripPackingTemplateApplicationKey(application))),
+            ],
+          };
+        });
         await Promise.all(get().trips.map((trip) => get().refreshTripFinancialProjection(trip.id)));
       },
 
@@ -1011,6 +1309,7 @@ export const useTripsStore = create<TripsState>()(
         latestProjectionRequest.clear();
         set({
           ...data,
+          appliedPackingTemplates: data.appliedPackingTemplates ?? [],
           financialProjections: [],
           financialProjectionFreshAt: {},
           financialProjectionStatus: {},
@@ -1024,21 +1323,25 @@ export const useTripsStore = create<TripsState>()(
         datasetEpoch += 1;
         latestProjectionRequest.clear();
         set({
-          trips: [], expenses: [], packingItems: [], participants: [], myUserId: null,
+          trips: [], expenses: [], packingItems: [], appliedPackingTemplates: [], participants: [], myUserId: null,
           financialProjections: [], financialProjectionFreshAt: {}, financialProjectionStatus: {}, pendingExpenseDrafts: {},
         });
       },
     }),
     {
       name: "lifesort-trips",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage)),
       // APP-059 review #1: freshness is never persisted, and nothing read back from disk
       // is current until the server confirms it again in this session.
       partialize: (state) => ({ ...state, financialProjectionStatus: staleStatuses(state.financialProjectionStatus) }),
       merge: (persisted, current) => {
         const merged = { ...current, ...(persisted as Partial<TripsState> | undefined) };
-        return { ...merged, financialProjectionStatus: staleStatuses(merged.financialProjectionStatus ?? {}) };
+        return {
+          ...merged,
+          appliedPackingTemplates: merged.appliedPackingTemplates ?? [],
+          financialProjectionStatus: staleStatuses(merged.financialProjectionStatus ?? {}),
+        };
       },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
@@ -1046,6 +1349,7 @@ export const useTripsStore = create<TripsState>()(
         state.financialProjectionFreshAt ??= {};
         state.financialProjectionStatus ??= {};
         state.pendingExpenseDrafts ??= {};
+        state.appliedPackingTemplates ??= [];
         state.expenses = state.expenses.map((expense) => ({
           ...expense,
           resolutionStatus: 'requires-transaction-date',

@@ -94,8 +94,40 @@
     "allCategories": "All",
     "expenseSaveFailed": "The expense was not saved. Check the connection and try again; the historical record was kept.",
     "savingExpense": "Saving…",
-    "copyPackingFrom": "Copy packing list from",
-    "defaultPackingList": "Default",
+    "packingStartWith": "Start the packing list with",
+    "packingStartEmpty": "Empty list",
+    "packingCopyHint": "Templates and other trips are copied into an independent list you can edit.",
+    "packingTripCopyLabel": "Copy: {{name}}",
+    "packingTemplateSectionTitle": "Packing templates",
+    "packingTemplateHint": "Choose a versioned set of suggestions. Applying it only adds missing items and never replaces your list.",
+    "packingTemplateLabel": "{{title}} · v{{version}}",
+    "packingTemplateApply": "Add suggestions",
+    "packingTemplateApplying": "Adding…",
+    "packingTemplateApplied_one": "Added {{count}} suggestion.",
+    "packingTemplateApplied_other": "Added {{count}} suggestions.",
+    "packingTemplateNoNewItems": "Every suggestion is already on this list.",
+    "packingTemplateApplyFailed": "The template could not be applied for the signed-in account. Try again after the trip has synced.",
+    "packingEditItem": "Edit packing item",
+    "packingEditLabel": "Packing item label",
+    "packingEditSave": "Save packing item",
+    "packingEditCancel": "Cancel editing",
+    "packingTemplates": {
+      "titles": {
+        "travelEssentials": "Travel essentials",
+        "weekendBasics": "Weekend basics"
+      },
+      "items": {
+        "passport": "Passport",
+        "wallet": "Wallet",
+        "charger": "Charger",
+        "travelAdapter": "Travel adapter",
+        "toothbrush": "Toothbrush",
+        "medication": "Medication",
+        "tops": "Tops",
+        "underwear": "Underwear",
+        "socks": "Socks"
+      }
+    },
     "save": "Save",
     "emptyState": "No trips yet",
     "ongoingOrPast": "Ongoing or past",
@@ -112,13 +144,6 @@
     "addItem": "Add",
     "packingReminderTitle": "Soon leaving for {{name}}",
     "packingReminderBody": "Have you checked your packing list?",
-    "defaultPackingItems": {
-      "passport": "Passport",
-      "wallet": "Wallet",
-      "charger": "Charger",
-      "toothbrush": "Toothbrush",
-      "medication": "Medication"
-    },
     "categories": {
       "flight": "Flight",
       "accommodation": "Accommodation",
@@ -165,6 +190,9 @@
 "noPackingItems": "No items on the list yet.",
     "a11y": {
         "addPackingItem": "Add to packing list",
-        "selectCategory": "Category: {{category}}"
+        "selectCategory": "Category: {{category}}",
+        "togglePackingItem": "Mark {{item}} packed or unpacked",
+        "editPackingItem": "Edit {{item}}",
+        "removePackingItem": "Remove {{item}}"
     }
 }

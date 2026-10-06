@@ -119,9 +119,9 @@ function pressableAncestor(label: string) {
 /** A snapshot saved to disk by an earlier session, which claimed to be fresh then. */
 async function savedSnapshotFromEarlierSession() {
   await AsyncStorage.setItem('lifesort-trips', JSON.stringify({
-    version: 1,
+    version: 2,
     state: {
-      trips: [trip], expenses: [], packingItems: [], participants: [], myUserId: OWNER,
+      trips: [trip], expenses: [], packingItems: [], appliedPackingTemplates: [], participants: [], myUserId: OWNER,
       financialProjections: [projection],
       financialProjectionFreshAt: { [TRIP]: `${YEAR}-10-01T00:00:00.000Z` },
       financialProjectionStatus: { [TRIP]: 'fresh' },

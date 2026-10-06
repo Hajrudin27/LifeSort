@@ -54,6 +54,7 @@ function buildBackupObject() {
         trips: state.trips,
         expenses: state.expenses,
         packingItems: state.packingItems,
+        appliedPackingTemplates: state.appliedPackingTemplates,
         participants: state.participants,
       };
     } else {

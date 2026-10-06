@@ -446,16 +446,26 @@ export const DATA_DOMAINS = [
     ...profileA({ expectsServerSync: true }),
   },
   {
+    id: 'travel.packing-templates',
+    title: 'Versioned packing template reference content',
+    module: 'travel',
+    description: 'Immutable, globally readable suggestions bundled with the app. Applying one creates independent Profile A packing rows; only a separate Trip-scoped id/version application marker is persisted.',
+    storageSurfaces: ['bundled-source:features/travel/packingTemplates'],
+    evidence: ['features/travel/packingTemplates.ts'],
+    ...profileD({ expectsLocalCopy: 'none' }),
+  },
+  {
     id: 'travel.trips',
     title: 'Trips, budgets, packing and participants',
     module: 'travel',
-    description: 'Trip records with destination/dates, MinorUnits budget, packing, unresolved legacy expenses, encrypted minimal Economy-backed financial projections, participant state, and owner-only document links (APP-058/059).',
+    description: 'Trip records with destination/dates, MinorUnits budget, independently editable packing rows (including copies from APP-060 templates), unresolved legacy expenses, encrypted minimal Economy-backed financial projections, participant state, and owner-only document links (APP-058/059/060).',
     storageSurfaces: [
       'async-storage:lifesort-trips',
       'supabase-table:trips',
       'supabase-table:trip_expenses',
       'supabase-table:trip_expense_links',
       'supabase-table:trip_packing_items',
+      'supabase-table:trip_packing_template_applications',
       'supabase-table:trip_participants',
       'supabase-table:trip_document_references',
       // TEMPORARY legacy-client compatibility (APP-058): a server-only holding table for
@@ -467,6 +477,7 @@ export const DATA_DOMAINS = [
       'utils/trip/tripRemote.ts',
       'supabase/migrations/20260930141858_app058_trip_canonical_entity.sql',
       'supabase/migrations/20261005120000_app059_travel_budget_bridge.sql',
+      'supabase/migrations/20261006120000_app060_packing_template_applications.sql',
     ],
     ...profileA({ expectsServerSync: true }),
   },
@@ -659,7 +670,7 @@ export const PERSISTENCE_SURFACES = [
   surface('async-storage:lifesort-life-goals', 'async-storage', 'Zustand key lifesort-life-goals', 'device', ['goals.life-goals'], ['store/useLifeGoalsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useLifeGoalsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-habits', 'async-storage', 'Zustand key lifesort-habits', 'device', ['habits.habits'], ['store/useHabitsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useHabitsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-todos', 'async-storage', 'Zustand key lifesort-todos', 'device', ['tasks.todos'], ['store/useTodoStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useTodoStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
-  surface('async-storage:lifesort-trips', 'async-storage', 'Encrypted Zustand key lifesort-trips', 'device', ['travel.trips', 'travel.attachments'], ['store/useTripsStore.ts', 'core/storage/documentCacheStorage.ts', 'core/storage/migrations/travelMoney.ts'], { kind: 'external', currentVersion: 1, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling, and runs the APP-059 inner v0 to v1 money/unresolved-date migration in memory before one encrypted commit.' }),
+  surface('async-storage:lifesort-trips', 'async-storage', 'Encrypted Zustand key lifesort-trips', 'device', ['travel.trips', 'travel.attachments'], ['store/useTripsStore.ts', 'core/storage/documentCacheStorage.ts', 'core/storage/migrations/travelMoney.ts'], { kind: 'external', currentVersion: 2, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling; APP-059 migrated inner v0 to v1 money/unresolved-date state and APP-060 migrates v1 to v2 with an empty explicit applied-template marker list.' }),
   surface('async-storage:lifesort-warranties', 'async-storage', 'Encrypted Zustand key lifesort-warranties', 'device', ['warranties.records', 'warranties.attachments'], ['store/useWarrantiesStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
   surface('async-storage:lifesort-documents', 'async-storage', 'Encrypted Zustand key lifesort-documents', 'device', ['documents.files'], ['store/useDocumentsStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'APP-055 surface is born encrypted; the AES-GCM v1 adapter owns key access and protected failure handling, and no historical plaintext payload exists to migrate.' }),
   surface('async-storage:lifesort-career', 'async-storage', 'Zustand key lifesort-career', 'device', ['career.applications', 'career.skills'], ['store/useCareerStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useCareerStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
@@ -712,6 +723,7 @@ export const PERSISTENCE_SURFACES = [
   surface('supabase-table:trip_expenses', 'supabase-table', 'public.trip_expenses', 'supabase', ['travel.trips'], ['store/useTripsStore.ts']),
   surface('supabase-table:trip_expense_links', 'supabase-table', 'public.trip_expense_links', 'supabase', ['travel.trips', 'economy.expenses'], ['features/economy/travelFinancialBridge.ts', 'supabase/migrations/20261005120000_app059_travel_budget_bridge.sql']),
   surface('supabase-table:trip_packing_items', 'supabase-table', 'public.trip_packing_items', 'supabase', ['travel.trips'], ['store/useTripsStore.ts']),
+  surface('supabase-table:trip_packing_template_applications', 'supabase-table', 'public.trip_packing_template_applications', 'supabase', ['travel.trips'], ['store/useTripsStore.ts', 'supabase/migrations/20261006120000_app060_packing_template_applications.sql']),
   surface('supabase-table:trip_participants', 'supabase-table', 'public.trip_participants', 'supabase', ['travel.trips'], ['store/useTripsStore.ts']),
   surface('supabase-table:trip_packing_compat_queue', 'supabase-table', 'public.trip_packing_compat_queue', 'supabase', ['travel.trips'], ['supabase/migrations/20260930141858_app058_trip_canonical_entity.sql']),
   surface('supabase-table:trip_document_references', 'supabase-table', 'public.trip_document_references', 'supabase', ['travel.trips'], ['utils/trip/tripRemote.ts', 'supabase/migrations/20260930141858_app058_trip_canonical_entity.sql']),
@@ -734,6 +746,7 @@ export const PERSISTENCE_SURFACES = [
   surface('supabase-storage-bucket:documents', 'supabase-storage-bucket', 'Storage bucket documents', 'supabase', ['documents.files'], ['core/documents/documentSync.ts', 'supabase/migrations/20260925090000_private_document_bucket.sql']),
   surface('supabase-storage-bucket:recipe-images', 'supabase-storage-bucket', 'Storage bucket recipe-images', 'supabase', ['food.global-catalogue'], ['supabase/migrations/20260903002859_add_activity_log_and_recipe_images.sql']),
   surface('bundled-source:data/seedRecipes', 'bundled-source', 'Bundled seed recipe source files', 'bundle', ['food.seed-recipes'], ['data/seedRecipes.ts']),
+  surface('bundled-source:features/travel/packingTemplates', 'bundled-source', 'Bundled versioned packing template catalogue', 'bundle', ['travel.packing-templates'], ['features/travel/packingTemplates.ts']),
 ] as const satisfies readonly PersistenceSurface[];
 
 export type PersistenceSurfaceId = (typeof PERSISTENCE_SURFACES)[number]['id'];

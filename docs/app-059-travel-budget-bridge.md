@@ -37,8 +37,8 @@ creation metadata. It receives `resolutionStatus: requires-transaction-date`; it
 receives a guessed transaction date. Safe legacy money additionally receives
 `amountMinor`. Unsafe money receives no converted value and is not rounded. Unsafe
 budgets are retained in `legacyBudgetMajor` until the user corrects or clears them.
-Backup format 7 applies the same rules to older exported Travel state; current
-exports omit and never restore the account-scoped projection cache.
+Backup format 7 introduced the same rules for older exported Travel state; later formats
+retain them. Current exports omit and never restore the account-scoped projection cache.
 
 The user can continue using the app without resolving old records. The expenses view
 labels them, shows that they do not count, and lets one record be resolved at a time by

@@ -47,9 +47,9 @@ function v1Economy() {
 const backup = (version: number, data: Record<string, unknown>) => JSON.stringify({ version, exportedAt: '2026-09-01T00:00:00.000Z', data });
 
 describe('APP-040 backup parsing', () => {
-  it('writes format 7', () => {
-    // APP-047 moved exports to 4; APP-050 to 5; APP-052 to 6; APP-059 to 7.
-    expect(BACKUP_VERSION).toBe(7);
+  it('writes format 8', () => {
+    // APP-047 moved exports to 4; APP-050 to 5; APP-052 to 6; APP-059 to 7; APP-060 to 8.
+    expect(BACKUP_VERSION).toBe(8);
   });
 
   it('format 1: converts every Economy money field exactly once and leaves other modules unchanged', () => {
@@ -129,7 +129,7 @@ describe('APP-040 backup parsing', () => {
     ['format 1 parseFloat-collapsed third decimal (20000000000000.001)', 1, { income: { incomeByMonth: { '2026-09': parseFloat('20000000000000.001') } } }, 'invalid_money'],
     ['format 1 high-magnitude third decimal', 1, { income: { incomeByMonth: { '2026-09': 5_000_000_000.001 } } }, 'invalid_money'],
     ['non-object expense entry', 2, { expenses: { expenses: [42] } }, 'invalid_format'],
-    ['future format', 8, { income: { incomeByMonth: {} } }, 'unsupported_version'],
+    ['future format', 9, { income: { incomeByMonth: {} } }, 'unsupported_version'],
     // APP-042 recurrence: a pre-3 file without a usable isRecurring, and a format 3 file
     // whose pair contradicts itself, both fail before any store is touched.
     ['pre-3 expense without isRecurring', 2, { expenses: { expenses: [{ id: 'e1', amount: 1_250 }] } }, 'invalid_format'],
@@ -323,7 +323,7 @@ describe('APP-040 backup restore and export through the real stores', () => {
 
     await exportBackup();
     const exported = JSON.parse(mockWritten);
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(8);
     expect(exported.data.expenses.expenses[0].amount).toBe(1_250);
     expect(exported.data.income.incomeByMonth['2026-09']).toBe(3_200_075);
     expect(exported.data.savingsGoals.extraSavings).toBe(1_010);

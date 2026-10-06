@@ -10,18 +10,15 @@ import DatePickerField from '@/components/DatePickerField';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { parseSupportedMoneyInput } from '@/core/money/supportedMoney';
+import {
+  getPackingTemplateByKey,
+  packingTemplateKey,
+  resolvePackingTemplate,
+  SELECTABLE_PACKING_TEMPLATES,
+} from '@/features/travel/packingTemplates';
 import { useTripsStore } from '@/store/useTripsStore';
-import { PackingCategory } from '@/types/trip';
 import { todayIso } from '@/utils/shared/localDate';
 import { MAX_TRIP_DESTINATION_LENGTH, normalizeDestination, tripProblem } from '@/utils/trip/tripDomain';
-
-const DEFAULT_PACKING_ITEMS: { key: string; category: PackingCategory }[] = [
-  { key: 'passport', category: 'essentials' },
-  { key: 'wallet', category: 'essentials' },
-  { key: 'charger', category: 'electronics' },
-  { key: 'toothbrush', category: 'toiletries' },
-  { key: 'medication', category: 'toiletries' },
-];
 
 export default function NewTripScreen() {
   const { t } = useTranslation();
@@ -31,6 +28,7 @@ export default function NewTripScreen() {
   const surface = useThemeColor({}, 'surface');
   const backgroundColor = useThemeColor({}, 'background');
   const danger = useThemeColor({}, 'danger');
+  const textMuted = useThemeColor({}, 'textMuted');
 
   const today = todayIso();
 
@@ -40,7 +38,7 @@ export default function NewTripScreen() {
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [budget, setBudget] = useState('');
-  const [copyFromTripId, setCopyFromTripId] = useState<string | null>(null);
+  const [packingSource, setPackingSource] = useState('empty');
 
   // A new trip names its destination and its dates are calendar dates in order.
   // "Destination required" is said by the field, not by an error on an empty form.
@@ -52,10 +50,15 @@ export default function NewTripScreen() {
     && problem === null && budgetValid;
 
   const save = () => {
-    const defaultItems = DEFAULT_PACKING_ITEMS.map(({ key, category }) => ({
-      label: t(`travel.defaultPackingItems.${key}`),
-      category,
-    }));
+    const selectedTemplate = packingSource.startsWith('template:')
+      ? getPackingTemplateByKey(packingSource.slice('template:'.length))
+      : null;
+    const copiedTemplateItems = selectedTemplate
+      ? resolvePackingTemplate(selectedTemplate, t).items.map(({ label, category }) => ({ label, category }))
+      : [];
+    const copyFromTripId = packingSource.startsWith('trip:')
+      ? packingSource.slice('trip:'.length)
+      : null;
     const id = addTrip(
       {
         name: name.trim(),
@@ -64,8 +67,9 @@ export default function NewTripScreen() {
         endDate,
         budget: parsedBudget?.ok ? parsedBudget.value : null,
       },
-      defaultItems,
-      copyFromTripId
+      copiedTemplateItems,
+      copyFromTripId,
+      selectedTemplate ? { id: selectedTemplate.id, version: selectedTemplate.version } : null,
     );
     if (!id) {
       setSaveFailed(true);
@@ -114,17 +118,33 @@ export default function NewTripScreen() {
           onChangeText={setBudget}
         />
 
-        {trips.length > 0 && (
-          <>
-            <Text style={sharedStyles.fieldLabel}>{t('travel.copyPackingFrom')}</Text>
-            <View style={sharedStyles.chipRow}>
-              <Chip label={t('travel.defaultPackingList')} active={copyFromTripId === null} onPress={() => setCopyFromTripId(null)} />
-              {trips.map((tr) => (
-                <Chip key={tr.id} label={tr.name} active={copyFromTripId === tr.id} onPress={() => setCopyFromTripId(tr.id)} />
-              ))}
-            </View>
-          </>
-        )}
+        <Text style={sharedStyles.fieldLabel}>{t('travel.packingStartWith')}</Text>
+        <Text style={{ color: textMuted }}>{t('travel.packingCopyHint')}</Text>
+        <View style={sharedStyles.chipRow}>
+          <Chip label={t('travel.packingStartEmpty')} active={packingSource === 'empty'} onPress={() => setPackingSource('empty')} />
+          {SELECTABLE_PACKING_TEMPLATES.map((entry) => {
+            const key = packingTemplateKey(entry);
+            return (
+              <Chip
+                key={key}
+                label={t('travel.packingTemplateLabel', {
+                  title: t(`travel.packingTemplates.titles.${entry.titleKey}`),
+                  version: entry.version,
+                })}
+                active={packingSource === `template:${key}`}
+                onPress={() => setPackingSource(`template:${key}`)}
+              />
+            );
+          })}
+          {trips.map((tr) => (
+            <Chip
+              key={tr.id}
+              label={t('travel.packingTripCopyLabel', { name: tr.name })}
+              active={packingSource === `trip:${tr.id}`}
+              onPress={() => setPackingSource(`trip:${tr.id}`)}
+            />
+          ))}
+        </View>
       </Card>
 
       {saveFailed && <Text accessibilityRole="alert" style={{ color: danger }}>{t('travel.saveFailed')}</Text>}

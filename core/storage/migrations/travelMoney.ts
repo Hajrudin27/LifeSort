@@ -14,6 +14,7 @@ const STATE_V1 = [
   'financialProjectionStatus',
   'pendingExpenseDrafts',
 ];
+const STATE_V2 = [...STATE_V1, 'appliedPackingTemplates'];
 const TRIP_EXPENSE_CATEGORIES = new Set([
   'flight', 'accommodation', 'transport', 'food', 'activities', 'shopping', 'other',
 ]);
@@ -51,10 +52,8 @@ function knownV0(value: unknown): boolean {
     && state.expenses.every((expense) => record(expense) && legacyNumber(expense.amount));
 }
 
-function knownV1(value: unknown): boolean {
-  const state = envelope(value, 1, STATE_V1);
-  return !!state
-    && Array.isArray(state.trips)
+function knownCurrentState(state: Json): boolean {
+  return Array.isArray(state.trips)
     && Array.isArray(state.expenses)
     && Array.isArray(state.packingItems)
     && Array.isArray(state.participants)
@@ -80,6 +79,34 @@ function knownV1(value: unknown): boolean {
       && expense.resolutionStatus === 'requires-transaction-date'
       && !Object.prototype.hasOwnProperty.call(expense, 'transactionDate')
       && (expense.amountMinor === undefined || isSupportedMoney(expense.amountMinor)));
+}
+
+function knownV1(value: unknown): boolean {
+  const state = envelope(value, 1, STATE_V1);
+  return !!state && knownCurrentState(state);
+}
+
+function validAppliedTemplates(value: unknown): boolean {
+  if (!Array.isArray(value)) return false;
+  const keys = new Set<string>();
+  for (const application of value) {
+    if (!record(application)
+      || typeof application.tripId !== 'string' || application.tripId.length === 0
+      || typeof application.templateId !== 'string' || application.templateId.trim().length === 0
+      || typeof application.templateVersion !== 'number'
+      || !Number.isInteger(application.templateVersion) || application.templateVersion <= 0
+      || (application.appliedBy !== undefined && typeof application.appliedBy !== 'string')
+      || (application.appliedAt !== undefined && typeof application.appliedAt !== 'string')) return false;
+    const key = `${application.tripId}\u0000${application.templateId}\u0000${application.templateVersion}`;
+    if (keys.has(key)) return false;
+    keys.add(key);
+  }
+  return true;
+}
+
+function knownV2(value: unknown): boolean {
+  const state = envelope(value, 2, STATE_V2);
+  return !!state && knownCurrentState(state) && validAppliedTemplates(state.appliedPackingTemplates);
 }
 
 function migrateTrip(trip: Json): Json {
@@ -109,7 +136,7 @@ function migrateExpense(expense: Json): Json {
 export const travelMoneyMigration: LocalMigrationDefinition = {
   storeId: 'async-storage:lifesort-trips',
   storageKey: 'lifesort-trips',
-  currentVersion: 1,
+  currentVersion: 2,
   detectVersion: (value) => record(value) && typeof value.version === 'number' ? value.version : null,
   steps: {
     0: (value) => {
@@ -132,6 +159,18 @@ export const travelMoneyMigration: LocalMigrationDefinition = {
         version: 1,
       };
     },
+    1: (value) => {
+      if (!knownV1(value)) throw new Error('unknown-v1-shape');
+      const current = value as Json;
+      return {
+        ...current,
+        state: {
+          ...(current.state as Json),
+          appliedPackingTemplates: [],
+        },
+        version: 2,
+      };
+    },
   },
-  validateCurrent: knownV1,
+  validateCurrent: knownV2,
 };

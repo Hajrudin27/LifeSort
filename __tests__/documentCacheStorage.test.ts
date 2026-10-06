@@ -164,6 +164,37 @@ function legacyExpensesPayload(uri = `${ATTACHMENTS_DIR}receipt.jpg`) {
   });
 }
 
+function preApp060TravelV1Payload() {
+  return JSON.stringify({
+    state: {
+      trips: [{
+        id: 'trip-existing', ownerId: 'account-a', name: 'Existing trip', destination: 'Rome',
+        startDate: '2027-05-01', endDate: '2027-05-08', budget: 50_000,
+        documents: [], createdAt: '2026-10-01T00:00:00.000Z',
+      }],
+      expenses: [{
+        id: 'legacy-expense', tripId: 'trip-existing', authorId: 'account-a', name: 'Train',
+        amount: 12.34, amountMinor: 1_234, category: 'transport', attachments: [],
+        createdAt: '2026-10-01T00:00:00.000Z', resolutionStatus: 'requires-transaction-date',
+      }],
+      packingItems: [{
+        id: 'packing-existing', tripId: 'trip-existing', label: 'Passport', checked: true,
+        isDefault: true, category: 'essentials',
+      }],
+      participants: [{
+        tripId: 'trip-existing', ownerId: 'account-a', userId: 'account-b',
+        invitedEmail: 'participant@example.test', status: 'accepted', invitedAt: '2026-10-01T00:00:00.000Z',
+      }],
+      myUserId: 'account-a',
+      financialProjections: [],
+      financialProjectionFreshAt: {},
+      financialProjectionStatus: {},
+      pendingExpenseDrafts: {},
+    },
+    version: 1,
+  });
+}
+
 describe('APP-029 document cache storage', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -283,6 +314,56 @@ describe('APP-029 document cache storage', () => {
     expect(first).not.toBe(second);
     await expect(decryptDocumentMetadataPayload('lifesort-expenses', first)).resolves.toBe(legacyExpensesPayload(''));
     await expect(decryptDocumentMetadataPayload('lifesort-expenses', second)).resolves.toBe(legacyExpensesPayload(''));
+  });
+
+  it('migrates an encrypted pre-APP-060 Travel v1 payload without changing existing Trip data', async () => {
+    const v1 = JSON.parse(preApp060TravelV1Payload());
+    const encryptedV1 = await encryptDocumentMetadataPayload('lifesort-trips', JSON.stringify(v1));
+    await AsyncStorage.setItem('lifesort-trips', encryptedV1);
+
+    const jsonStorage = createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage))!;
+    const hydrated = await jsonStorage.getItem('lifesort-trips') as {
+      version: number;
+      state: { myUserId: unknown; packingItems: unknown; appliedPackingTemplates: unknown[] };
+    };
+
+    expect(hydrated).toEqual({
+      ...v1,
+      state: { ...v1.state, appliedPackingTemplates: [] },
+      version: 2,
+    });
+    expect(hydrated!.state.myUserId).toBe('account-a');
+    expect(hydrated!.state.packingItems).toEqual(v1.state.packingItems);
+    expect(hydrated!.state.appliedPackingTemplates).toEqual([]);
+    const stored = await AsyncStorage.getItem('lifesort-trips');
+    expect(stored).toContain('__lifesort_encrypted_document_metadata__');
+    expect(stored).not.toContain('Existing trip');
+    expect(stored).not.toContain('Passport');
+
+    await expect(jsonStorage.getItem('lifesort-trips')).resolves.toEqual(hydrated);
+  });
+
+  it('keeps invalid encrypted Travel v1 bytes unchanged and fails closed', async () => {
+    const invalidV1 = JSON.parse(preApp060TravelV1Payload());
+    invalidV1.state.unexpectedField = [];
+    const encryptedV1 = await encryptDocumentMetadataPayload('lifesort-trips', JSON.stringify(invalidV1));
+    await AsyncStorage.setItem('lifesort-trips', encryptedV1);
+
+    const jsonStorage = createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage))!;
+    await expect(jsonStorage.getItem('lifesort-trips')).rejects.toMatchObject({
+      name: 'LocalMigrationError', code: 'read-failed',
+    });
+    expect(await AsyncStorage.getItem('lifesort-trips')).toBe(encryptedV1);
+  });
+
+  it('does not mistake raw Travel v1 plaintext for an authenticated encrypted payload', async () => {
+    const plaintextV1 = preApp060TravelV1Payload();
+    await AsyncStorage.setItem('lifesort-trips', plaintextV1);
+
+    await expect(documentMetadataEncryptedStorage.getItem('lifesort-trips')).rejects.toMatchObject({
+      name: 'DocumentCacheProtectedDataError', code: 'migration-failed',
+    });
+    expect(await AsyncStorage.getItem('lifesort-trips')).toBe(plaintextV1);
   });
 
   it('fails safely for corrupted and unsupported metadata envelopes', async () => {
@@ -540,9 +621,9 @@ describe('APP-029 document cache storage', () => {
     const jsonStorage = createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage))!;
     const hydrated = await jsonStorage.getItem(key);
     // APP-040 + APP-042: expenses' inner schema upgrades to v2 (100 kr -> 10000 øre,
-    // plus an explicit recurrence) in the same encrypted commit. APP-059 similarly
-    // upgrades trips to v1; warranties stay at v0.
-    expect(hydrated!.version).toBe(key === 'lifesort-expenses' ? 2 : key === 'lifesort-trips' ? 1 : 0);
+    // plus an explicit recurrence) in the same encrypted commit. APP-059/060 similarly
+    // upgrade trips through v1 to v2; warranties stay at v0.
+    expect(hydrated!.version).toBe(key === 'lifesort-expenses' ? 2 : key === 'lifesort-trips' ? 2 : 0);
     expect(hydrated!.state).toBeDefined();
     if (key === 'lifesort-expenses') {
       const expense = (hydrated!.state as { expenses: { amount: number; recurrenceFrequency: unknown }[] }).expenses[0];

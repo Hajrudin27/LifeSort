@@ -753,13 +753,20 @@ const LEGACY_PLAINTEXT_MIGRATABLE_STORES: ReadonlySet<string> = new Set([
 function looksLikeKnownDocumentMetadataPayload(
   storageName: string,
   parsed: Record<string, unknown>,
-  acceptCurrentInnerVersion = false,
+  acceptSupportedEncryptedVersion = false,
 ): boolean {
   // Historical writers always used Zustand's explicit default version 0; only
-  // encrypted payloads may already carry an adapter-owned current version.
-  // Reject before encryption, key creation, or attachment migration.
+  // authenticated encrypted payloads may carry any adapter-owned version that
+  // the migration harness can advance. The harness performs the strict
+  // version-specific validation; this outer gate only recognises the store.
+  // Raw plaintext remains restricted to historical v0 below.
   const currentInnerVersion = INNER_SCHEMA_MIGRATIONS[storageName]?.currentVersion ?? 0;
-  if (parsed.version !== 0 && !(acceptCurrentInnerVersion && parsed.version === currentInnerVersion)) return false;
+  const supportedEncryptedVersion = acceptSupportedEncryptedVersion
+    && typeof parsed.version === 'number'
+    && Number.isSafeInteger(parsed.version)
+    && parsed.version >= 0
+    && parsed.version <= currentInnerVersion;
+  if (parsed.version !== 0 && !supportedEncryptedVersion) return false;
   if (!isRecord(parsed.state)) return false;
   const state = parsed.state;
   if (storageName === 'lifesort-expenses') {

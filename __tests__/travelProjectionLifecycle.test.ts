@@ -231,9 +231,9 @@ describe('finding 3 — a cached projection is never presented as current', () =
 
   it('a payload that claims to be fresh (older build or tampering) is still demoted on hydration', async () => {
     await AsyncStorage.setItem(KEY, JSON.stringify({
-      version: 1,
+      version: 2,
       state: {
-        trips: [localTrip()], expenses: [], packingItems: [], participants: [], myUserId: OWNER,
+        trips: [localTrip()], expenses: [], packingItems: [], appliedPackingTemplates: [], participants: [], myUserId: OWNER,
         financialProjections: [projectionRow('e1')],
         financialProjectionFreshAt: { [TRIP]: '2026-10-01T00:00:00.000Z' },
         financialProjectionStatus: { [TRIP]: 'fresh' },

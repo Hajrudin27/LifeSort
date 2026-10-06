@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, SectionList, TextInput } from 'react-native';
 
@@ -11,14 +11,17 @@ import { sharedStyles } from '@/constants/sharedStyles';
 import Hero, { HeroPill, HeroPillText } from '@/components/Hero';
 import { useAccentTints } from '@/hooks/useAccentTints';
 import { useHomeBackTitle } from '@/hooks/useHomeBackTitle';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useTripsStore } from '@/store/useTripsStore';
 import { daysUntil } from '@/utils/shared/dateDays';
+import { formatDkk, moneyLocaleFor } from '@/core/money/format';
+import { projectionVisibleTo, settledTripSpend, tripSpendFreshness } from '@/features/travel/financialReadContract';
 
 const PLANNING_WINDOW_DAYS = 90;
 const CURRENT_YEAR = new Date().getFullYear();
 
 export default function TravelScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { from } = useLocalSearchParams<{ from?: string }>();
   useHomeBackTitle(from);
 
@@ -27,9 +30,15 @@ export default function TravelScreen() {
   const surface = useThemeColor({}, 'surface');
   const textMuted = useThemeColor({}, 'textMuted');
   const success = useThemeColor({}, 'success');
+  const warning = useThemeColor({}, 'warning');
   const trips = useTripsStore((s) => s.trips);
   const packingItems = useTripsStore((s) => s.packingItems);
-  const tripExpenses = useTripsStore((s) => s.expenses);
+  const financialProjections = useTripsStore((s) => s.financialProjections);
+  const financialProjectionFreshAt = useTripsStore((s) => s.financialProjectionFreshAt);
+  const financialProjectionStatus = useTripsStore((s) => s.financialProjectionStatus);
+  const refreshFinancialProjection = useTripsStore((s) => s.refreshTripFinancialProjection);
+  const myUserId = useTripsStore((s) => s.myUserId);
+  const sessionUserId = useAuthStore((s) => s.session?.user.id);
   const [search, setSearch] = useState('');
 
   const filtered = trips.filter((tr) => tr.name.toLowerCase().includes(search.trim().toLowerCase()));
@@ -50,9 +59,25 @@ export default function TravelScreen() {
   // Total på tværs af alle rejser, der starter i indeværende år
   const tripsThisYear = trips.filter((tr) => tr.startDate.slice(0, 4) === String(CURRENT_YEAR));
   const tripIdsThisYear = new Set(tripsThisYear.map((tr) => tr.id));
-  const totalSpentThisYear = tripExpenses
-    .filter((e) => tripIdsThisYear.has(e.tripId))
-    .reduce((sum, e) => sum + e.amount, 0);
+  const yearTripIdsKey = JSON.stringify([...tripIdsThisYear].sort());
+
+  // The yearly total is a financial surface like the trip screens: it revalidates
+  // the snapshots it adds up, and never shows a saved one as current (APP-059 review #1).
+  useEffect(() => {
+    for (const tripId of JSON.parse(yearTripIdsKey) as string[]) void refreshFinancialProjection(tripId);
+  }, [yearTripIdsKey, refreshFinancialProjection]);
+
+  // Only the account the cache belongs to is shown it (a session can switch accounts
+  // without a local cleanup); to anyone else the yearly spend is unavailable.
+  const spendFreshness = projectionVisibleTo(myUserId, sessionUserId)
+    ? tripSpendFreshness(tripIdsThisYear, financialProjectionFreshAt, financialProjectionStatus)
+    : 'unavailable';
+  let totalSpentThisYear = null;
+  if (spendFreshness !== 'unavailable') {
+    try {
+      totalSpentThisYear = settledTripSpend(financialProjections.filter((entry) => tripIdsThisYear.has(entry.tripId)));
+    } catch { totalSpentThisYear = null; }
+  }
 
   return (
     <View style={sharedStyles.formContainer}>
@@ -60,13 +85,20 @@ export default function TravelScreen() {
         <Hero
           icon={{ ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' }}
           kicker={t('travel.totalSpentLabel', { year: CURRENT_YEAR })}
-          value={`${totalSpentThisYear.toFixed(0)} kr.`}
+          value={totalSpentThisYear === null
+            ? t('travel.spendUnavailable')
+            : formatDkk(totalSpentThisYear, moneyLocaleFor(i18n.language))}
           style={styles.hero}
         >
           <HeroPill style={styles.heroPillSpacing}>
             <HeroPillText>{t('travel.tripsCountThisYear', { count: tripsThisYear.length })}</HeroPillText>
           </HeroPill>
         </Hero>
+      )}
+      {trips.length > 0 && totalSpentThisYear !== null && spendFreshness === 'stale' && (
+        <Text accessibilityRole="alert" style={[styles.staleNotice, { color: warning }]}>
+          {t('travel.financialProjectionStale')}
+        </Text>
       )}
 
       <TextInput
@@ -169,6 +201,7 @@ export default function TravelScreen() {
 const styles = {
   hero: { marginBottom: 4 },
   heroPillSpacing: { marginTop: 14 },
+  staleNotice: { fontSize: 12, textAlign: 'center' as const },
   emptyCard: { alignItems: 'center' as const, borderRadius: 20, padding: 32 },
   card: {
     gap: 8,

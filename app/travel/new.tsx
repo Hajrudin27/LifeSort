@@ -9,6 +9,7 @@ import Chip from '@/components/Chip';
 import DatePickerField from '@/components/DatePickerField';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
+import { parseSupportedMoneyInput } from '@/core/money/supportedMoney';
 import { useTripsStore } from '@/store/useTripsStore';
 import { PackingCategory } from '@/types/trip';
 import { todayIso } from '@/utils/shared/localDate';
@@ -45,7 +46,10 @@ export default function NewTripScreen() {
   // "Destination required" is said by the field, not by an error on an empty form.
   const problem = tripProblem({ destination, startDate, endDate }, { destinationRequired: true });
   const dateProblem = problem !== null && problem !== 'destination-required' ? problem : null;
-  const canSave = name.trim().length > 0 && normalizeDestination(destination) !== undefined && problem === null;
+  const parsedBudget = budget.trim().length === 0 ? null : parseSupportedMoneyInput(budget);
+  const budgetValid = parsedBudget === null || (parsedBudget.ok && parsedBudget.value >= 0);
+  const canSave = name.trim().length > 0 && normalizeDestination(destination) !== undefined
+    && problem === null && budgetValid;
 
   const save = () => {
     const defaultItems = DEFAULT_PACKING_ITEMS.map(({ key, category }) => ({
@@ -58,7 +62,7 @@ export default function NewTripScreen() {
         destination: destination.trim(),
         startDate,
         endDate,
-        budget: budget.trim().length > 0 && !isNaN(parseFloat(budget)) ? parseFloat(budget) : null,
+        budget: parsedBudget?.ok ? parsedBudget.value : null,
       },
       defaultItems,
       copyFromTripId

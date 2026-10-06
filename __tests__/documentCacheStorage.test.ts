@@ -540,9 +540,9 @@ describe('APP-029 document cache storage', () => {
     const jsonStorage = createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage))!;
     const hydrated = await jsonStorage.getItem(key);
     // APP-040 + APP-042: expenses' inner schema upgrades to v2 (100 kr -> 10000 øre,
-    // plus an explicit recurrence) in the same encrypted commit; trips and warranties
-    // stay at their v0 schema.
-    expect(hydrated!.version).toBe(key === 'lifesort-expenses' ? 2 : 0);
+    // plus an explicit recurrence) in the same encrypted commit. APP-059 similarly
+    // upgrades trips to v1; warranties stay at v0.
+    expect(hydrated!.version).toBe(key === 'lifesort-expenses' ? 2 : key === 'lifesort-trips' ? 1 : 0);
     expect(hydrated!.state).toBeDefined();
     if (key === 'lifesort-expenses') {
       const expense = (hydrated!.state as { expenses: { amount: number; recurrenceFrequency: unknown }[] }).expenses[0];

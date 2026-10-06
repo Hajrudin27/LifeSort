@@ -130,7 +130,13 @@ describe('leverandørerne rører ikke Home', () => {
       const source = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
       const feature = file.split(path.sep)[1];
       for (const match of source.matchAll(/from\s+'@\/features\/([^/']+)/g)) {
-        expect(match[1]).toBe(feature);
+        // APP-059 is the one explicit cross-feature read contract: Travel asks
+        // Economy to reconcile financial semantics; it never imports a private store.
+        if (file === path.join('features', 'travel', 'financialReadContract.ts')) {
+          expect(match[1]).toBe('economy');
+        } else {
+          expect(match[1]).toBe(feature);
+        }
       }
       // Og de importerer aldrig en route.
       expect(source).not.toMatch(/from\s+'@\/app\//);

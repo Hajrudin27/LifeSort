@@ -160,3 +160,18 @@ export function financialTotalsForMonth(
     expenseCount,
   };
 }
+
+/**
+ * The settled-spending half of APP-039 without a month filter. Consumers such as
+ * Travel still use Economy's identity/correlation reconciliation and semantics;
+ * they do not reimplement financial arithmetic in their own store.
+ */
+export function settledFinancialSpending(entries: readonly FinancialEntry[]): MinorUnits {
+  let spending = ZERO_MINOR_UNITS;
+  for (const entry of reconcile(entries)) {
+    if (!isTransaction(entry) || entry.status !== 'booked') continue;
+    if (entry.semantic === 'expense') spending = addMinorUnits(spending, entry.amount);
+    else if (entry.semantic === 'refund') spending = subtractMinorUnits(spending, entry.amount);
+  }
+  return spending;
+}

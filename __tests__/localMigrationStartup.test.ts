@@ -178,3 +178,101 @@ it('rejects all startup waiters when late B fails after A succeeds', async () =>
   await expect(auth).rejects.toMatchObject({ code: 'read-failed' });
   expect(readyShell).not.toHaveBeenCalled(); expect(authContinuation).not.toHaveBeenCalled();
 });
+
+describe('APP-059 review #3 — every per-key storage mutation shares one FIFO', () => {
+  it('a remove invoked after a delayed set cannot be overtaken by that set', async () => {
+    const runtime = require('@/core/storage/migrations/runtime');
+    const gate = deferred(); const started = deferred();
+    let value: string | null = null;
+    const operations: string[] = [];
+    const adapter = runtime.migrationGatedStorage({
+      getItem: async () => value,
+      setItem: async (_name: string, next: string) => {
+        operations.push('set:start'); started.resolve(); await gate.promise;
+        value = next; operations.push('set:end');
+      },
+      removeItem: async () => { operations.push('remove'); value = null; },
+    });
+
+    const setting = adapter.setItem('synthetic-key', 'newer');
+    await started.promise;
+    const removing = adapter.removeItem('synthetic-key');
+    await flush();
+    expect(operations).toEqual(['set:start']);
+    gate.resolve();
+    await Promise.all([setting, removing]);
+    expect(operations).toEqual(['set:start', 'set:end', 'remove']);
+    expect(value).toBeNull();
+  });
+
+  it('a set invoked after a delayed remove cannot run before that remove', async () => {
+    const runtime = require('@/core/storage/migrations/runtime');
+    const gate = deferred(); const started = deferred();
+    let value: string | null = 'old';
+    const operations: string[] = [];
+    const adapter = runtime.migrationGatedStorage({
+      getItem: async () => value,
+      setItem: async (_name: string, next: string) => { operations.push('set'); value = next; },
+      removeItem: async () => {
+        operations.push('remove:start'); started.resolve(); await gate.promise;
+        value = null; operations.push('remove:end');
+      },
+    });
+
+    const removing = adapter.removeItem('synthetic-key');
+    await started.promise;
+    const setting = adapter.setItem('synthetic-key', 'newer');
+    await flush();
+    expect(operations).toEqual(['remove:start']);
+    gate.resolve();
+    await Promise.all([removing, setting]);
+    expect(operations).toEqual(['remove:start', 'remove:end', 'set']);
+    expect(value).toBe('newer');
+  });
+
+  it('a failed set does not strand the following remove', async () => {
+    const runtime = require('@/core/storage/migrations/runtime');
+    const operations: string[] = [];
+    const adapter = runtime.migrationGatedStorage({
+      getItem: async () => null,
+      setItem: async () => { operations.push('set'); throw new Error('synthetic write failure'); },
+      removeItem: async () => { operations.push('remove'); },
+    });
+
+    const setting = adapter.setItem('synthetic-key', 'value');
+    const removing = adapter.removeItem('synthetic-key');
+    await expect(setting).rejects.toThrow('synthetic write failure');
+    await expect(removing).resolves.toBeUndefined();
+    expect(operations).toEqual(['set', 'remove']);
+  });
+
+  it('same-key removes stay ordered while a different key remains parallel', async () => {
+    const runtime = require('@/core/storage/migrations/runtime');
+    const gate = deferred(); const firstStarted = deferred();
+    const operations: string[] = [];
+    let removeCount = 0;
+    const adapter = runtime.migrationGatedStorage({
+      getItem: async () => null,
+      setItem: async (name: string) => { operations.push(`set:${name}`); },
+      removeItem: async (name: string) => {
+        removeCount += 1;
+        operations.push(`remove:${name}:${removeCount}:start`);
+        if (removeCount === 1) { firstStarted.resolve(); await gate.promise; }
+        operations.push(`remove:${name}:${removeCount}:end`);
+      },
+    });
+
+    const first = adapter.removeItem('key-a');
+    await firstStarted.promise;
+    const second = adapter.removeItem('key-a');
+    const independent = adapter.setItem('key-b', 'value');
+    await independent;
+    expect(operations).toEqual(['remove:key-a:1:start', 'set:key-b']);
+    gate.resolve();
+    await Promise.all([first, second]);
+    expect(operations).toEqual([
+      'remove:key-a:1:start', 'set:key-b', 'remove:key-a:1:end',
+      'remove:key-a:2:start', 'remove:key-a:2:end',
+    ]);
+  });
+});

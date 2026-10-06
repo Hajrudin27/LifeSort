@@ -35,9 +35,11 @@ import { supportedMoney } from '@/core/money/supportedMoney';
  *  5 — APP-050: Pantry bærer valgfrie strukturerede mængder og eksplicitte datoer;
  *      ældre fritekstmængder bevares ordret som legacyQuantityText.
  *  6 — APP-052: shopping items skelner manuelle og opskriftsafledte artefakter.
- * Nye eksporter skriver altid 6. Øvrige moduler er semantisk uændrede.
+ *  7 — APP-059: Travel-budgetter er MinorUnits; gamle Travel-udgifter forbliver
+ *      udaterede legacy-poster med en sikker, valgfri MinorUnits-konvertering.
+ * Nye eksporter skriver altid 7.
  */
-export const BACKUP_VERSION = 6;
+export const BACKUP_VERSION = 7;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString';
 
@@ -277,6 +279,59 @@ function canonicalShoppingItems(
   return { ok: true, value: { ...partial, shoppingItems: items } };
 }
 
+/** APP-059 Travel backup boundary. Unsafe legacy money is preserved unresolved. */
+function canonicalTravelMoney(
+  partial: Record<string, unknown>, version: number,
+): { ok: true; value: Record<string, unknown> } | { ok: false; error: BackupParseError } {
+  const trips = partial.trips;
+  const expenses = partial.expenses;
+  if (trips !== undefined && !(trips as unknown[]).every(isPlainObject)) return { ok: false, error: 'invalid_format' };
+  if (expenses !== undefined && !(expenses as unknown[]).every(isPlainObject)) return { ok: false, error: 'invalid_format' };
+
+  const nextTrips: Record<string, unknown>[] | undefined = trips === undefined ? undefined
+    : (trips as Record<string, unknown>[]).map((trip) => {
+      const budget = trip.budget;
+      if (version >= 7) {
+        if (budget !== null && !isSupportedTravelMoney(budget)) throw new Error('invalid');
+        if (trip.legacyBudgetMajor !== undefined && !finiteNumber(trip.legacyBudgetMajor)) throw new Error('invalid');
+        return { ...trip };
+      }
+      if (budget === undefined || budget === null) return { ...trip, budget: null };
+      if (!finiteNumber(budget)) throw new Error('invalid');
+      try { return { ...trip, budget: supportedMoney(legacyMajorUnitsToMinorUnits(budget)) }; }
+      catch { return { ...trip, budget: null, legacyBudgetMajor: budget }; }
+    });
+
+  const nextExpenses: Record<string, unknown>[] | undefined = expenses === undefined ? undefined
+    : (expenses as Record<string, unknown>[]).map((expense) => {
+      if (!finiteNumber(expense.amount)) throw new Error('invalid');
+      if (version >= 7) {
+        if (expense.resolutionStatus !== 'requires-transaction-date'
+          || Object.prototype.hasOwnProperty.call(expense, 'transactionDate')
+          || (expense.amountMinor !== undefined && !isSupportedTravelMoney(expense.amountMinor))) throw new Error('invalid');
+        return { ...expense };
+      }
+      const next: Record<string, unknown> = { ...expense, resolutionStatus: 'requires-transaction-date' };
+      delete next.transactionDate;
+      try { next.amountMinor = supportedMoney(legacyMajorUnitsToMinorUnits(expense.amount)); } catch { delete next.amountMinor; }
+      return next;
+    });
+
+  return {
+    ok: true,
+    value: {
+      ...partial,
+      ...(nextTrips === undefined ? {} : { trips: nextTrips }),
+      ...(nextExpenses === undefined ? {} : { expenses: nextExpenses }),
+    },
+  };
+}
+
+const finiteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+function isSupportedTravelMoney(value: unknown): value is MinorUnits {
+  try { return supportedMoney(value) === value; } catch { return false; }
+}
+
 // `__proto__` er den nøgle der kan ændre et objekts prototype gennem Object.assign.
 // De to øvrige kan ikke det, men har ingen plads i data og fjernes for en sikkerheds skyld.
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -327,6 +382,16 @@ export function parseBackupFile(content: string): BackupParseResult {
     if (Object.keys(partial).length === 0) continue;
     const canonical = canonicalEconomyMoney(storeKey, partial, version);
     if (!canonical.ok) return canonical;
+    if (storeKey === 'trips') {
+      try {
+        const travel = canonicalTravelMoney(canonical.value, version);
+        if (!travel.ok) return travel;
+        data[storeKey] = travel.value;
+      } catch {
+        return { ok: false, error: 'invalid_format' };
+      }
+      continue;
+    }
     if (storeKey === 'food') {
       const food = canonicalRecipeIngredients(canonical.value, version);
       if (!food.ok) return food;

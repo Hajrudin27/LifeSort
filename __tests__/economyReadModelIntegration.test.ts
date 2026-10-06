@@ -10,6 +10,8 @@ import { useSavingsGoalsStore } from '@/store/useSavingsGoalsStore';
 import { getExpenseTrend, getIncomeTrend } from '@/utils/expense/economyInsights';
 import { categoryTotalForMonth, totalForMonth } from '@/utils/expense/expenseStats';
 
+jest.mock('@/utils/auth/pinAuth', () => ({ clearLocalPin: jest.fn(() => Promise.resolve()) }));
+
 /** APP-040: store amounts are DKK MinorUnits; displayed values are localized (test language: da). */
 const m = minorUnits;
 const MONTH = '2026-09';

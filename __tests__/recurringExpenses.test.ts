@@ -46,7 +46,9 @@ jest.mock('@/utils/shared/attachmentSync', () => ({
   deleteAttachmentRemote: jest.fn(() => Promise.resolve()),
   fetchAttachmentsFor: jest.fn(() => Promise.resolve([])),
 }));
+jest.mock('@/utils/auth/pinAuth', () => ({ clearLocalPin: jest.fn(() => Promise.resolve()) }));
 
+import { useAuthStore } from '@/store/useAuthStore';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useIncomeStore } from '@/store/useIncomeStore';
 
@@ -68,6 +70,7 @@ const expenseInput = (overrides: Partial<{
 });
 
 beforeEach(async () => {
+  useAuthStore.setState({ session: { user: { id: 'synthetic-user' } } as any });
   await useExpensesStore.persist.rehydrate();
   useExpensesStore.setState({ expenses: [], seriesStoppedAt: {}, categoryBudgets: {} });
   useIncomeStore.setState({ incomeByMonth: {} });

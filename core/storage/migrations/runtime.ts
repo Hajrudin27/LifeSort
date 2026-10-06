@@ -68,6 +68,21 @@ export async function withMigrationStorageCleanup<T>(cleanup: () => Promise<T>):
  */
 export function migrationGatedStorage(storage: StateStorage): StateStorage<Promise<void>> {
   const reads = new Map<string, Promise<void>>();
+  // Zustand persistence is intentionally fire-and-forget. Keep that behaviour across
+  // different stores, but serialize every mutation for one storage key so neither an
+  // older set nor a remove can finish out of invocation order.
+  const mutations = new Map<string, Promise<void>>();
+  const enqueueMutation = (name: string, operation: () => Promise<void>) => {
+    const predecessor = mutations.get(name) ?? Promise.resolve();
+    const mutation = predecessor.catch(() => undefined).then(operation);
+    mutations.set(name, mutation);
+    activeWrites.add(mutation);
+    void mutation.finally(() => {
+      activeWrites.delete(mutation);
+      if (mutations.get(name) === mutation) mutations.delete(name);
+    }).catch(() => undefined);
+    return mutation;
+  };
   return {
     getItem(name) {
       const read = (async () => {
@@ -113,20 +128,19 @@ export function migrationGatedStorage(storage: StateStorage): StateStorage<Promi
     setItem(name, value) {
       if (cleanupDepth) return Promise.resolve();
       const epoch = writeEpoch;
-      const write = (async () => {
+      return enqueueMutation(name, async () => {
         await ensureLocalMigrations();
         await reads.get(name);
         if (cleanupDepth || epoch !== writeEpoch) return;
         await storage.setItem(name, value);
-      })();
-      activeWrites.add(write);
-      void write.finally(() => activeWrites.delete(write)).catch(() => undefined);
-      return write;
+      });
     },
-    async removeItem(name) {
+    removeItem(name) {
       // Explicit cleanup remains authorized even after a failed read.
-      await storage.removeItem(name);
-      reads.delete(name);
+      return enqueueMutation(name, async () => {
+        await storage.removeItem(name);
+        reads.delete(name);
+      });
     },
   };
 }

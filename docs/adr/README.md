@@ -65,6 +65,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0044](./0044-per-document-deletion-uses-prepare-remove-finalize-with-retained-tombstones.md) | Per-document deletion uses prepare-remove-finalize with retained tombstones | Accepted | 2026-09-27 | APP-056 |
 | [0045](./0045-warranty-receipts-are-owner-bound-document-references.md) | Warranty receipts are owner-bound document references, and the legacy columns keep their names | Accepted | 2026-09-30 | APP-057 |
 | [0046](./0046-trips-are-canonical-parents-and-reference-standalone-documents.md) | Trips are canonical parents and reference standalone documents | Accepted | 2026-09-30 | APP-058 |
+| [0047](./0047-travel-spend-is-an-economy-projection-and-undated-legacy-expenses-stay-unresolved.md) | Travel spend is an Economy projection and undated legacy expenses stay unresolved | Accepted | 2026-10-05 | APP-059 |
 
 ## When an ADR is required
 

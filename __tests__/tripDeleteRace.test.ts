@@ -17,7 +17,6 @@ jest.mock('expo-file-system/legacy', () => ({
   deleteAsync: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('expo-file-system', () => ({ File: class { bytes() { return Promise.reject(new Error('x')); } create() {} write() { return Promise.resolve(); } } }));
-
 type Gate<T> = { resolve: (value: T) => void; reject: (error: unknown) => void; promise: Promise<T> };
 function mockGate<T>(): Gate<T> {
   let resolve!: (value: T) => void; let reject!: (error: unknown) => void;

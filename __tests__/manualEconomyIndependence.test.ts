@@ -12,6 +12,8 @@ import { useExpensesStore } from '@/store/useExpensesStore';
 import { useIncomeStore } from '@/store/useIncomeStore';
 import { useSavingsGoalsStore } from '@/store/useSavingsGoalsStore';
 
+jest.mock('@/utils/auth/pinAuth', () => ({ clearLocalPin: jest.fn(() => Promise.resolve()) }));
+
 /**
  * APP-041: manual Economy is the baseline mode; banking is optional.
  * See docs/app-041-manual-economy.md.

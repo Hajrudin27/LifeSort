@@ -258,7 +258,7 @@ the key material in SecureStore.
 | `useLifeGoalsStore` | `store/useLifeGoalsStore.ts` | `goals` | `lifesort-life-goals` | AsyncStorage (plain) | `life_goals` | personal | Hajrudin Kardasevic |
 | `useHabitsStore` | `store/useHabitsStore.ts` | `habits` | `lifesort-habits` | AsyncStorage (plain) | `habits` | ordinary | Hajrudin Kardasevic |
 | `useTodoStore` | `store/useTodoStore.ts` | `tasks` | `lifesort-todos` | AsyncStorage (plain) | `todos` | ordinary | Hajrudin Kardasevic |
-| `useTripsStore` | `store/useTripsStore.ts` | `travel` | `lifesort-trips` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `trips`, `trip_expenses`, `trip_packing_items`, `trip_participants` | personal, financial, document | Hajrudin Kardasevic |
+| `useTripsStore` | `store/useTripsStore.ts` | `travel` | `lifesort-trips` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts`; includes stale-labelled minimal trip financial projections, unresolved legacy Travel rows, and narrow account-bound pending new-expense drafts for restart-safe identity | `trips`, legacy `trip_expenses`, `trip_packing_items`, `trip_participants`; canonical spend is created in `expenses` and linked by server-only `trip_expense_links` through APP-059 RPCs | personal, financial, document | Hajrudin Kardasevic |
 | `useWarrantiesStore` | `store/useWarrantiesStore.ts` | `warranties` | `lifesort-warranties` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `warranties` | document, financial | Hajrudin Kardasevic |
 | `useDocumentsStore` | `store/useDocumentsStore.ts` | `documents` | `lifesort-documents` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `documents` | document | Hajrudin Kardasevic |
 | `useCareerStore` | `store/useCareerStore.ts` | `career` | `lifesort-career` | AsyncStorage (plain) | `job_applications`, `skills` | personal | Hajrudin Kardasevic |
@@ -311,9 +311,10 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `habits` | `habits` | `store/useHabitsStore.ts` | ordinary | Hajrudin Kardasevic |
 | `todos` | `tasks` | `store/useTodoStore.ts` | ordinary | Hajrudin Kardasevic |
 | `trips` | `travel` | `store/useTripsStore.ts` | personal | Hajrudin Kardasevic |
-| `trip_expenses` | `travel` | `store/useTripsStore.ts` | financial | Hajrudin Kardasevic |
+| `trip_expenses` | `travel` | `store/useTripsStore.ts` (unresolved legacy rows only after APP-059) | financial | Hajrudin Kardasevic |
 | `trip_packing_items` | `travel` | `store/useTripsStore.ts` | ordinary | Hajrudin Kardasevic |
 | `trip_participants` | `travel` | `store/useTripsStore.ts` | personal | Hajrudin Kardasevic |
+| `trip_expense_links` | `travel` + `economy` (server-only bridge) | no direct client table access; APP-059 SECURITY DEFINER RPCs called by `features/economy/travelFinancialBridge.ts` | financial | Hajrudin Kardasevic |
 | `warranties` | `warranties` | `store/useWarrantiesStore.ts` | document, financial | Hajrudin Kardasevic |
 | `attachments` | shared (`economy`, `warranties`, `travel`) | `utils/shared/attachmentSync.ts`, `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
 | `documents` | `documents` | `core/documents/documentSync.ts`, `core/documents/documentReferences.ts` (APP-057 id/name/date reference read; no path), `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |

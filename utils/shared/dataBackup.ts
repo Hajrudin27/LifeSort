@@ -45,7 +45,20 @@ type StoreKey = keyof typeof STORE_REGISTRY;
 function buildBackupObject() {
   const data: Record<string, unknown> = {};
   for (const key of Object.keys(STORE_REGISTRY) as StoreKey[]) {
-    data[key] = STORE_REGISTRY[key].getState();
+    // APP-059's participant projection is an account-scoped encrypted cache, not
+    // portable user data. Never put it (or its freshness metadata) in a plaintext
+    // user export; only canonical Trip state and unresolved legacy rows travel.
+    if (key === 'trips') {
+      const state = useTripsStore.getState();
+      data[key] = {
+        trips: state.trips,
+        expenses: state.expenses,
+        packingItems: state.packingItems,
+        participants: state.participants,
+      };
+    } else {
+      data[key] = STORE_REGISTRY[key].getState();
+    }
   }
   return {
     version: BACKUP_VERSION,
@@ -110,7 +123,13 @@ export async function importBackup(): Promise<ImportResult | null> {
     }
     // setState uden `replace` merger de validerede felter ind i eksisterende
     // state, så storens actions bevares. Kun felter fra whitelisten når hertil.
-    (STORE_REGISTRY[key] as any).setState(partial);
+    if (key === 'trips') {
+      // APP-059: restored trips must not inherit the projection cache (or its
+      // freshness) of the dataset they replace; the store clears it in the same write.
+      useTripsStore.getState().restoreBackup(partial as never);
+    } else {
+      (STORE_REGISTRY[key] as any).setState(partial);
+    }
     restoredKeys.push(key);
   }
 

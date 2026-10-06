@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { minorUnits } from '@/core/money/minorUnits';
 
 /**
  * APP-058 — the trip store: what it accepts, what it sends, in what order, what it
@@ -22,7 +23,6 @@ jest.mock('expo-file-system', () => ({
     write() { return Promise.resolve(); }
   },
 }));
-
 const USER = '3f1b7c2e-9a4d-4e1f-8b6a-2c5d7e9f0a11';
 const mockLog: string[] = [];
 let upsertResults: Record<string, { error: unknown }> = {};
@@ -79,7 +79,7 @@ const KEY = 'lifesort-trips';
 const NONE = { expenses: 0, packingItems: 0, participants: 0, documents: 0 };
 const settle = async () => { for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setTimeout(resolve, 0)); };
 const state = () => useTripsStore.getState();
-const input = { name: 'Synthetic trip', destination: '  Rome ', startDate: '2027-05-01', endDate: '2027-05-08', budget: 5000 };
+const input = { name: 'Synthetic trip', destination: '  Rome ', startDate: '2027-05-01', endDate: '2027-05-08', budget: minorUnits(500_000) };
 
 const legacyTrip = (overrides: Partial<Trip> = {}): Trip => ({
   id: '1693000000000-abc',
@@ -245,18 +245,18 @@ describe('APP-058 review #1 — canonical ownership', () => {
     expect(state().trips.find((t) => t.id === id)!.ownerId).toBeUndefined();
   });
 
-  it('hydrates an old encrypted payload with no owner, and stores the owner inside the same v0 envelope', async () => {
+  it('hydrates an old encrypted payload with no owner, and stores the owner inside the APP-059 v1 envelope', async () => {
     await documentMetadataEncryptedStorage.setItem(KEY, JSON.stringify({ state: { trips: [legacyTrip()], expenses: [], packingItems: [], participants: [], myUserId: null }, version: 0 }));
     await useTripsStore.persist.rehydrate();
     expect(state().trips[0].ownerId).toBeUndefined();
     useTripsStore.setState({ trips: [legacyTrip({ ownerId: USER })] });
     await settle();
-    expect(JSON.parse((await documentMetadataEncryptedStorage.getItem(KEY))!).version).toBe(0);
+    expect(JSON.parse((await documentMetadataEncryptedStorage.getItem(KEY))!).version).toBe(1);
     expect(await AsyncStorage.getItem(KEY)).not.toContain(USER);
   });
 });
 
-describe('APP-058 local persistence (no version change)', () => {
+describe('APP-058 data through APP-059 versioned local persistence', () => {
   it('hydrates a pre-APP-058 encrypted v0 payload with legacy ids, documents and no destination', async () => {
     const before058 = JSON.stringify({
       state: { trips: [legacyTrip()], expenses: [], packingItems: [], participants: [], myUserId: null },
@@ -274,12 +274,12 @@ describe('APP-058 local persistence (no version change)', () => {
     expect(mockDeleteCachedFile).not.toHaveBeenCalled();
   });
 
-  it('writes the destination inside the same encrypted v0 envelope', async () => {
+  it('writes the destination inside the encrypted APP-059 v1 envelope', async () => {
     state().addTrip(input, []);
     await settle();
     expect(await AsyncStorage.getItem(KEY)).not.toContain('Rome');
     const decrypted = JSON.parse((await documentMetadataEncryptedStorage.getItem(KEY))!);
-    expect(decrypted.version).toBe(0);
+    expect(decrypted.version).toBe(1);
     expect(decrypted.state.trips[0].destination).toBe('Rome');
     // A trip holds no document path, filename or URL for linked documents.
     expect(JSON.stringify(decrypted.state.trips[0])).not.toMatch(/storage_path|storagePath|signed|https?:/);

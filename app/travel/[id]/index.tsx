@@ -12,13 +12,23 @@ import DatePickerField from "@/components/DatePickerField";
 import Kicker from "@/components/Kicker";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { sharedStyles } from "@/constants/sharedStyles";
+import { decimalSeparatorFor, formatDkk, moneyLocaleFor } from '@/core/money/format';
+import { minorUnitsToInputText } from '@/core/money/decimal';
+import { parseSupportedMoneyInput } from '@/core/money/supportedMoney';
+import {
+  legacyResolutionPending,
+  projectionVisibleTo,
+  remainingTripBudget,
+  settledTripSpend,
+  tripSpendFreshness,
+} from '@/features/travel/financialReadContract';
 import { useAccentTints } from "@/hooks/useAccentTints";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useTripsStore } from "@/store/useTripsStore";
 import { MAX_TRIP_DESTINATION_LENGTH, normalizeDestination, tripProblem } from "@/utils/trip/tripDomain";
 
 export default function TripDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const accentTints = useAccentTints();
   const borderColor = useThemeColor({}, "border");
@@ -40,10 +50,20 @@ export default function TripDetailScreen() {
   const isEmailVerified = useAuthStore((s) => s.isEmailVerified);
   const removeParticipant = useTripsStore((s) => s.removeParticipant);
   const fetchParticipants = useTripsStore((s) => s.fetchParticipants);
+  const allFinancialProjections = useTripsStore((s) => s.financialProjections);
+  const projectionFreshAt = useTripsStore((s) => s.financialProjectionFreshAt);
+  const projectionStatus = useTripsStore((s) => s.financialProjectionStatus);
+  const myUserId = useTripsStore((s) => s.myUserId);
+  const legacyExpenses = useTripsStore((s) => s.expenses);
+  const refreshFinancialProjection = useTripsStore((s) => s.refreshTripFinancialProjection);
+  const locale = moneyLocaleFor(i18n.language);
 
   useEffect(() => {
-    if (id) fetchParticipants(id);
-  }, [id]);
+    if (id) {
+      fetchParticipants(id);
+      void refreshFinancialProjection(id);
+    }
+  }, [id, fetchParticipants, refreshFinancialProjection]);
 
   const [name, setName] = useState(trip?.name ?? "");
   const [destination, setDestination] = useState(trip?.destination ?? "");
@@ -51,7 +71,11 @@ export default function TripDetailScreen() {
   const [showDelete, setShowDelete] = useState(false);
   const [startDate, setStartDate] = useState(trip?.startDate ?? "");
   const [endDate, setEndDate] = useState(trip?.endDate ?? "");
-  const [budget, setBudget] = useState(trip?.budget?.toString() ?? "");
+  const [budget, setBudget] = useState(
+    trip?.budget !== null && trip?.budget !== undefined
+      ? minorUnitsToInputText(trip.budget, decimalSeparatorFor(locale))
+      : trip?.legacyBudgetMajor?.toString() ?? "",
+  );
   const [showEdit, setShowEdit] = useState(false);
 
   const [showInvite, setShowInvite] = useState(false);
@@ -80,7 +104,27 @@ export default function TripDetailScreen() {
     { destination, startDate, endDate },
     { destinationRequired: normalizeDestination(trip.destination) !== undefined },
   );
-  const canSave = name.trim().length > 0 && problem === null;
+  const parsedBudget = budget.trim().length === 0 ? null : parseSupportedMoneyInput(budget);
+  const budgetValid = parsedBudget === null || (parsedBudget.ok && parsedBudget.value >= 0);
+  const canSave = name.trim().length > 0 && problem === null && budgetValid;
+  // The cache is shown only to the account it belongs to (a session can switch accounts
+  // without a local cleanup). A saved snapshot is shown only labelled as not current;
+  // no snapshot, no number.
+  const projectionsVisible = projectionVisibleTo(myUserId, sessionUserId);
+  const tripProjections = projectionsVisible
+    ? allFinancialProjections.filter((projection) => projection.tripId === trip.id)
+    : [];
+  const spendFreshness = projectionsVisible
+    ? tripSpendFreshness([trip.id], projectionFreshAt, projectionStatus)
+    : 'unavailable';
+  let spent = null;
+  if (spendFreshness !== 'unavailable') {
+    try { spent = settledTripSpend(tripProjections); } catch { spent = null; }
+  }
+  const remaining = spent !== null && trip.budget !== null ? remainingTripBudget(trip.budget, spent) : null;
+  // A saved row whose attachments are still being handed to Economy is not unresolved.
+  const unresolvedCount = legacyExpenses.filter((expense) => expense.tripId === trip.id
+    && !legacyResolutionPending(expense.id, tripProjections, sessionUserId)).length;
 
   const save = () => {
     const saved = updateTrip(trip.id, {
@@ -88,8 +132,7 @@ export default function TripDetailScreen() {
       destination: destination.trim(),
       startDate,
       endDate,
-      budget:
-        budget.trim().length > 0 && !isNaN(parseFloat(budget)) ? parseFloat(budget) : null,
+      budget: parsedBudget?.ok ? parsedBudget.value : null,
     });
     if (!saved) {
       setSaveFailed(true);
@@ -170,8 +213,22 @@ export default function TripDetailScreen() {
         </Text>
         {trip.budget !== null && (
           <Text style={{ color: textMuted }}>
-            {t("travel.ofBudget", { budget: trip.budget.toFixed(2) })}
+            {spent === null
+              ? t('travel.spendUnavailable')
+              : t('travel.budgetSummary', {
+                  spent: formatDkk(spent, locale),
+                  budget: formatDkk(trip.budget, locale),
+                  remaining: formatDkk(remaining!, locale),
+                })}
           </Text>
+        )}
+        {trip.budget !== null && spent !== null && spendFreshness === 'stale' && (
+          <Text accessibilityRole="alert" style={{ color: warning, textAlign: "center" }}>
+            {t('travel.financialProjectionStale')}
+          </Text>
+        )}
+        {unresolvedCount > 0 && (
+          <Text style={{ color: warning }}>{t('travel.unresolvedExpenseCount', { count: unresolvedCount })}</Text>
         )}
       </Card>
 

@@ -35,7 +35,9 @@ jest.mock('@/utils/shared/attachmentSync', () => ({
   deleteAttachmentRemote: jest.fn(() => Promise.resolve()),
   fetchAttachmentsFor: jest.fn(() => Promise.resolve([])),
 }));
+jest.mock('@/utils/auth/pinAuth', () => ({ clearLocalPin: jest.fn(() => Promise.resolve()) }));
 
+import { useAuthStore } from '@/store/useAuthStore';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useIncomeStore } from '@/store/useIncomeStore';
 import { useSavingsGoalsStore } from '@/store/useSavingsGoalsStore';
@@ -58,6 +60,7 @@ async function persisted(key: string): Promise<Record<string, any>> {
 }
 
 beforeEach(async () => {
+  useAuthStore.setState({ session: { user: { id: 'synthetic-user' } } as any });
   await Promise.all([useExpensesStore.persist.rehydrate(), useIncomeStore.persist.rehydrate(), useSavingsGoalsStore.persist.rehydrate()]);
   useExpensesStore.setState({ expenses: [], seriesStoppedAt: {}, categoryBudgets: {} });
   useIncomeStore.setState({ incomeByMonth: {} });

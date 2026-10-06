@@ -66,11 +66,8 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
     reset: () =>
       useDocumentsStore.setState({ documents: [], uploading: false, uploadError: null, deletingId: null, deleteError: null }),
   },
-  {
-    key: 'lifesort-trips',
-    reset: () =>
-      useTripsStore.setState({ trips: [], expenses: [], packingItems: [], participants: [], myUserId: null }),
-  },
+  // Includes the APP-059 projection cache, and retires any projection answer still in flight.
+  { key: 'lifesort-trips', reset: () => useTripsStore.getState().clearLocal() },
   { key: 'lifesort-todos', reset: () => useTodoStore.setState({ todos: [] }) },
   { key: 'lifesort-life-goals', reset: () => useLifeGoalsStore.setState({ goals: [] }) },
   { key: 'lifesort-habits', reset: () => useHabitsStore.setState({ habits: [] }) },

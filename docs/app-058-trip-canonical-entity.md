@@ -18,9 +18,8 @@
 | References, not duplicated blobs | `trip_document_references` holds two ids and a time, owner-bound to both the trip and the document. No name, path, URL or bytes. Packing items and expenses become real children of the trip through foreign keys |
 | Deletion dependency preview | `trip_deletion_preview()` counts on the server; the UI shows it, says linked Documents are kept, shows legacy on-device files separately, fails closed, and offers deletion only to the owner |
 
-**Budget is not linked here.** The master specification says a trip's budget should use
-Economy through a read contract. That bridge — and any change to how Travel stores money —
-is APP-059. Travel keeps its own `budget` and its own expenses exactly as before.
+**Budget is not linked in APP-058.** APP-059 subsequently adds the Economy read bridge and
+MinorUnits migration; see `docs/app-059-travel-budget-bridge.md` and ADR-0047.
 
 ## Baseline and audit
 
@@ -133,7 +132,7 @@ both dates are valid and ordered. `updateTrip` returns `false` when a change wou
 and lets an old trip without a destination stay that way while never letting one that has it lose
 it. New trips are created with the trimmed destination.
 
-**Ownership.** `Trip.ownerId` (optional, in the same encrypted v0 payload) is `trips.user_id` as
+**Ownership.** `Trip.ownerId` (optional, now in the encrypted APP-059 v1 payload) is `trips.user_id` as
 the server said it: mapped on fetch for own and shared trips, recorded when the server accepts a
 trip row under my id, and backfilled onto a legacy trip on the next fetch. `isOwner` is true only
 when it equals the signed-in user. **Unknown means hidden**: while participant data loads, when it

@@ -11,6 +11,11 @@ import { newEntityId } from '@/core/ids';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { minorUnitsToServerNumeric, serverNumericToMinorUnits } from '@/core/money/serverNumeric';
 import { supportedMoney } from '@/core/money/supportedMoney';
+import {
+  combineTravelProjectionInvalidations,
+  invalidateTravelProjectionForExpense,
+  refreshTravelProjectionAfterEconomyCommit,
+} from '@/features/travel/economyMutationInvalidation';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -55,6 +60,13 @@ async function getUserId(): Promise<string | null> {
   return userData.user?.id ?? null;
 }
 
+/** Read synchronously only when an ordered mutation is initiated. Keeping this lazy
+ * avoids making every Economy read-model import initialize the complete auth flow. */
+function initiatingAccountId(): string | null {
+  const { useAuthStore } = require('@/store/useAuthStore') as typeof import('@/store/useAuthStore');
+  return useAuthStore.getState().session?.user.id ?? null;
+}
+
 // Bemærk: "attachments" sendes ALDRIG med i selve expense-raden — de synkroniseres
 // separat til den delte `attachments`-tabel + Storage-bucket (se utils/shared/attachmentSync.ts).
 function toRow(userId: string, e: Expense) {
@@ -75,28 +87,61 @@ function toRow(userId: string, e: Expense) {
   };
 }
 
-async function syncUpsertExpense(expense: Expense) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('expenses').upsert(toRow(userId, expense));
+async function syncUpsertExpense(expense: Expense): Promise<boolean> {
+  try {
+    const userId = await getUserId();
+    if (!userId) return false;
+    const result = await supabase.from('expenses').upsert(toRow(userId, expense));
+    return !result?.error;
+  } catch { return false; }
 }
 
-async function syncUpsertExpenses(expenses: Expense[]) {
-  const userId = await getUserId();
-  if (!userId || expenses.length === 0) return;
-  await supabase.from('expenses').upsert(expenses.map((e) => toRow(userId, e)));
+async function syncUpsertExpenseForAccount(accountId: string | null, expense: Expense): Promise<boolean> {
+  try {
+    const userId = await getUserId();
+    if (!accountId || userId !== accountId) return false;
+    const result = await supabase.from('expenses').upsert(toRow(accountId, expense));
+    return !result?.error;
+  } catch { return false; }
 }
 
-async function syncDeleteExpense(id: string) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('expenses').delete().eq('user_id', userId).eq('id', id);
+async function syncUpsertExpenses(expenses: Expense[]): Promise<boolean> {
+  try {
+    const userId = await getUserId();
+    if (!userId || expenses.length === 0) return false;
+    const result = await supabase.from('expenses').upsert(expenses.map((e) => toRow(userId, e)));
+    return !result?.error;
+  } catch { return false; }
 }
 
-async function syncDeleteExpenses(ids: string[]) {
-  const userId = await getUserId();
-  if (!userId || ids.length === 0) return;
-  await supabase.from('expenses').delete().eq('user_id', userId).in('id', ids);
+async function syncDeleteExpense(accountId: string | null, id: string): Promise<boolean> {
+  try {
+    const userId = await getUserId();
+    if (!accountId || userId !== accountId) return false;
+    const result = await supabase.from('expenses').delete().eq('user_id', accountId).eq('id', id);
+    return !result?.error;
+  } catch { return false; }
+}
+
+async function syncDeleteExpenses(accountId: string | null, ids: string[]): Promise<boolean> {
+  try {
+    const userId = await getUserId();
+    if (!accountId || userId !== accountId || ids.length === 0) return false;
+    const result = await supabase.from('expenses').delete().eq('user_id', accountId).in('id', ids);
+    return !result?.error;
+  } catch { return false; }
+}
+
+const expenseMutationLanes = new Map<string, Promise<void>>();
+
+/** Preserve server mutation order for repeated edits/deletes of one canonical expense. */
+function runExpenseMutation(expenseId: string, mutation: () => Promise<void>): void {
+  const predecessor = expenseMutationLanes.get(expenseId) ?? Promise.resolve();
+  const current = predecessor.catch(() => undefined).then(mutation);
+  expenseMutationLanes.set(expenseId, current);
+  void current.finally(() => {
+    if (expenseMutationLanes.get(expenseId) === current) expenseMutationLanes.delete(expenseId);
+  }).catch(() => undefined);
 }
 
 async function syncUpsertCategoryBudget(userId: string, category: string, limit: MinorUnits) {
@@ -176,6 +221,7 @@ export const useExpensesStore = create<ExpensesState>()(
       },
 
       updateExpense: (id, updates) => {
+        const accountId = initiatingAccountId();
         const target = get().expenses.find((e) => e.id === id);
         if (!target) return;
 
@@ -205,44 +251,54 @@ export const useExpensesStore = create<ExpensesState>()(
           ),
         };
 
-        let removedExpenses: Expense[] = [];
-
-        set((state) => {
-          const updated = state.expenses.map((e) => (e.id === id ? updatedExpense : e));
-
-          const removed = updated.filter(
-            (e) =>
-              (e.seriesId ?? e.id) === (target.seriesId ?? target.id) &&
-              e.id !== id &&
-              e.nextPaymentDate.slice(0, 7) > editedMonth
-          );
-          removedExpenses = removed;
-          const removedIds = removedExpenses.map((e) => e.id);
-
-          const cleaned = updated.filter((e) => !removedIds.includes(e.id));
-          return { expenses: cleaned };
-        });
-
-        syncUpsertExpense(updatedExpense);
+        const updated = get().expenses.map((e) => (e.id === id ? updatedExpense : e));
+        const removedExpenses = updated.filter(
+          (e) =>
+            (e.seriesId ?? e.id) === (target.seriesId ?? target.id) &&
+            e.id !== id &&
+            e.nextPaymentDate.slice(0, 7) > editedMonth
+        );
         const removedIds = removedExpenses.map((e) => e.id);
-        if (removedIds.length > 0) syncDeleteExpenses(removedIds);
+        const invalidation = combineTravelProjectionInvalidations(
+          [id, ...removedIds].map((expenseId) => invalidateTravelProjectionForExpense(expenseId, accountId)),
+        );
+        set({ expenses: updated.filter((e) => !removedIds.includes(e.id)) });
+
+        runExpenseMutation(id, async () => {
+          const updatedOnServer = await syncUpsertExpenseForAccount(accountId, updatedExpense);
+          const removedOnServer = removedIds.length === 0 || await syncDeleteExpenses(accountId, removedIds);
+          if (updatedOnServer && removedOnServer) {
+            await refreshTravelProjectionAfterEconomyCommit(invalidation);
+          }
+        });
         for (const expense of removedExpenses) cleanupAttachments(expense.attachments);
       },
 
       removeExpense: (id) => {
+        const accountId = initiatingAccountId();
         const target = get().expenses.find((e) => e.id === id);
+        if (!target) return;
+        const invalidation = invalidateTravelProjectionForExpense(id, accountId);
         set((state) => ({
           expenses: state.expenses.filter((e) => e.id !== id),
         }));
         cleanupAttachments(target?.attachments);
-        syncDeleteExpense(id);
+        runExpenseMutation(id, async () => {
+          if (await syncDeleteExpense(accountId, id)) {
+            await refreshTravelProjectionAfterEconomyCommit(invalidation);
+          }
+        });
       },
 
       deleteRecurringFromMonth: (seriesId, fromMonthKey) => {
+        const accountId = initiatingAccountId();
         const removedExpenses = get().expenses.filter(
           (e) => e.seriesId === seriesId && e.nextPaymentDate.slice(0, 7) >= fromMonthKey,
         );
         const removedIds = removedExpenses.map((e) => e.id);
+        const invalidation = combineTravelProjectionInvalidations(
+          removedIds.map((expenseId) => invalidateTravelProjectionForExpense(expenseId, accountId)),
+        );
 
         set((state) => ({
           expenses: state.expenses.filter(
@@ -251,7 +307,13 @@ export const useExpensesStore = create<ExpensesState>()(
           seriesStoppedAt: { ...state.seriesStoppedAt, [seriesId]: fromMonthKey },
         }));
 
-        if (removedIds.length > 0) syncDeleteExpenses(removedIds);
+        if (removedIds.length > 0) {
+          runExpenseMutation(removedIds[0], async () => {
+            if (await syncDeleteExpenses(accountId, removedIds)) {
+              await refreshTravelProjectionAfterEconomyCommit(invalidation);
+            }
+          });
+        }
         for (const expense of removedExpenses) cleanupAttachments(expense.attachments);
       },
 
@@ -430,11 +492,17 @@ export const useExpensesStore = create<ExpensesState>()(
         // Hent vedhæftninger for de nye udgifter (fx på et andet device) —
         // sker efter set() ovenfor, så listen viser sig med det samme uden billeder,
         // og billederne popper ind, når de signerede URL'er er hentet.
+        // The answer is merged by id rather than replacing the list: a local-only
+        // attachment added meanwhile (an APP-059 legacy Travel handoff, or one the
+        // user just added) is not on the server and must not be dropped.
         for (const expenseId of newExpenseIds) {
           fetchAttachmentsFor('expense', expenseId).then((attachments) => {
             if (attachments.length === 0) return;
+            const remoteIds = new Set(attachments.map((attachment) => attachment.id));
             set((state) => ({
-              expenses: state.expenses.map((e) => (e.id === expenseId ? { ...e, attachments } : e)),
+              expenses: state.expenses.map((e) => (e.id === expenseId
+                ? { ...e, attachments: [...attachments, ...e.attachments.filter((local) => !remoteIds.has(local.id))] }
+                : e)),
             }));
           });
         }

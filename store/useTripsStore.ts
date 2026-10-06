@@ -1,5 +1,17 @@
 import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
+import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
+import { minorUnitsToServerNumeric, serverNumericToMinorUnits } from '@/core/money/serverNumeric';
+import { supportedMoney } from '@/core/money/supportedMoney';
+import type { MinorUnits } from '@/core/money/minorUnits';
+import {
+  economyReferencesAttachment,
+  fetchTripFinancialProjection,
+  handOffLegacyAttachments,
+  linkTripExpense,
+} from '@/features/economy/travelFinancialBridge';
+import { canResolveLegacyTripExpense } from '@/features/travel/financialReadContract';
+import { registerEconomyMutationInvalidation } from '@/features/travel/economyMutationInvalidation';
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -13,9 +25,10 @@ import {
   Trip,
   TripExpense,
   TripExpenseCategory,
+  TripFinancialProjection,
+  PendingTripExpenseDraft,
   TripParticipant,
 } from "@/types/trip";
-import { fetchExchangeRate } from "@/utils/trip/currencyConversion";
 import { normalizeDestination, tripProblem } from "@/utils/trip/tripDomain";
 import { deleteTripRemote, fetchTripDeletionPreview, type TripDeleteResult, type TripDependencyCounts } from "@/utils/trip/tripRemote";
 import { isTripGone, markTripGone, runInTripLane } from "@/utils/trip/tripWriteLane";
@@ -24,6 +37,20 @@ import {
   cancelTripPackingReminder,
   scheduleTripPackingReminder,
 } from "@/utils/trip/tripReminder";
+import { parseCalendarDate } from '@/utils/shared/localDate';
+
+/** How one explicit legacy resolution ended (APP-059). */
+export type LegacyResolutionResult =
+  /** The server resolved it and Economy durably owns its attachments; the legacy row is gone. */
+  | 'resolved'
+  /**
+   * The server resolved it, so the canonical Economy expense exists and counts, but the
+   * attachment handoff is not confirmed durable yet. The legacy row and its attachments
+   * stay until a later refresh or retry completes it.
+   */
+  | 'attachments-pending'
+  /** Nothing is known to have been saved: refused, invalid, unreachable, or other details. */
+  | 'failed';
 
 interface TripsState {
   trips: Trip[];
@@ -31,6 +58,16 @@ interface TripsState {
   packingItems: PackingItem[];
   participants: TripParticipant[];
   myUserId: string | null;
+  financialProjections: TripFinancialProjection[];
+  /** When the trip's saved snapshot was last confirmed by the server; absent = no snapshot. */
+  financialProjectionFreshAt: Record<string, string>;
+  /**
+   * 'fresh' only for a snapshot the server confirmed during THIS app session. It is
+   * never persisted as 'fresh' and everything read back from disk is 'stale'.
+   */
+  financialProjectionStatus: Record<string, 'fresh' | 'stale'>;
+  /** Narrow restart-safe identities for new Travel expenses whose RPC outcome is not yet settled. */
+  pendingExpenseDrafts: Record<string, PendingTripExpenseDraft>;
 
   /**
    * A new trip must name a destination and have ordered calendar dates (APP-058).
@@ -42,7 +79,7 @@ interface TripsState {
       destination: string;
       startDate: string;
       endDate: string;
-      budget: number | null;
+      budget: MinorUnits | null;
     },
     defaultPackingItems: { label: string; category: PackingCategory }[],
     copyFromTripId?: string | null,
@@ -68,13 +105,34 @@ interface TripsState {
   addTripDocument: (tripId: string, attachment: Attachment) => void;
   removeTripDocument: (tripId: string, attachmentId: string) => void;
 
+  /**
+   * Creates one canonical Economy expense linked to the trip. `expenseId` belongs to
+   * the caller's draft: the same draft sends the same id on every retry, so an
+   * attempt that committed but lost its answer is recognised, never duplicated. A new
+   * draft gets a new id. Resolves the id once the server has confirmed it, else null.
+   */
   addTripExpense: (input: {
+    expenseId: string;
     tripId: string;
     name: string;
-    amount: number;
+    amount: MinorUnits;
     category: TripExpenseCategory;
-    currency?: string;
-  }) => Promise<string>;
+    transactionDate: string;
+  }) => Promise<string | null>;
+  /** Explicitly abandons only this account's unconfirmed draft. */
+  abandonPendingTripExpenseDraft: (expenseId: string) => Promise<boolean>;
+  /**
+   * A server-confirmed resolution is never reported as a failed save. Whether the
+   * attachment handoff is complete is a separate part of the result. The legacy row is
+   * kept until Economy durably owns its attachments.
+   */
+  resolveLegacyTripExpense: (input: {
+    id: string;
+    name: string;
+    amount: MinorUnits;
+    category: TripExpenseCategory;
+    transactionDate: string;
+  }) => Promise<LegacyResolutionResult>;
   updateTripExpense: (
     id: string,
     updates: Partial<Pick<TripExpense, "name" | "amount" | "category">>,
@@ -82,6 +140,13 @@ interface TripsState {
   removeTripExpense: (id: string) => void;
   addExpenseAttachment: (expenseId: string, attachment: Attachment) => void;
   removeExpenseAttachment: (expenseId: string, attachmentId: string) => void;
+  /**
+   * Asks the server for the trip's projection. The answer lands only if, when it
+   * arrives, it is still this trip's latest request, for the same account, in the
+   * same local dataset (no account cleanup or backup restore since), and the trip is
+   * still here. Resolves true when a fresh snapshot was applied.
+   */
+  refreshTripFinancialProjection: (tripId: string) => Promise<boolean>;
 
   addPackingItem: (tripId: string, label: string, category: PackingCategory) => void;
   togglePackingItem: (id: string) => void;
@@ -93,11 +158,21 @@ interface TripsState {
   fetchParticipants: (tripId: string) => Promise<void>;
 
   fetchFromSupabase: () => Promise<void>;
+
+  /** Restores validated backup data. The restored trips never inherit the projection cache. */
+  restoreBackup: (data: Partial<Pick<TripsState, 'trips' | 'expenses' | 'packingItems' | 'participants'>>) => void;
+  /** Logout / account switch (APP-021): every trace, including the projection cache. */
+  clearLocal: () => void;
 }
 
 async function getUserId(): Promise<string | null> {
   const { data: userData } = await supabase.auth.getUser();
   return userData.user?.id ?? null;
+}
+
+/** The signed-in account, or null when there is none or it cannot be confirmed. Never throws. */
+async function signedInUserId(): Promise<string | null> {
+  try { return await getUserId(); } catch { return null; }
 }
 
 function tripToRow(userId: string, tr: Trip) {
@@ -108,9 +183,22 @@ function tripToRow(userId: string, tr: Trip) {
     destination: tr.destination ?? null,
     start_date: tr.startDate,
     end_date: tr.endDate,
-    budget: tr.budget,
+    ...(tr.legacyBudgetMajor === undefined
+      ? { budget: tr.budget === null ? null : minorUnitsToServerNumeric(tr.budget) }
+      : {}),
     created_at: tr.createdAt,
   };
+}
+
+function legacyAmountMinor(value: unknown): MinorUnits | undefined {
+  try { return supportedMoney(legacyMajorUnitsToMinorUnits(value)); } catch { return undefined; }
+}
+
+function remoteBudget(value: unknown): Pick<Trip, 'budget' | 'legacyBudgetMajor'> {
+  if (value === null) return { budget: null };
+  try { return { budget: supportedMoney(serverNumericToMinorUnits(value)) }; } catch {
+    return { budget: null, ...(typeof value === 'number' && Number.isFinite(value) ? { legacyBudgetMajor: value } : {}) };
+  }
 }
 
 function packingItemToRow(userId: string, p: PackingItem) {
@@ -183,12 +271,104 @@ async function syncDeletePackingItem(id: string) {
 
 async function syncUpsertExpense(expense: TripExpense) {
   const userId = await getUserId();
-  if (!userId) return;
+  if (!userId || (expense.authorId !== undefined && expense.authorId !== userId)) return;
   await supabase.from("trip_expenses").upsert(expenseToRow(userId, expense));
 }
 
 async function syncDeleteExpense(id: string) {
   await supabase.from("trip_expenses").delete().eq("id", id);
+}
+
+/**
+ * Which local dataset an asynchronous answer was requested for (APP-059 review #1).
+ *
+ * The module-choice store's epoch mechanism: every account cleanup (log out, and
+ * before every log in) and every backup restore moves the epoch, so an answer that
+ * was in flight belongs to a dataset that is no longer here and changes nothing.
+ * Each trip also remembers its latest projection request, so an older answer can
+ * never overwrite a newer one, and a projection answer must be for the account that
+ * is still signed in (checked like every remote write here, via `getUserId`).
+ * In memory only; it dies with the process.
+ */
+let datasetEpoch = 0;
+let projectionSequence = 0;
+const latestProjectionRequest = new Map<string, number>();
+
+/** Freshness describes this session's server answer, so it is never written to disk as 'fresh'. */
+function staleStatuses(status: Record<string, 'fresh' | 'stale'>): Record<string, 'fresh' | 'stale'> {
+  return Object.fromEntries(Object.keys(status).map((tripId) => [tripId, 'stale' as const]));
+}
+
+function samePendingDraft(
+  draft: PendingTripExpenseDraft,
+  input: Omit<PendingTripExpenseDraft, 'accountId' | 'status'>,
+): boolean {
+  return draft.expenseId === input.expenseId
+    && draft.tripId === input.tripId
+    && draft.name === input.name
+    && draft.amount === input.amount
+    && draft.category === input.category
+    && draft.transactionDate === input.transactionDate;
+}
+
+/** Await the existing store's real persistence adapter, including its per-key barrier. */
+async function persistTripsStateNow(): Promise<boolean> {
+  const options = useTripsStore.persist.getOptions();
+  if (!options.storage || !options.name) return false;
+  try {
+    const state = useTripsStore.getState();
+    const persisted = options.partialize ? options.partialize(state) : state;
+    await options.storage.setItem(options.name, { state: persisted, version: options.version });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Legacy Travel files that Economy now references belong to Economy and must survive. */
+function releasableAttachments(attachments: readonly Attachment[] | undefined): Attachment[] {
+  return (attachments ?? []).filter((attachment) => !economyReferencesAttachment(attachment));
+}
+
+/**
+ * Lets go of a legacy expense that the server has resolved into the canonical
+ * Economy expense with the same id (APP-059 review #1).
+ *
+ * The legacy row is the only record of its attachments until Economy holds them
+ * durably, so it is removed ONLY after `handOffLegacyAttachments` says 'durable'.
+ * Until then it stays exactly as it was: still reachable, still excluded from spend.
+ * The next refresh tries again. An attachment added to the legacy row meanwhile
+ * keeps the row until that attachment has been handed over as well.
+ */
+async function settleResolvedLegacyExpense(expenseId: string): Promise<void> {
+  const legacy = useTripsStore.getState().expenses.find((item) => item.id === expenseId);
+  if (!legacy) return;
+  if (legacy.attachments.length > 0 && await handOffLegacyAttachments(expenseId, legacy.attachments) !== 'durable') return;
+  const handedOver = new Set(legacy.attachments.map((attachment) => attachment.id));
+  useTripsStore.setState((state) => ({
+    expenses: state.expenses.filter((item) => item.id !== expenseId
+      || item.attachments.some((attachment) => !handedOver.has(attachment.id))),
+  }));
+}
+
+/**
+ * Whether the server's own record shows exactly THIS submission resolved: a projection
+ * confirmed in this session lists the legacy identity as canonical for this account,
+ * with the submitted details. It decides the result when the resolution's own answer
+ * was lost. A retry whose details differ from what the server holds was not saved.
+ */
+function serverRecordsResolution(
+  state: TripsState,
+  expense: TripExpense,
+  accountId: string,
+  input: { name: string; amount: MinorUnits; category: TripExpenseCategory; transactionDate: string },
+): boolean {
+  if (state.financialProjectionStatus[expense.tripId] !== 'fresh') return false;
+  return state.financialProjections.some((projection) => projection.tripId === expense.tripId
+    && projection.expenseId === expense.id && projection.legacyTripExpenseId === expense.id
+    && projection.expenseOwnerId === accountId && projection.name === input.name.trim()
+    && projection.amount === input.amount && projection.category === input.category
+    && projection.transactionDate === input.transactionDate);
 }
 
 export const useTripsStore = create<TripsState>()(
@@ -199,6 +379,10 @@ export const useTripsStore = create<TripsState>()(
       packingItems: [],
       participants: [],
       myUserId: null,
+      financialProjections: [],
+      financialProjectionFreshAt: {},
+      financialProjectionStatus: {},
+      pendingExpenseDrafts: {},
 
       addTrip: (input, defaultPackingItems, copyFromTripId) => {
         if (tripProblem(input, { destinationRequired: true }) !== null) return null;
@@ -248,6 +432,7 @@ export const useTripsStore = create<TripsState>()(
         const problem = tripProblem(next, { destinationRequired: normalizeDestination(current.destination) !== undefined });
         if (problem !== null) return false;
         const target: Trip = { ...next, destination: normalizeDestination(next.destination) };
+        if (Object.prototype.hasOwnProperty.call(updates, 'budget')) delete target.legacyBudgetMajor;
         set((state) => ({ trips: state.trips.map((tr) => (tr.id === id ? target : tr)) }));
         scheduleTripPackingReminder(id, target.name, target.startDate);
         void syncTrip(id);
@@ -273,8 +458,10 @@ export const useTripsStore = create<TripsState>()(
         }),
 
       removeTripFromDevice: (id) => {
-        // Before anything else: a write still waiting for this trip must not run.
+        // Before anything else: a write still waiting for this trip must not run,
+        // and a projection answer still in flight for it must not land.
         markTripGone(id);
+        latestProjectionRequest.delete(id);
         const targetTrip = get().trips.find((tr) => tr.id === id);
         const removedExpenses = get().expenses.filter((e) => e.tripId === id);
         cancelTripPackingReminder(id);
@@ -283,9 +470,19 @@ export const useTripsStore = create<TripsState>()(
           expenses: state.expenses.filter((e) => e.tripId !== id),
           packingItems: state.packingItems.filter((p) => p.tripId !== id),
           participants: state.participants.filter((p) => p.tripId !== id),
+          financialProjections: state.financialProjections.filter((projection) => projection.tripId !== id),
+          financialProjectionFreshAt: Object.fromEntries(
+            Object.entries(state.financialProjectionFreshAt).filter(([tripId]) => tripId !== id),
+          ),
+          financialProjectionStatus: Object.fromEntries(
+            Object.entries(state.financialProjectionStatus).filter(([tripId]) => tripId !== id),
+          ),
+          pendingExpenseDrafts: Object.fromEntries(
+            Object.entries(state.pendingExpenseDrafts).filter(([, draft]) => draft.tripId !== id),
+          ),
         }));
         cleanupAttachments(targetTrip?.documents);
-        for (const expense of removedExpenses) cleanupAttachments(expense.attachments);
+        for (const expense of removedExpenses) cleanupAttachments(releasableAttachments(expense.attachments));
       },
 
       addTripDocument: (tripId, attachment) =>
@@ -312,37 +509,141 @@ export const useTripsStore = create<TripsState>()(
       },
 
       addTripExpense: async (input) => {
-        const { currency, amount, ...rest } = input;
-        const id = newEntityId();
-
-        let finalAmount = amount;
-        let originalAmount: number | undefined;
-        let exchangeRate: number | undefined;
-        let resolvedCurrency: string | undefined;
-
-        if (currency && currency !== 'DKK') {
-          const rate = await fetchExchangeRate(currency, 'DKK');
-          if (rate !== null) {
-            originalAmount = amount;
-            exchangeRate = rate;
-            finalAmount = Math.round(amount * rate * 100) / 100;
-            resolvedCurrency = currency;
-          }
+        if (typeof input.expenseId !== 'string' || input.expenseId.trim().length === 0
+          || input.name.trim().length === 0 || input.amount < 0 || parseCalendarDate(input.transactionDate) === null) {
+          return null;
         }
-
-        const newExpense: TripExpense = {
-          id,
-          attachments: [],
-          createdAt: new Date().toISOString(),
-          amount: finalAmount,
-          currency: resolvedCurrency,
-          originalAmount,
-          exchangeRate,
-          ...rest,
+        try { supportedMoney(input.amount); } catch { return null; }
+        const accountId = await signedInUserId();
+        if (!accountId || (get().myUserId !== null && get().myUserId !== accountId)) return null;
+        const payload = {
+          expenseId: input.expenseId,
+          tripId: input.tripId,
+          name: input.name.trim(),
+          amount: input.amount,
+          category: input.category,
+          transactionDate: input.transactionDate,
         };
-        set((state) => ({ expenses: [...state.expenses, newExpense] }));
-        syncUpsertExpense(newExpense);
-        return id;
+        const existing = get().pendingExpenseDrafts[input.expenseId];
+        // An id belongs forever to the account and exact payload that first persisted it.
+        if (existing && (existing.accountId !== accountId || !samePendingDraft(existing, payload))) return null;
+        // The screen must recover an unresolved draft for this account/trip instead of
+        // quietly creating a second UUID after a restart.
+        if (!existing && Object.values(get().pendingExpenseDrafts).some((draft) =>
+          draft.accountId === accountId && draft.tripId === input.tripId && draft.status !== 'confirmed')) return null;
+        if (existing?.status === 'confirmed') {
+          set((state) => {
+            const pendingExpenseDrafts = { ...state.pendingExpenseDrafts };
+            delete pendingExpenseDrafts[input.expenseId];
+            return { pendingExpenseDrafts };
+          });
+          await persistTripsStateNow();
+          return input.expenseId;
+        }
+        set((state) => ({
+          pendingExpenseDrafts: {
+            ...state.pendingExpenseDrafts,
+            [input.expenseId]: { ...payload, accountId, status: 'pending' },
+          },
+        }));
+        // No server mutation is allowed until the identity and exact retry payload are
+        // durably readable from the same storage path used during app hydration.
+        if (!await persistTripsStateNow()) return null;
+        // Persistence is an await boundary: a recovery link can replace the session
+        // while the draft write is in flight. Keep the draft for its original account,
+        // but never let the replacement account submit it.
+        if (await signedInUserId() !== accountId
+          || (get().myUserId !== null && get().myUserId !== accountId)) return null;
+        const result = await linkTripExpense({
+          ...payload,
+          expectedAccountId: accountId,
+        });
+        // The RPC is also an await boundary. Its transaction may have committed for A,
+        // but B must not settle, refresh or rewrite A's local draft.
+        if (await signedInUserId() !== accountId
+          || (get().myUserId !== null && get().myUserId !== accountId)) return null;
+        if (result !== 'linked') {
+          set((state) => ({
+            pendingExpenseDrafts: {
+              ...state.pendingExpenseDrafts,
+              [input.expenseId]: { ...payload, accountId, status: 'ambiguous' },
+            },
+          }));
+          await persistTripsStateNow();
+          return null;
+        }
+        await get().refreshTripFinancialProjection(input.tripId);
+        set((state) => ({
+          pendingExpenseDrafts: {
+            ...state.pendingExpenseDrafts,
+            [input.expenseId]: { ...payload, accountId, status: 'confirmed' },
+          },
+        }));
+        if (!await persistTripsStateNow()) {
+          set((state) => ({
+            pendingExpenseDrafts: {
+              ...state.pendingExpenseDrafts,
+              [input.expenseId]: { ...payload, accountId, status: 'ambiguous' },
+            },
+          }));
+          return null;
+        }
+        set((state) => {
+          const pendingExpenseDrafts = { ...state.pendingExpenseDrafts };
+          delete pendingExpenseDrafts[input.expenseId];
+          return { pendingExpenseDrafts };
+        });
+        await persistTripsStateNow();
+        return input.expenseId;
+      },
+      abandonPendingTripExpenseDraft: async (expenseId) => {
+        const accountId = await signedInUserId();
+        const draft = get().pendingExpenseDrafts[expenseId];
+        if (!accountId || !draft || draft.accountId !== accountId || draft.status === 'confirmed') return false;
+        set((state) => {
+          const pendingExpenseDrafts = { ...state.pendingExpenseDrafts };
+          delete pendingExpenseDrafts[expenseId];
+          return { pendingExpenseDrafts };
+        });
+        return persistTripsStateNow();
+      },
+      resolveLegacyTripExpense: async (input) => {
+        const userId = await signedInUserId();
+        const expense = get().expenses.find((item) => item.id === input.id);
+        if (!expense) return 'failed';
+        const trip = get().trips.find((candidate) => candidate.id === expense.tripId);
+        // Fail closed: nothing is sent unless this account is shown to be the author.
+        if (!userId || !canResolveLegacyTripExpense(expense, trip, userId)
+          || input.name.trim().length === 0 || input.amount < 0
+          || parseCalendarDate(input.transactionDate) === null) return 'failed';
+        try { supportedMoney(input.amount); } catch { return 'failed'; }
+        if (await signedInUserId() !== userId
+          || (get().myUserId !== null && get().myUserId !== userId)) return 'failed';
+        const result = await linkTripExpense({
+          tripId: expense.tripId,
+          expectedAccountId: userId,
+          expenseId: expense.id,
+          legacyTripExpenseId: expense.id,
+          name: input.name,
+          amount: input.amount,
+          category: input.category,
+          transactionDate: input.transactionDate,
+          currency: expense.currency,
+          originalAmount: expense.originalAmount,
+          exchangeRate: expense.exchangeRate,
+        });
+        if (await signedInUserId() !== userId
+          || (get().myUserId !== null && get().myUserId !== userId)) return 'failed';
+        // The server now holds the canonical expense, but the legacy row keeps its
+        // attachments until Economy durably does. If the answer was lost, the refresh
+        // below finds the server's record of the resolution and settles it the same way.
+        if (result === 'linked') await settleResolvedLegacyExpense(expense.id);
+        await get().refreshTripFinancialProjection(expense.tripId);
+        // Saved: the server said so, or — when that answer was lost — its own record shows
+        // exactly this submission resolved. A saved resolution is never a failed save.
+        if (result !== 'linked' && !serverRecordsResolution(get(), expense, userId, input)) return 'failed';
+        // The legacy row (and its attachments) stays until Economy durably owns them.
+        return get().expenses.some((item) => item.id === expense.id) ? 'attachments-pending' : 'resolved';
       },
       updateTripExpense: (id, updates) => {
         set((state) => ({
@@ -358,7 +659,7 @@ export const useTripsStore = create<TripsState>()(
         set((state) => ({
           expenses: state.expenses.filter((e) => e.id !== id),
         }));
-        cleanupAttachments(target?.attachments);
+        cleanupAttachments(releasableAttachments(target?.attachments));
         syncDeleteExpense(id);
       },
 
@@ -384,7 +685,63 @@ export const useTripsStore = create<TripsState>()(
               : e,
           ),
         }));
-        if (attachment?.uri) deleteCachedAttachmentFile(attachment.uri);
+        if (attachment?.uri && !economyReferencesAttachment(attachment)) deleteCachedAttachmentFile(attachment.uri);
+      },
+
+      refreshTripFinancialProjection: async (tripId) => {
+        // What the answer must still match is fixed when the request starts.
+        const epoch = datasetEpoch;
+        const request = ++projectionSequence;
+        latestProjectionRequest.set(tripId, request);
+        const stillCurrent = () => epoch === datasetEpoch
+          && latestProjectionRequest.get(tripId) === request
+          && !isTripGone(tripId)
+          && get().trips.some((trip) => trip.id === tripId);
+
+        // The account this request is made for. Without one no answer could be tied to
+        // an account, so the cached snapshot simply stays unconfirmed.
+        const accountId = await signedInUserId();
+        // Answers land only in a Travel dataset that belongs to the same account. After a
+        // session switch without a cleanup, the local data is still the previous account's
+        // until the new account's trip fetch takes it over.
+        const ownDataset = () => accountId !== null && get().myUserId === accountId;
+        const projections = accountId && stillCurrent() && ownDataset() ? await fetchTripFinancialProjection(tripId) : null;
+        if (!stillCurrent()) return false;
+        if (accountId !== null && !ownDataset()) return false;
+        if (projections === null) {
+          set((state) => ({
+            financialProjectionStatus: { ...state.financialProjectionStatus, [tripId]: 'stale' },
+          }));
+          return false;
+        }
+        // The session can change without a cleanup (another account's recovery link).
+        // An answer made for a different account than the current one never lands.
+        if (await signedInUserId() !== accountId || !stillCurrent() || !ownDataset()) return false;
+        set((state) => ({
+          financialProjections: [
+            ...state.financialProjections.filter((projection) => projection.tripId !== tripId),
+            ...projections,
+          ],
+          financialProjectionFreshAt: {
+            ...state.financialProjectionFreshAt,
+            [tripId]: new Date().toISOString(),
+          },
+          financialProjectionStatus: { ...state.financialProjectionStatus, [tripId]: 'fresh' },
+        }));
+
+        // The server's own record that this account resolved a legacy row: finish the
+        // attachment handoff for any such row still here. This is what recovers a lost
+        // answer, a failed Economy refresh, or a restart in the middle of a resolution.
+        const resolved = new Set(projections
+          .filter((projection) => projection.legacyTripExpenseId === projection.expenseId
+            && projection.expenseOwnerId === accountId)
+          .map((projection) => projection.expenseId));
+        const pending = get().expenses.filter((expense) => expense.tripId === tripId && resolved.has(expense.id));
+        for (const expense of pending) {
+          if (epoch !== datasetEpoch) break;
+          await settleResolvedLegacyExpense(expense.id);
+        }
+        return true;
       },
 
       addPackingItem: (tripId, label, category) => {
@@ -487,14 +844,39 @@ export const useTripsStore = create<TripsState>()(
       },
 
       fetchFromSupabase: async () => {
+        // An account cleanup while this is in flight means its answers belong to the
+        // previous account: none of them, nor the projection refreshes they would start,
+        // may be written into the next account's store (APP-059 review #1).
+        let epoch = datasetEpoch;
         const userId = await getUserId();
-        if (!userId) return;
-        set({ myUserId: userId });
+        if (!userId || epoch !== datasetEpoch) return;
+        const previousAccount = get().myUserId;
+        if (previousAccount !== null && previousAccount !== userId) {
+          // The session switched accounts without the normal local cleanup (another
+          // account's password-recovery link calls setSession in place). The projection
+          // cache is the previous account's: it is dropped, and nothing that account
+          // still has in flight may land. Only APP-059 state is reset here; the rest of
+          // the local data is the general auth cleanup's concern, not this store's.
+          datasetEpoch += 1;
+          latestProjectionRequest.clear();
+          epoch = datasetEpoch;
+          set((state) => ({
+            myUserId: userId,
+            financialProjections: [],
+            financialProjectionFreshAt: {},
+            financialProjectionStatus: {},
+            pendingExpenseDrafts: Object.fromEntries(
+              Object.entries(state.pendingExpenseDrafts).filter(([, draft]) => draft.accountId === userId),
+            ),
+          }));
+        } else {
+          set({ myUserId: userId });
+        }
 
         const [tripsResult, packingResult, expensesResult, myInvitationsResult] = await Promise.all([
           supabase.from("trips").select("id, user_id, name, destination, start_date, end_date, budget, created_at").eq("user_id", userId),
           supabase.from("trip_packing_items").select("id, trip_id, label, checked, category").eq("user_id", userId),
-          supabase.from("trip_expenses").select("id, trip_id, name, amount, category, currency, original_amount, exchange_rate").eq("user_id", userId),
+          supabase.from("trip_expenses").select("id, user_id, trip_id, name, amount, category, currency, original_amount, exchange_rate").eq("user_id", userId),
           supabase.from("trip_participants").select("trip_id, owner_id, user_id, invited_email, status, invited_at").eq("user_id", userId),
         ]);
 
@@ -509,7 +891,7 @@ export const useTripsStore = create<TripsState>()(
         if (acceptedTripIds.length > 0) {
           const [sharedTrips, sharedExpenses, sharedPacking] = await Promise.all([
             supabase.from("trips").select("id, user_id, name, destination, start_date, end_date, budget, created_at").in("id", acceptedTripIds),
-            supabase.from("trip_expenses").select("id, trip_id, name, amount, category, currency, original_amount, exchange_rate").in("trip_id", acceptedTripIds),
+            supabase.from("trip_expenses").select("id, user_id, trip_id, name, amount, category, currency, original_amount, exchange_rate").in("trip_id", acceptedTripIds),
             supabase.from("trip_packing_items").select("id, trip_id, label, checked, category").in("trip_id", acceptedTripIds),
           ]);
           sharedTripsData = sharedTrips.data ?? [];
@@ -517,6 +899,7 @@ export const useTripsStore = create<TripsState>()(
           sharedPackingData = sharedPacking.data ?? [];
         }
 
+        if (epoch !== datasetEpoch) return;
         set((state) => {
           const allTripRows = [...(tripsResult.data ?? []), ...sharedTripsData];
           const existingTripIds = new Set(state.trips.map((tr) => tr.id));
@@ -533,7 +916,7 @@ export const useTripsStore = create<TripsState>()(
               destination: row.destination ?? undefined,
               startDate: row.start_date,
               endDate: row.end_date,
-              budget: row.budget !== null ? Number(row.budget) : null,
+              ...remoteBudget(row.budget),
               documents: [],
               createdAt: row.created_at,
             }));
@@ -550,6 +933,7 @@ export const useTripsStore = create<TripsState>()(
             .map((row) => ({
               id: row.id,
               tripId: row.trip_id,
+              authorId: row.user_id ?? undefined,
               label: row.label,
               checked: row.checked,
               isDefault: false,
@@ -558,19 +942,26 @@ export const useTripsStore = create<TripsState>()(
 
           const allExpenseRows = [...(expensesResult.data ?? []), ...sharedExpensesData];
           const existingExpenseIds = new Set(state.expenses.map((e) => e.id));
+          // `trip_expenses.user_id` is the row's author, and the server never changes it
+          // (APP-058). Who may resolve a legacy row depends on it (APP-059 review #1).
+          const serverAuthors = new Map<string, string>(allExpenseRows
+            .filter((row) => typeof row.user_id === 'string')
+            .map((row) => [row.id, row.user_id]));
           const fetchedExpenses: TripExpense[] = allExpenseRows
             .filter((row) => !existingExpenseIds.has(row.id) && !isTripGone(row.trip_id))
             .map((row) => ({
               id: row.id,
               tripId: row.trip_id,
+              ...(typeof row.user_id === 'string' ? { authorId: row.user_id } : {}),
               name: row.name,
               amount: Number(row.amount),
+              amountMinor: legacyAmountMinor(Number(row.amount)),
               category: row.category as TripExpenseCategory,
               currency: row.currency ?? undefined,
               originalAmount: row.original_amount !== null ? Number(row.original_amount) : undefined,
               exchangeRate: row.exchange_rate !== null ? Number(row.exchange_rate) : undefined,
               attachments: [],
-              createdAt: new Date().toISOString(),
+              resolutionStatus: 'requires-transaction-date',
             }));
 
           const existingParticipantKeys = new Set(state.participants.map((p) => `${p.tripId}-${p.userId}`));
@@ -597,15 +988,112 @@ export const useTripsStore = create<TripsState>()(
               ...fetchedTrips,
             ],
             packingItems: [...state.packingItems, ...fetchedPackingItems],
-            expenses: [...state.expenses, ...fetchedExpenses],
+            // A known legacy row learns its author from the server, which is the authority
+            // on it; a row the server did not return keeps whatever it had locally.
+            expenses: [
+              ...state.expenses.map((expense) => {
+                const authorId = serverAuthors.get(expense.id);
+                return authorId !== undefined && authorId !== expense.authorId ? { ...expense, authorId } : expense;
+              }),
+              ...fetchedExpenses,
+            ],
             participants: [...state.participants, ...fetchedParticipants],
           };
+        });
+        await Promise.all(get().trips.map((trip) => get().refreshTripFinancialProjection(trip.id)));
+      },
+
+      // APP-059 review #1: the restored trips start without any projection cache — not
+      // even as stale data — and nothing requested before the restore may land. One
+      // write, so no moment ever holds restored trips beside the old projections.
+      restoreBackup: (data) => {
+        datasetEpoch += 1;
+        latestProjectionRequest.clear();
+        set({
+          ...data,
+          financialProjections: [],
+          financialProjectionFreshAt: {},
+          financialProjectionStatus: {},
+          pendingExpenseDrafts: {},
+        });
+      },
+
+      // APP-021: the epoch moves BEFORE the state is cleared, so an answer still in
+      // flight cannot write the previous account's trips or projections back.
+      clearLocal: () => {
+        datasetEpoch += 1;
+        latestProjectionRequest.clear();
+        set({
+          trips: [], expenses: [], packingItems: [], participants: [], myUserId: null,
+          financialProjections: [], financialProjectionFreshAt: {}, financialProjectionStatus: {}, pendingExpenseDrafts: {},
         });
       },
     }),
     {
       name: "lifesort-trips",
+      version: 1,
       storage: createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage)),
+      // APP-059 review #1: freshness is never persisted, and nothing read back from disk
+      // is current until the server confirms it again in this session.
+      partialize: (state) => ({ ...state, financialProjectionStatus: staleStatuses(state.financialProjectionStatus) }),
+      merge: (persisted, current) => {
+        const merged = { ...current, ...(persisted as Partial<TripsState> | undefined) };
+        return { ...merged, financialProjectionStatus: staleStatuses(merged.financialProjectionStatus ?? {}) };
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.financialProjections ??= [];
+        state.financialProjectionFreshAt ??= {};
+        state.financialProjectionStatus ??= {};
+        state.pendingExpenseDrafts ??= {};
+        state.expenses = state.expenses.map((expense) => ({
+          ...expense,
+          resolutionStatus: 'requires-transaction-date',
+          ...(expense.amountMinor === undefined && legacyAmountMinor(expense.amount) !== undefined
+            ? { amountMinor: legacyAmountMinor(expense.amount) }
+            : {}),
+        }));
+      },
     },
   ),
 );
+
+registerEconomyMutationInvalidation({
+  invalidateExpense(expenseId, accountId) {
+    const state = useTripsStore.getState();
+    if (accountId === null || state.myUserId !== accountId) {
+      return { accountId, tripIds: [], requestTokens: {} };
+    }
+    const projectedTripIds = state.financialProjections
+      .filter((projection) => projection.expenseId === expenseId
+        && projection.expenseOwnerId === accountId)
+      .map((projection) => projection.tripId);
+    // With no cached row there is no reverse index from Economy id to trip. Invalidate
+    // every trip in this account's currently loaded dataset so an older in-flight
+    // answer cannot become current and the successful write gets an authoritative read.
+    const tripIds = [...new Set(projectedTripIds.length > 0
+      ? projectedTripIds
+      : state.trips.map((trip) => trip.id))];
+    const requestTokens: Record<string, number> = {};
+    for (const tripId of tripIds) {
+      const token = ++projectionSequence;
+      latestProjectionRequest.set(tripId, token);
+      requestTokens[tripId] = token;
+    }
+    if (tripIds.length > 0) {
+      useTripsStore.setState((current) => ({
+        financialProjectionStatus: {
+          ...current.financialProjectionStatus,
+          ...Object.fromEntries(tripIds.map((tripId) => [tripId, 'stale' as const])),
+        },
+      }));
+    }
+    return { accountId, tripIds, requestTokens };
+  },
+  async refreshAfterCommit({ accountId, tripIds, requestTokens }) {
+    if (accountId === null || useTripsStore.getState().myUserId !== accountId) return;
+    await Promise.all(tripIds
+      .filter((tripId) => latestProjectionRequest.get(tripId) === requestTokens[tripId])
+      .map((tripId) => useTripsStore.getState().refreshTripFinancialProjection(tripId)));
+  },
+});

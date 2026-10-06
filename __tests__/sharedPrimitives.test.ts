@@ -39,15 +39,13 @@ const ATTACHMENT_TYPE_FILES = ['types/attachment.ts'];
 
 /**
  * Skærme der formaterer beløb selv, i stedet for gennem et Money-primitiv.
- * APP-040 flyttede Økonomiens beløb til core/money/format.ts; Food og Travel er
- * ikke migreret. ExpensePieChart står her for en procentsats, ikke et beløb.
+ * APP-040 flyttede Økonomiens beløb til core/money/format.ts; APP-059 flyttede
+ * Travel samme vej. Food er ikke migreret. ExpensePieChart står her for en
+ * procentsats, ikke et beløb.
  */
 const MONEY_FORMATTING_FILES = [
   'app/food/index.tsx',
   'app/food/weekly-plan.tsx',
-  'app/travel/[id]/expenses/index.tsx',
-  'app/travel/[id]/index.tsx',
-  'app/travel/index.tsx',
   'components/ExpensePieChart.tsx',
   // APP-011 flyttede Homes beløbsformatering herind. Den forsvandt ikke —
   // den flyttede, og skal med i frysningen, hvor den nu står.

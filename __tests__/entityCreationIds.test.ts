@@ -4,6 +4,8 @@ import { newEntityId } from '@/core/ids';
 import { minorUnits } from '@/core/money/minorUnits';
 import { Expense } from '@/types/expense';
 
+let mockUser: { id: string } | null = null;
+
 // Exercise the real Zustand persistence/hydration and domain actions without a device.
 // Encryption itself is covered by the APP-028/029 suites.
 jest.mock('@/core/storage/documentCacheStorage', () => ({
@@ -14,7 +16,10 @@ jest.mock('@/core/storage/cycleHealthEncryptedStorage', () => ({
   cycleHealthEncryptedStorage: require('@react-native-async-storage/async-storage'),
 }));
 jest.mock('@/lib/supabase', () => ({
-  supabase: { auth: { getUser: jest.fn(() => Promise.resolve({ data: { user: null } })) } },
+  supabase: {
+    auth: { getUser: jest.fn(() => Promise.resolve({ data: { user: mockUser } })) },
+    from: jest.fn(() => ({ upsert: jest.fn(() => Promise.resolve({ error: null })) })),
+  },
 }));
 jest.mock('@/utils/shared/attachmentSync', () => ({
   uploadAttachment: jest.fn(() => Promise.resolve(null)),
@@ -23,9 +28,14 @@ jest.mock('@/utils/shared/attachmentSync', () => ({
 jest.mock('@/utils/trip/tripReminder', () => ({
   scheduleTripPackingReminder: jest.fn(), cancelTripPackingReminder: jest.fn(),
 }));
+jest.mock('@/features/economy/travelFinancialBridge', () => ({
+  linkTripExpense: jest.fn(() => Promise.resolve('linked')),
+  fetchTripFinancialProjection: jest.fn(() => Promise.resolve([])),
+}));
 jest.mock('@/utils/warranty/warrantyReminder', () => ({
   scheduleWarrantyReminder: jest.fn(), cancelWarrantyReminder: jest.fn(),
 }));
+jest.mock('@/utils/auth/pinAuth', () => ({ clearLocalPin: jest.fn(() => Promise.resolve()) }));
 
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useTripsStore } from '@/store/useTripsStore';
@@ -52,6 +62,7 @@ function expectFreshIds(records: { id: string }[]) {
 }
 
 beforeEach(async () => {
+  mockUser = null;
   await Promise.all([
     useExpensesStore.persist.rehydrate(), useTripsStore.persist.rehydrate(),
     useSavingsGoalsStore.persist.rehydrate(), useTodoStore.persist.rehydrate(),
@@ -107,15 +118,27 @@ it('mints fresh recurrence instance IDs, preserves series/month deduplication an
 });
 
 it('keeps trip references and reminder IDs, while copied packing items get new IDs', async () => {
+  mockUser = { id: 'synthetic-account' };
   const store = useTripsStore.getState();
   const firstId = store.addTrip(tripInput, [{ label: 'Passport', category: 'other' }])!;
   const copiedId = store.addTrip(tripInput, [], firstId)!;
   store.addPackingItem(copiedId, 'Coat', 'other');
-  const expenseId = await store.addTripExpense({ tripId: copiedId, name: 'Train', amount: 25, category: 'transport' });
+  // APP-059 review #1: the draft mints its crypto id once and the store keeps it.
+  const draftId = newEntityId();
+  const expenseId = await store.addTripExpense({
+    expenseId: draftId,
+    tripId: copiedId,
+    name: 'Train',
+    amount: minorUnits(2_500),
+    category: 'transport',
+    transactionDate: '2027-01-02',
+  });
   const state = useTripsStore.getState();
-  expectFreshIds([...state.trips, ...state.packingItems, ...state.expenses]);
+  expectFreshIds([...state.trips, ...state.packingItems]);
+  expect(expenseId).toBe(draftId);
+  expect(expenseId).toMatch(UUID_V4);
   expect(state.packingItems.map((p) => p.tripId)).toEqual([firstId, copiedId, copiedId]);
-  expect(state.expenses[0]).toMatchObject({ id: expenseId, tripId: copiedId });
+  expect(state.expenses).toEqual([]); // canonical Economy, never duplicated in legacy Travel state
   expect(scheduleTripPackingReminder).toHaveBeenCalledWith(copiedId, tripInput.name, tripInput.startDate);
 });
 

@@ -169,10 +169,12 @@ describe('APP-058 architecture', () => {
     }
   });
 
-  it('holds the story boundaries: no Economy bridge, no notification platform, no outbox, no reservation domain', () => {
+  it('holds the APP-059 boundary: no direct Economy store, notification platform, outbox, or reservation domain', () => {
     for (const file of TRAVEL_FILES) {
       const source = stripComments(read(file));
-      expect(source).not.toMatch(/useExpensesStore|useIncomeStore|useSavingsGoalsStore|core\/money|core\/economy/);
+      // APP-059 deliberately adds the typed Economy bridge and shared Money
+      // primitives. Travel still cannot reach any private Economy store.
+      expect(source).not.toMatch(/useExpensesStore|useIncomeStore|useSavingsGoalsStore/);
       expect(source).not.toMatch(/core\/sync|enqueue|outbox|tombstone|revision/i);
     }
     expect(fs.existsSync(path.join(REPO_ROOT, 'types/reservation.ts'))).toBe(false);

@@ -13,6 +13,7 @@ import { Platform } from 'react-native';
 import type { StateStorage } from 'zustand/middleware';
 
 import { expensesMoneyMigration } from './migrations/economyMoney';
+import { travelMoneyMigration } from './migrations/travelMoney';
 import { migrateLocalStore, type LocalMigrationDefinition } from './migrations/harness';
 
 const KEYCHAIN_KEY = 'lifesort-document-cache-key';
@@ -716,6 +717,7 @@ function visitAttachmentLists(payload: Record<string, unknown>, visit: (attachme
  */
 const INNER_SCHEMA_MIGRATIONS: Readonly<Record<string, LocalMigrationDefinition>> = {
   [expensesMoneyMigration.storageKey]: expensesMoneyMigration,
+  [travelMoneyMigration.storageKey]: travelMoneyMigration,
 };
 
 /** Returns the upgraded plaintext, or the input unchanged when already current. */

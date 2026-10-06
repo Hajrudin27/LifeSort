@@ -63,7 +63,9 @@ jest.mock('@/utils/shared/attachmentSync', () => ({
   fetchAttachmentsFor: jest.fn(() => Promise.resolve([])),
   uploadAttachment: jest.fn(() => Promise.resolve(null)),
 }));
+jest.mock('@/utils/auth/pinAuth', () => ({ clearLocalPin: jest.fn(() => Promise.resolve()) }));
 
+import { useAuthStore } from '@/store/useAuthStore';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useTripsStore } from '@/store/useTripsStore';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
@@ -142,6 +144,7 @@ function tripExpense(id: string, tripId: string, attachments: Attachment[] = [])
 
 describe('APP-029 parent attachment cache cleanup', () => {
   beforeEach(() => {
+    useAuthStore.setState({ session: { user: { id: 'user_1' } } as any });
     jest.clearAllMocks();
     mockDeleteCachedAttachmentFile.mockResolvedValue(undefined);
     useExpensesStore.setState({ expenses: [], seriesStoppedAt: {}, categoryBudgets: {} });

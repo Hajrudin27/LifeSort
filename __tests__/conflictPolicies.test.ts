@@ -50,12 +50,15 @@ describe('APP-035 registry and deterministic boundary', () => {
     ['economy.savings', 'savings-contribution', 'append-only', 'A'],
     ['tasks.todos', 'todo', 'task-fields', 'A'],
     ['warranties.attachments', 'attachment', 'document-manual', 'B'],
+    ['home.household', 'home-task', 'home-task-coupled', 'A'],
   ])('explicitly registers %s / %s', (domain, entity, policy, profile) => {
     expect(getConflictPolicy(domain, entity)).toBe(policy);
     expect(getDataDomain(domain)?.profile).toBe(profile);
   });
-  it('reviews exactly four families and never fabricates a default for other domains or kinds', () => {
-    expect(CONFLICT_POLICIES.map((p) => p.policy)).toEqual(['setting-rebase', 'append-only', 'task-fields', 'document-manual']);
+  it('reviews exactly five families and never fabricates a default for other domains or kinds', () => {
+    expect(CONFLICT_POLICIES.map((p) => p.policy)).toEqual([
+      'setting-rebase', 'append-only', 'task-fields', 'document-manual', 'home-task-coupled',
+    ]);
     expect(Object.isFrozen(CONFLICT_POLICIES)).toBe(true);
     for (const domain of DATA_DOMAINS) {
       expect(getConflictPolicy(domain.id, 'unreviewed')).toBeNull();

@@ -13,6 +13,7 @@ import { useAccentTints } from '@/hooks/useAccentTints';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
 import { useProfileStore } from '@/store/useProfileStore';
 import { TaskAssignee, TaskFrequency } from '@/types/household';
+import { resolvedDeviceTimeZone } from '@/utils/household/householdTaskSchedule';
 
 const FREQUENCIES: TaskFrequency[] = ['weekly', 'monthly', 'quarterly', 'yearly'];
 
@@ -30,6 +31,8 @@ export default function HouseholdTaskDetailScreen() {
   const updateTask = useHouseholdStore((s) => s.updateTask);
   const markTaskDone = useHouseholdStore((s) => s.markTaskDone);
   const removeTask = useHouseholdStore((s) => s.removeTask);
+  const conflict = useHouseholdStore((s) => s.taskConflicts[id ?? '']);
+  const resolveTaskConflict = useHouseholdStore((s) => s.resolveTaskConflict);
 
   const [title, setTitle] = useState(task?.title ?? '');
   const [frequency, setFrequency] = useState<TaskFrequency>(task?.frequency ?? 'monthly');
@@ -46,6 +49,8 @@ export default function HouseholdTaskDetailScreen() {
 
   const canSave = title.trim().length > 0;
   const assigneeLabel = task.assignedTo === 'me' ? t('household.assignee.me') : partnerName || t('household.assignee.partner');
+  let showTaskTimeZone = false;
+  try { showTaskTimeZone = task.timeZone !== null && task.timeZone !== resolvedDeviceTimeZone(); } catch {}
 
   const save = () => {
     updateTask(task.id, { title: title.trim(), frequency, assignedTo, rotates });
@@ -76,7 +81,22 @@ export default function HouseholdTaskDetailScreen() {
         <Text style={{ color: textMuted, fontSize: 13 }}>
           {task.lastDone ? t('household.lastDone', { date: task.lastDone }) : t('household.neverDone')}
         </Text>
+        {showTaskTimeZone ? (
+          <Text style={{ color: textMuted, fontSize: 13 }}>
+            {t('household.taskTimeZone', { timeZone: task.timeZone })}
+          </Text>
+        ) : null}
       </Card>
+
+      {conflict ? (
+        <Card style={sharedStyles.card}>
+          <Text accessibilityRole="text" accessibilityLiveRegion="polite">{t('household.conflict.message')}</Text>
+          <Button label={t('household.conflict.keepServer')} variant="secondary"
+            onPress={() => { void resolveTaskConflict(task.id, 'server'); }} />
+          <Button label={t('household.conflict.keepMine')}
+            onPress={() => { void resolveTaskConflict(task.id, 'mine'); }} />
+        </Card>
+      ) : null}
 
       <Button label={t('household.markDone')} variant="secondary" onPress={() => markTaskDone(task.id)} />
 

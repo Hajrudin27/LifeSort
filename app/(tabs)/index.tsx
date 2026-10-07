@@ -181,9 +181,9 @@ export default function HomeScreen() {
   const todosThisWeek = todos.filter((td) => !td.completed && td.dueDate && isDateInCurrentWeek(td.dueDate, locale));
 
   const householdTasks = useHouseholdStore((s) => s.tasks);
-  const overdueHouseholdCount = householdTasks.filter((ht) => daysUntilDue(ht.lastDone, ht.frequency) < 0).length;
+  const overdueHouseholdCount = householdTasks.filter((ht) => daysUntilDue(ht) < 0).length;
   const householdThisWeekCount = householdTasks.filter((ht) => {
-    const days = daysUntilDue(ht.lastDone, ht.frequency);
+    const days = daysUntilDue(ht);
     return days >= 0 && days <= 7;
   }).length;
 

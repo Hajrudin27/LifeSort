@@ -18,6 +18,13 @@
     "markDone": "Marker som gjort",
     "lastDone": "Sidst gjort: {{date}}",
     "neverDone": "Aldrig gjort",
+    "taskTimeZone": "Planens tidszone: {{timeZone}}",
+    "conflict": {
+      "message": "Opgaven er blevet ændret på en anden enhed, så din seneste ændring er ikke gemt endnu. Vælg hvilken version der skal beholdes.",
+      "keepServer": "Behold den anden enheds version",
+      "keepMine": "Behold min version",
+      "needsReview": "Skal gennemgås"
+    },
     "dueIn": "Om {{days}} dage",
     "dueToday": "I dag",
     "overdue": "Overskredet",

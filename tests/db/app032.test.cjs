@@ -74,6 +74,15 @@ before(() => {
   // Run the original idempotency/security/concurrency regressions after APP-033 too.
   sql(fs.readFileSync(path.join(root, 'supabase/migrations/20260911075104_user_modules_revisions.sql'), 'utf8'));
   sql(fs.readFileSync(path.join(root, 'supabase/migrations/20260911081953_user_modules_tombstones.sql'), 'utf8'));
+  // APP-061 adds a seven-argument overload. Every module-choice regression below must
+  // still hold with it installed (pre-APP-061 household_tasks shape, minimal columns).
+  sql(`create table public.household_tasks(
+      id text not null, user_id uuid not null references auth.users(id) on delete cascade,
+      kind text not null, title text not null, frequency text not null, last_done date,
+      created_at timestamptz not null default now(), assigned_to text not null default 'me',
+      rotates boolean not null default false, primary key(user_id,id));
+    alter table public.household_tasks enable row level security;`);
+  sql(fs.readFileSync(path.join(root, 'supabase/migrations/20261007104454_app061_home_task_sync.sql'), 'utf8'));
   // Test-only trigger counts actual writes, including no-op UPSERT updates. Merely
   // counting user_modules rows would not prove that duplicate writes were skipped.
   sql(`create table public.app032_effects(user_id uuid, module_id text);
@@ -219,6 +228,17 @@ for (const scenario of ['commit', 'rollback', 'changed']) {
     }
   });
 }
+test('APP-061 overload coexists: six arguments stay module-choice; seven never accept it', () => {
+  assert.equal(sql(auth() + rpc(61, 'travel', true)), 'applied');
+  assert.equal(sql(auth() + rpc(61, 'travel', true)), 'replayed');
+  const seven = (n) => `select public.apply_sync_mutation(${quote(id(n))},'core.module-choice','module-choice',
+    'travel','upsert','{"enabled":true}'::jsonb,null::bigint);`;
+  fails(auth() + seven(61), 'PT400', 'invalid_mutation');
+  fails(auth() + seven(62), 'PT400', 'invalid_mutation');
+  assert.equal(receipts(62), '0');
+  fails(auth(A, 'anon') + seven(63), '42501');
+});
+
 test('account deletion cascades replay evidence and domain data', () => {
   const user = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
   sql(`insert into auth.users values(${quote(user)})`);

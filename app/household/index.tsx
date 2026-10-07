@@ -26,8 +26,8 @@ export default function HouseholdScreen() {
   const shoppingItems = useHouseholdStore((s) => s.shoppingItems);
   const movingItems = useHouseholdStore((s) => s.movingItems);
 
-  const cleaningDue = tasks.filter((t) => t.kind === 'cleaning' && daysUntilDue(t.lastDone, t.frequency) <= 0).length;
-  const maintenanceDue = tasks.filter((t) => t.kind === 'maintenance' && daysUntilDue(t.lastDone, t.frequency) <= 0).length;
+  const cleaningDue = tasks.filter((t) => t.kind === 'cleaning' && daysUntilDue(t) <= 0).length;
+  const maintenanceDue = tasks.filter((t) => t.kind === 'maintenance' && daysUntilDue(t) <= 0).length;
   const movingDone = movingItems.filter((i) => i.checked).length;
 
   const rows: {

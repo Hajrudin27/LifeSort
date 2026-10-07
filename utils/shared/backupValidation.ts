@@ -21,6 +21,8 @@ import { decodeShoppingItems } from '@/core/food/shopping';
 import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { supportedMoney } from '@/core/money/supportedMoney';
+import { parseCalendarDate as parseHouseholdCalendarDate } from '@/utils/shared/localDate';
+import { isValidIanaTimeZone } from '@/utils/shared/timeZone';
 
 /**
  * Backup-formatets version.
@@ -39,9 +41,11 @@ import { supportedMoney } from '@/core/money/supportedMoney';
  *      udaterede legacy-poster med en sikker, valgfri MinorUnits-konvertering.
  *  8 — APP-060: Travel-backup bærer eksplicitte Trip-skabelonmarkører; pakkelabels
  *      bruges aldrig til at udlede, om en skabelon allerede er anvendt.
- * Nye eksporter skriver altid 8.
+ *  9 — APP-061: Home-opgaver bærer en fast IANA-tidszone eller eksplicit null
+ *      for historisk enheds-lokal semantik. Syncmetadata er aldrig en del af backup.
+ * Nye eksporter skriver altid 9.
  */
-export const BACKUP_VERSION = 8;
+export const BACKUP_VERSION = 9;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString';
 
@@ -281,6 +285,39 @@ function canonicalShoppingItems(
   return { ok: true, value: { ...partial, shoppingItems: items } };
 }
 
+function canonicalHouseholdTasks(
+  partial: Record<string, unknown>,
+  version: number,
+): { ok: true; value: Record<string, unknown> } | { ok: false; error: BackupParseError } {
+  if (partial.tasks === undefined) return { ok: true, value: partial };
+  const canonical: Record<string, unknown>[] = [];
+  const baseKeys = ['id', 'kind', 'title', 'frequency', 'lastDone', 'assignedTo', 'rotates', 'createdAt'];
+  for (const raw of partial.tasks as unknown[]) {
+    if (!isPlainObject(raw)) return { ok: false, error: 'invalid_format' };
+    // Pre-rotation exports omit assignedTo/rotates; earlier formats restored them as defaults.
+    const task = version < 9
+      ? { ...raw, assignedTo: raw.assignedTo ?? 'me', rotates: raw.rotates ?? false }
+      : raw;
+    const allowed = version < 9 ? baseKeys : [...baseKeys, 'timeZone'];
+    if (Object.keys(task).some((key) => !allowed.includes(key))
+      || typeof task.id !== 'string' || task.id.length === 0
+      || !['cleaning', 'maintenance'].includes(String(task.kind))
+      || typeof task.title !== 'string'
+      || !['weekly', 'monthly', 'quarterly', 'yearly'].includes(String(task.frequency))
+      || (task.lastDone !== undefined && parseHouseholdCalendarDate(task.lastDone) === null)
+      || !['me', 'partner'].includes(String(task.assignedTo))
+      || typeof task.rotates !== 'boolean'
+      || typeof task.createdAt !== 'string' || !Number.isFinite(Date.parse(task.createdAt))) {
+      return { ok: false, error: 'invalid_format' };
+    }
+    if (version >= 9 && task.timeZone !== null && !isValidIanaTimeZone(task.timeZone)) {
+      return { ok: false, error: 'invalid_format' };
+    }
+    canonical.push(version < 9 ? { ...task, timeZone: null } : { ...task });
+  }
+  return { ok: true, value: { ...partial, tasks: canonical } };
+}
+
 /** APP-059 Travel backup boundary. Unsafe legacy money is preserved unresolved. */
 function canonicalTravelMoney(
   partial: Record<string, unknown>, version: number,
@@ -422,6 +459,12 @@ export function parseBackupFile(content: string): BackupParseResult {
       const shopping = canonicalShoppingItems(pantry.value, version);
       if (!shopping.ok) return shopping;
       data[storeKey] = shopping.value;
+      continue;
+    }
+    if (storeKey === 'household') {
+      const household = canonicalHouseholdTasks(canonical.value, version);
+      if (!household.ok) return household;
+      data[storeKey] = household.value;
       continue;
     }
     if (storeKey !== 'expenses') {

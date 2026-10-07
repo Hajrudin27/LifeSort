@@ -73,7 +73,7 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
   { key: 'lifesort-habits', reset: () => useHabitsStore.setState({ habits: [] }) },
   {
     key: 'lifesort-household',
-    reset: () => useHouseholdStore.setState({ tasks: [], shoppingItems: [], movingItems: [] }),
+    reset: () => useHouseholdStore.getState().clearLocal(),
   },
   { key: 'lifesort-career', reset: () => useCareerStore.setState({ applications: [], skills: [] }) },
   { key: 'lifesort-skill-categories', reset: () => useSkillCategoriesStore.setState({ categories: [] }) },

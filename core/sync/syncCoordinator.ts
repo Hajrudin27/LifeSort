@@ -1,12 +1,14 @@
 import type { ConnectivitySource } from '@/core/sync/connectivity';
 import type { ForegroundSource } from '@/core/sync/appForeground';
 import { claimMutation, isMutationClaimed, releaseMutation } from '@/core/sync/mutationClaims';
-import { createOutbox, subscribeOutbox } from '@/core/sync/outbox';
+import { createOutbox, subscribeOutbox, type OutboxMutation } from '@/core/sync/outbox';
 import {
+  isTransientSyncFailure,
   planFailedAttempt,
   SYNC_BATCH_LIMIT,
   SYNC_CONTINUATION_DELAY_MS,
 } from '@/core/sync/retryPolicy';
+import { notifyPermanentFailure } from '@/core/sync/refusalHandlers';
 import { sendServerMutation } from '@/core/sync/serverMutations';
 import { planSyncWork } from '@/core/sync/syncEligibility';
 import { syncSafeError } from '@/core/sync/syncStatus';
@@ -38,6 +40,13 @@ export interface SyncCoordinatorOptions {
   random?: () => number;
   schedule?: (callback: () => void, delayMs: number) => TimerHandle;
   cancel?: (handle: TimerHandle) => void;
+  /**
+   * Told, after the fact, that a refusal was durably recorded and will not be retried
+   * automatically. It sends nothing; a domain may reconcile its own data and supersede
+   * the blocked chain through the outbox. Its faults never reach the cycle.
+   * Defaults to the domain registry in core/sync/refusalHandlers.
+   */
+  onPermanentFailure?: (accountId: string, mutation: OutboxMutation) => void;
 }
 
 export function createSyncCoordinator(options: SyncCoordinatorOptions) {
@@ -170,10 +179,14 @@ export function createSyncCoordinator(options: SyncCoordinatorOptions) {
             // cannot be written, the outcome is still what the server said —
             // it does not become a transport failure, and a permanent refusal
             // does not become something worth retrying.
+            const code = syncSafeError(result);
             recorded = await record(() => outbox.updateMetadata(
               mutation.mutationId,
-              planFailedAttempt(mutation.attempts, syncSafeError(result), now(), random),
+              planFailedAttempt(mutation.attempts, code, now(), random),
             ));
+            if (recorded && !isTransientSyncFailure(code) && alive(id, epoch)) {
+              try { (options.onPermanentFailure ?? notifyPermanentFailure)(id, mutation); } catch { /* Never a cycle fault. */ }
+            }
           }
           if (!recorded) break;
         } finally {

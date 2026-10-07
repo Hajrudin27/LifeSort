@@ -254,7 +254,7 @@ the key material in SecureStore.
 | `useSavingsGoalsStore` | `store/useSavingsGoalsStore.ts` | `economy` | `lifesort-savings-goals` | AsyncStorage (plain) | `savings_goals`, `savings_history`, `savings_extra` | financial | Hajrudin Kardasevic |
 | `useCategoriesStore` | `store/useCategoriesStore.ts` | `economy` | `lifesort-categories` | AsyncStorage (plain) | `categories` | ordinary | Hajrudin Kardasevic |
 | `useFoodStore` | `store/useFoodStore.ts` | `food` | `lifesort-food-v2` | AsyncStorage (plain) | `food_standard_prices`, `food_monthly_budget`, `food_saved_plans`, `food_purchases`, `food_pantry_items`, `food_shopping_items`, `food_shopping_item_derivations`, `food_recipes`, `food_offers`, `food_selected_stores`, `global_offers`, `global_standard_prices` | ordinary, financial | Hajrudin Kardasevic |
-| `useHouseholdStore` | `store/useHouseholdStore.ts` | `home` | `lifesort-household` | AsyncStorage (plain) | `household_tasks`, `household_shopping_items`, `household_moving_items` | ordinary | Hajrudin Kardasevic |
+| `useHouseholdStore` | `store/useHouseholdStore.ts` | `home` | `lifesort-household` | AsyncStorage (plain), versioned Z1 | `household_tasks` via durable outbox/RPC; shopping and moving retain existing paths | ordinary | Hajrudin Kardasevic |
 | `useLifeGoalsStore` | `store/useLifeGoalsStore.ts` | `goals` | `lifesort-life-goals` | AsyncStorage (plain) | `life_goals` | personal | Hajrudin Kardasevic |
 | `useHabitsStore` | `store/useHabitsStore.ts` | `habits` | `lifesort-habits` | AsyncStorage (plain) | `habits` | ordinary | Hajrudin Kardasevic |
 | `useTodoStore` | `store/useTodoStore.ts` | `tasks` | `lifesort-todos` | AsyncStorage (plain) | `todos` | ordinary | Hajrudin Kardasevic |
@@ -304,7 +304,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `food_selected_stores` | `food` | `store/useFoodStore.ts` | personal | Hajrudin Kardasevic |
 | `global_offers` | `food` (shared read-only) | `store/useFoodStore.ts` | ordinary | Hajrudin Kardasevic |
 | `global_standard_prices` | `food` (shared read-only) | `store/useFoodStore.ts` | ordinary | Hajrudin Kardasevic |
-| `household_tasks` | `home` | `store/useHouseholdStore.ts` | ordinary | Hajrudin Kardasevic |
+| `household_tasks` | `home` | `store/useHouseholdStore.ts`, `core/sync/serverMutations.ts` | ordinary | Hajrudin Kardasevic |
 | `household_shopping_items` | `home` | `store/useHouseholdStore.ts` | ordinary | Hajrudin Kardasevic |
 | `household_moving_items` | `home` | `store/useHouseholdStore.ts` | ordinary | Hajrudin Kardasevic |
 | `life_goals` | `goals` | `store/useLifeGoalsStore.ts` | personal | Hajrudin Kardasevic |
@@ -413,7 +413,7 @@ Directory-level map of the remaining shared code. Not enforced by the test.
 
 | Module | Domain logic | Types | Localization namespaces |
 | --- | --- | --- | --- |
-| `core-shell` | `utils/shared/` (`localDate`, `monthKey`, `dateDays`, `greeting`, `pieChartMath`, `lastWeekdayOfMonth`, `syncQueue`, `dataBackup`, `backupValidation`, `imageCompression`, `attachmentStorage`, `attachmentSync`), `hooks/` | `types/attachment.ts` | `common`, `home`, `life`, `search`, `about`, `datePicker` |
+| `core-shell` | `utils/shared/` (`localDate`, `monthKey`, `dateDays`, `timeZone`, `greeting`, `pieChartMath`, `lastWeekdayOfMonth`, `syncQueue`, `dataBackup`, `backupValidation`, `imageCompression`, `attachmentStorage`, `attachmentSync`), `hooks/` | `types/attachment.ts` | `common`, `home`, `life`, `search`, `about`, `datePicker` |
 | `account` | `utils/auth/` (`pinAuth`, `pinLockout`, `secureSessionStorage`, `clearLocalUserData`, `deleteAccount`) | `types/profile.ts` | `auth`, `profile`, `settings`, `appLock`, `deleteAccount`, `backup`, `language` |
 | `economy` | `utils/expense/`, `utils/savings/` | `types/expense.ts`, `types/savingsGoal.ts` | `expenses`, `economy`, `savings` |
 | `food` | `utils/food/`, `data/seedRecipes*.ts` | `types/food.ts` | `food` |

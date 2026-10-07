@@ -6,10 +6,11 @@ import { incomeMoneyMigration, savingsGoalsMoneyMigration } from './economyMoney
 import { foodIngredientsMigration } from './foodIngredients';
 import { homeLayoutMigration } from './homeLayout';
 import { outboxMigration } from './outbox';
+import { householdMigration } from './household';
 
 /** Zustand stores whose hydration reads run their versioned definition directly. */
 const ZUSTAND_VERSIONED_DEFINITIONS: readonly LocalMigrationDefinition[] = [
-  homeLayoutMigration, incomeMoneyMigration, savingsGoalsMoneyMigration, foodIngredientsMigration,
+  homeLayoutMigration, incomeMoneyMigration, savingsGoalsMoneyMigration, foodIngredientsMigration, householdMigration,
 ];
 
 /** Implementations, not another inventory: inclusion and versions come from governance. */

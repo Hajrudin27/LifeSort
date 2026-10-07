@@ -165,3 +165,46 @@ it.each([
   mockRetry.mockResolvedValue({ status, error: { code: '', message: 'private gateway response' } });
   expect(await sendServerMutation(accountId, entry)).toEqual({ ok: false, reason });
 });
+
+const homeTask = {
+  id: '11111111-1111-4111-8111-111111111111',
+  kind: 'cleaning',
+  title: 'Kitchen',
+  frequency: 'weekly',
+  assignedTo: 'me',
+  rotates: true,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  timeZone: 'Europe/Copenhagen',
+};
+const homeMutation: OutboxMutation = {
+  ...entry,
+  dataDomain: 'home.household',
+  entityType: 'home-task',
+  entityId: homeTask.id,
+  payload: { action: 'edit', task: homeTask },
+  baseRevision: 7,
+};
+
+it('APP-061 sends the reviewed Home-task envelope with its base revision', async () => {
+  expect(await sendServerMutation(accountId, homeMutation)).toEqual({ ok: true, status: 'applied' });
+  expect(mockRpc).toHaveBeenCalledWith('apply_sync_mutation', {
+    p_mutation_id: homeMutation.mutationId,
+    p_data_domain: 'home.household',
+    p_entity_type: 'home-task',
+    p_entity_id: homeTask.id,
+    p_operation: 'upsert',
+    p_payload: { action: 'edit', task: homeTask },
+    p_base_revision: 7,
+  });
+});
+
+it.each([
+  { ...homeMutation, baseRevision: undefined },
+  { ...homeMutation, payload: { action: 'edit', task: { ...homeTask, timeZone: 'Bad/Zone' } } },
+  { ...homeMutation, payload: { action: 'complete', completedOn: '2026-02-30' } },
+  { ...homeMutation, payload: { action: 'edit', task: { ...homeTask, user_id: 'spoof' } } },
+])('APP-061 rejects malformed or owner-spoofing Home envelopes before auth', async (mutation) => {
+  expect(await sendServerMutation(accountId, mutation as OutboxMutation)).toEqual({ ok: false, reason: 'validation' });
+  expect(mockSession).not.toHaveBeenCalled();
+  expect(mockRpc).not.toHaveBeenCalled();
+});

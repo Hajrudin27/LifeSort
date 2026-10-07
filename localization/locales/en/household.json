@@ -18,6 +18,13 @@
     "markDone": "Mark as done",
     "lastDone": "Last done: {{date}}",
     "neverDone": "Never done",
+    "taskTimeZone": "Schedule timezone: {{timeZone}}",
+    "conflict": {
+      "message": "This task was changed on another device, so your latest change has not been saved yet. Choose which version to keep.",
+      "keepServer": "Keep the other device's version",
+      "keepMine": "Keep my version",
+      "needsReview": "Needs review"
+    },
     "dueIn": "In {{days}} days",
     "dueToday": "Today",
     "overdue": "Overdue",

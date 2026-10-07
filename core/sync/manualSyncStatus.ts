@@ -1,6 +1,7 @@
 import { claimMutation, releaseMutation } from '@/core/sync/mutationClaims';
 import { createOutbox, subscribeOutbox, type OutboxMutation } from '@/core/sync/outbox';
-import { planFailedAttempt } from '@/core/sync/retryPolicy';
+import { notifyPermanentFailure } from '@/core/sync/refusalHandlers';
+import { isTransientSyncFailure, planFailedAttempt } from '@/core/sync/retryPolicy';
 import { sendServerMutation } from '@/core/sync/serverMutations';
 import { getEntityChainHeads } from '@/core/sync/syncEligibility';
 import {
@@ -31,6 +32,7 @@ export function createManualSyncStatus(
   getActiveAccount: () => string | null,
   publish: (projection: SyncStatusProjection) => void,
   send: typeof sendServerMutation = sendServerMutation,
+  onPermanentFailure: (accountId: string, mutation: OutboxMutation) => void = notifyPermanentFailure,
 ) {
   let accountId: string | null = null;
   let generation = 0;
@@ -117,6 +119,10 @@ export function createManualSyncStatus(
           const code = syncSafeError(result);
           errors.set(mutationId, code);
           await outbox.updateMetadata(mutationId, planFailedAttempt(mutation.attempts, code, Date.now()));
+          // Same contract as the coordinator: the domain may reconcile, never resend.
+          if (!isTransientSyncFailure(code) && isActive()) {
+            try { onPermanentFailure(id, mutation); } catch { /* Presentation only. */ }
+          }
         }
       } catch {
         // Raw storage/transport exceptions never become presentation data.

@@ -108,5 +108,16 @@
     "serialization": "raw JSON bytes",
     "synthetic": true,
     "sensitivity": "A/D (seed recipe copies and synthetic user recipes, prices and plans)"
+  },
+  {
+    "file": "household/9523a34-v0.json",
+    "storeId": "async-storage:lifesort-household",
+    "storageKey": "lifesort-household",
+    "sourceCommit": "9523a34",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A (synthetic Home task and list content)"
   }
 ]

@@ -20,6 +20,7 @@ export default function HouseholdTasksScreen() {
 
   const allTasks = useHouseholdStore((s) => s.tasks);
   const markTaskDone = useHouseholdStore((s) => s.markTaskDone);
+  const taskConflicts = useHouseholdStore((s) => s.taskConflicts);
   const tasks = allTasks.filter((t) => t.kind === kind);
 
   const screenTitle = kind === 'cleaning' ? t('household.cleaningLabel') : t('household.maintenanceLabel');
@@ -38,7 +39,7 @@ export default function HouseholdTasksScreen() {
           </Card>
         }
         renderItem={({ item }) => {
-          const days = daysUntilDue(item.lastDone, item.frequency);
+          const days = daysUntilDue(item);
           const dueColor = days < 0 ? danger : days === 0 ? warning : textMuted;
           const dueLabel = days < 0 ? t('household.overdue') : days === 0 ? t('household.dueToday') : t('household.dueIn', { days });
 
@@ -50,6 +51,9 @@ export default function HouseholdTasksScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.title}>{item.title}</Text>
                     <Text style={[styles.meta, { color: dueColor }]}>{dueLabel}</Text>
+                    {taskConflicts[item.id] ? (
+                      <Text style={[styles.meta, { color: warning }]}>{t('household.conflict.needsReview')}</Text>
+                    ) : null}
                   </View>
                 </View>
               </Pressable>
@@ -75,6 +79,6 @@ const styles = {
   titleRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
   title: { fontWeight: '700' as const },
   meta: { fontSize: 13, marginTop: 2 },
-  doneButton: { paddingVertical: 6, paddingHorizontal: 10 },
+  doneButton: { minHeight: 44, minWidth: 44, paddingHorizontal: 10, justifyContent: 'center' as const },
   doneButtonText: { fontSize: 13, fontWeight: '600' as const },
 };

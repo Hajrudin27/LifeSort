@@ -20,8 +20,8 @@ expense/trip/warranty/cycle adapters encrypt their entire serialized value.
 `Z0` means raw JSON `{state: <listed fields>, version: 0}`; functions are omitted by
 JSON serialization. `E1/Z0` means AES-GCM v1 outer envelope with inner Z0.
 All hydrate in their named `store/use…Store.ts` through `createJSONStorage` and
-`persist` at import time. APP-038 intercepts reads before parsing; Home is the
-only changed domain schema. `external` means the listed store/secure adapter
+`persist` at import time. APP-038 intercepts reads before parsing; APP-061 later
+places Home under the versioned migration registry. `external` means the listed store/secure adapter
 retains schema ownership, not a claim of full nested-record validation.
 
 `User sweep` means the existing `features/localStores.ts` reset followed by
@@ -45,7 +45,7 @@ on logout. APP-038 adds delayed-write invalidation around this existing cleanup.
 | `lifesort-savings-goals` | A | AsyncStorage / Z1 (APP-040; was Z0) | goals[]; history[]; extraSavings; money in DKK MinorUnits | 49c4355 through c73bf68 Z0 major-unit floats; APP-040 v0→v1 | `store/useSavingsGoalsStore.ts` | versioned; core/storage/migrations/economyMoney.ts | User sweep |
 | `lifesort-categories` | A | AsyncStorage / Z0 | categories[] including built-ins | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useCategoriesStore.ts` | external; store/useCategoriesStore.ts | User sweep |
 | `lifesort-food-v2` | A,D | AsyncStorage / Z3 (APP-052; was Z2) | monthlyBudgetByMonth, purchases[], pantryItems[] (structured/legacy), shoppingItems[] (manual or meal-plan artifact with immutable recipe provenance), offers[], recipes[] (typed ingredients), standardPrices[], globalStandardPrices[], globalOffers[], savedPlans, selectedStores[] | APP-047 v0→v1 keeps historical recipe amounts verbatim; APP-050 v1→v2 keeps historical Pantry text verbatim; APP-052 v2→v3 makes all historical shopping rows explicit manual items without inferring identity, amount or provenance (see [app-052-shopping-list-derivation.md](./app-052-shopping-list-derivation.md)) | `store/useFoodStore.ts` | versioned; core/storage/migrations/foodIngredients.ts | User sweep |
-| `lifesort-household` | A | AsyncStorage / Z0 | tasks[]; shoppingItems[]; movingItems[] | 49c4355 pre-rotation tasks; f00dd0d adds assignedTo/rotates with existing hydration defaults | `store/useHouseholdStore.ts` | external; store/useHouseholdStore.ts | User sweep |
+| `lifesort-household` | A | AsyncStorage / Z1 | tasks[] with timeZone; taskSync{}; shoppingItems[]; movingItems[] | 49c4355 pre-rotation tasks; f00dd0d adds assignedTo/rotates; APP-061 Z0-to-Z1 adds timeZone:null and empty taskSync without changing list content | `store/useHouseholdStore.ts` | versioned; core/storage/migrations/household.ts | User sweep |
 | `lifesort-life-goals` | A | AsyncStorage / Z0 | goals[] | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useLifeGoalsStore.ts` | external; store/useLifeGoalsStore.ts | User sweep |
 | `lifesort-habits` | A | AsyncStorage / Z0 | habits[] (including logs) | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useHabitsStore.ts` | external; store/useHabitsStore.ts | User sweep |
 | `lifesort-todos` | A | AsyncStorage / Z0 | todos[] | d417466 baseline; no incompatible schema evolution identified in available history (old entity IDs remain strings). | `store/useTodoStore.ts` | external; store/useTodoStore.ts | User sweep |
@@ -78,7 +78,7 @@ v1-to-v2 feature migration or fixture was added.
 | secure-store:lifesort-document-cache-key | `lifesort-document-cache-key`, SecureStore | B | Base64 AES key bytes since 0746c50 | `core/storage/documentCacheStorage.ts` | Immutable/no-schema key material | Key-epoch-aware deletion on logout |
 | filesystem:document-directory/attachments | `documentDirectory/attachments/*`, filesystem | B | `LSATTACH` binary header + version 1 + IV/tag metadata + AES-GCM bytes in `.lsenc`; legacy plaintext files pre-0746c50 | `documentCacheStorage` on metadata migration/view/cache use | External specialized migration, encrypted pending-cleanup records | Parent attachment cleanup / persistent cache clear on logout |
 | filesystem:cache-directory/lifesort-decrypted-attachments | `cacheDirectory/lifesort-decrypted-attachments/*`, filesystem | B | Temporary plaintext interoperability copies, never canonical persisted schema | `documentCacheStorage` viewer/share/upload | Cleanup-only, not migration staging | Viewer/temp lifecycle and logout |
-| filesystem:document-directory/lifesort-backup-json | `documentDirectory/lifesort-backup-<date>.json`, filesystem | B | `{version:1,exportedAt,data}` since 49c4355; v2 APP-040 Economy MinorUnits; v3 APP-042 recurrence; v4 APP-047 ingredients; v5 APP-050 Pantry; v6 APP-052 shopping provenance; v7 APP-059 Travel money; v8 APP-060 applied-template markers; user-triggered archive | `utils/shared/dataBackup.ts` / `backupValidation.ts`; never startup hydrated | External export/import contract; APP-097 | Existing logout does not sweep these exports; unchanged audit finding |
+| filesystem:document-directory/lifesort-backup-json | `documentDirectory/lifesort-backup-<date>.json`, filesystem | B | `{version:1,exportedAt,data}` since 49c4355; v2 APP-040 Economy MinorUnits; v3 APP-042 recurrence; v4 APP-047 ingredients; v5 APP-050 Pantry; v6 APP-052 shopping provenance; v7 APP-059 Travel money; v8 APP-060 applied-template markers; v9 APP-061 Household task time-zone semantics; user-triggered archive | `utils/shared/dataBackup.ts` / `backupValidation.ts`; never startup hydrated | External export/import contract; APP-097 | Existing logout does not sweep these exports; unchanged audit finding |
 
 Remote Supabase tables/auth/buckets remain server persistence, not locally
 hydrated keys. Cached remote data appears only within the local rows above.
@@ -97,7 +97,10 @@ persistence inventory; no migration work was added to them.
   cleanup fails. This existing specialized operation is not advertised as a
   generic single-write/multi-key transaction. APP-038 only guards unsupported
   inner schemas and tests preservation; no new plaintext staging exists.
-- Household: hydration fills assignedTo/rotates defaults and seeds moving items.
+- Household: APP-061 migrates Z0 to Z1 by preserving task/list content, filling
+  the former hydration defaults (assignedTo 'me', rotates false) for pre-rotation
+  tasks, adding timeZone:null to legacy tasks, and initializing an empty taskSync
+  map. Future versions and malformed current data fail closed.
   Food hydration seeds recipes for the existing language and, since APP-047,
   refreshes persisted seed copies from the bundle (removed seeds stay removed). Expense hydration
   deduplicates IDs and adds missing attachment arrays; warranty hydration adds
@@ -121,6 +124,7 @@ persistence inventory; no migration work was added to them.
 | --- | --- | --- | --- | --- | --- |
 | `home-layout/c4715e6-v0.json` | Home | c4715e6 | Zustand 0, before detail map | Zustand 1 | Synthetic preferences only |
 | `home-layout/d417466-v0.json` | Home | d417466 | Zustand 0, with detail map | Zustand 1 | Synthetic preferences only |
+| `household/9523a34-v0.json` | Household | 9523a34 | Zustand 0, before APP-061 time-zone and sync metadata | Zustand 1 | Synthetic task and list content only |
 | `outbox/d417466-v1.json` | Outbox | d417466 | Envelope 1 | Envelope 1, exact bytes unchanged | Synthetic account/IDs and module booleans only |
 | `cycle/94f39eb-plaintext-v0.json` | Cycle | 94f39eb, before 0711414 encryption | Plaintext Zustand 0 | AES-GCM envelope 1, inner Zustand 0 | Synthetic defaults and empty arrays; no health records |
 | `expenses/49c4355-plaintext-v0.json` | Expenses | 49c4355, before attachments and encryption | Plaintext Zustand 0, major-unit floats | AES-GCM envelope 1, inner Zustand 2 (APP-040 money, APP-042 recurrence) | Synthetic names and amounts |

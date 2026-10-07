@@ -66,7 +66,7 @@ export default function LifeScreen() {
   const habitLogsThisWeek = habits.reduce((sum, habit) => sum + getLoggedThisWeek(habit.logs), 0);
 
   const householdTasks = useHouseholdStore((s) => s.tasks);
-  const dueHouseholdCount = householdTasks.filter((task) => daysUntilDue(task.lastDone, task.frequency) <= 0).length;
+  const dueHouseholdCount = householdTasks.filter((task) => daysUntilDue(task) <= 0).length;
 
   const applications = useCareerStore((s) => s.applications);
   const interviewCount = applications.filter((application) => application.status === 'interview').length;

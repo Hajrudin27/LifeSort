@@ -21,6 +21,7 @@ export async function sendServerMutation(
   if (!supportsServerMutation(mutation)) return { ok: false, reason: 'validation' };
   if (!isActive()) return { ok: false, reason: 'authorization' };
   let args;
+  const homeTask = mutation.dataDomain === 'home.household' && mutation.entityType === 'home-task';
   try {
     args = {
       p_mutation_id: mutation.mutationId,
@@ -29,6 +30,7 @@ export async function sendServerMutation(
       p_entity_id: mutation.entityId,
       p_operation: mutation.operation,
       p_payload: mutation.payload === undefined ? null : JSON.parse(JSON.stringify(mutation.payload)),
+      ...(homeTask ? { p_base_revision: mutation.baseRevision ?? null } : {}),
     };
   } catch {
     return { ok: false, reason: 'validation' };

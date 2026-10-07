@@ -3,8 +3,9 @@ import type { TodoItem } from '@/types/life';
 import { isSupportedMoney } from '@/core/money/supportedMoney';
 import type { SavingsContribution } from '@/types/savingsGoal';
 import type { Attachment } from '@/types/attachment';
+import type { HouseholdTask } from '@/types/household';
 
-export type ConflictPolicyId = 'setting-rebase' | 'append-only' | 'task-fields' | 'document-manual';
+export type ConflictPolicyId = 'setting-rebase' | 'append-only' | 'task-fields' | 'document-manual' | 'home-task-coupled';
 export interface Preferences {
   readonly language: 'da' | 'en' | null;
   readonly mode: 'light' | 'dark' | 'system';
@@ -19,6 +20,7 @@ export interface ConflictEntities {
   'savings-contribution': Readonly<SavingsContribution>;
   todo: Readonly<TodoItem>;
   attachment: DocumentIdentity;
+  'home-task': Readonly<HouseholdTask>;
 }
 type EntityType = keyof ConflictEntities;
 type DomainByEntity = {
@@ -26,12 +28,14 @@ type DomainByEntity = {
   'savings-contribution': 'economy.savings';
   todo: 'tasks.todos';
   attachment: 'warranties.attachments';
+  'home-task': 'home.household';
 };
 type PolicyByEntity = {
   preferences: 'setting-rebase';
   'savings-contribution': 'append-only';
   todo: 'task-fields';
   attachment: 'document-manual';
+  'home-task': 'home-task-coupled';
 };
 type PolicyRegistration = { readonly [E in EntityType]: {
   readonly dataDomain: DomainByEntity[E] & DataDomainId;
@@ -45,6 +49,7 @@ export const CONFLICT_POLICIES = Object.freeze([
   Object.freeze({ dataDomain: 'economy.savings', entityType: 'savings-contribution', policy: 'append-only' }),
   Object.freeze({ dataDomain: 'tasks.todos', entityType: 'todo', policy: 'task-fields' }),
   Object.freeze({ dataDomain: 'warranties.attachments', entityType: 'attachment', policy: 'document-manual' }),
+  Object.freeze({ dataDomain: 'home.household', entityType: 'home-task', policy: 'home-task-coupled' }),
 ] as const satisfies readonly PolicyRegistration[]);
 
 export function getConflictPolicy(dataDomain: DataDomainId | string, entityType: string): ConflictPolicyId | null {
@@ -80,7 +85,7 @@ export type ConflictInput = { [E in EntityType]: ConflictVersions<ConflictEntiti
 export type ConflictFailure =
   | { readonly kind: 'unresolved'; readonly reason: 'unclassified' | 'invalid-input' | 'missing-base' |
     'missing-remote' | 'stale-remote' | 'concurrent-create' | 'pending-delete' | 'field-conflict' |
-    'document-conflict' | 'unknown-content' }
+    'document-conflict' | 'unknown-content' | 'home-task-conflict' }
   | { readonly kind: 'invariant-error'; readonly reason: 'equal-revision-contradiction' |
     'base-revision-mismatch' | 'restore-forbidden' | 'append-content-conflict' };
 export type ConflictResult<T> = ConflictFailure
@@ -116,6 +121,17 @@ const contributionFields: FieldRules<Readonly<SavingsContribution>> = {
 const documentFields: FieldRules<DocumentIdentity> = {
   id: nonempty, name: string, kind: (v) => v === 'image' || v === 'document',
   contentIdentity: (v) => v === null || nonempty(v),
+};
+const householdTaskFields: FieldRules<Readonly<HouseholdTask>> = {
+  id: nonempty,
+  kind: (v) => v === 'cleaning' || v === 'maintenance',
+  title: nonempty,
+  frequency: (v) => v === 'weekly' || v === 'monthly' || v === 'quarterly' || v === 'yearly',
+  lastDone: optionalString,
+  assignedTo: (v) => v === 'me' || v === 'partner',
+  rotates: boolean,
+  createdAt: string,
+  timeZone: (v) => v === null || nonempty(v),
 };
 
 /** Declared scalar fields only. Reject extra fields/accessors before reading values. */
@@ -180,6 +196,35 @@ function resolveEntity<T>(input: ConflictVersions<T>, policy: ConflictPolicyId, 
     if (equal(local.value, remote.value, fields)) return { kind: 'accept-remote', remote };
     return { kind: 'unresolved', reason: 'document-conflict' };
   }
+  if (policy === 'home-task-coupled') {
+    if (!base) return { kind: 'unresolved', reason: 'concurrent-create' };
+    const immutableChanged = (local.value as HouseholdTask).createdAt !== (base.value as HouseholdTask).createdAt ||
+      (local.value as HouseholdTask).timeZone !== (base.value as HouseholdTask).timeZone ||
+      (remote.value as HouseholdTask).createdAt !== (base.value as HouseholdTask).createdAt ||
+      (remote.value as HouseholdTask).timeZone !== (base.value as HouseholdTask).timeZone;
+    if (immutableChanged) return invalid();
+    if (equal(local.value, remote.value, fields)) return { kind: 'accept-remote', remote };
+    if (remote.revision === base.revision && equal(remote.value, base.value, fields)) {
+      return { kind: 'rebase-local', value: { ...local.value }, baseRevision: remote.revision };
+    }
+    // Disjoint changes merge, but lastDone/assignedTo/rotates are one coupled
+    // schedule: two sides' rotation outcomes are never combined. ABA history
+    // (remoteChangedFields) is not modelled here, so it is never merged.
+    const changed = (value: T) => fields.filter((key) => value[key] !== base.value[key]);
+    const mine = changed(local.value), theirs = changed(remote.value);
+    const coupled = (keys: (keyof T)[]) => keys.some((key) =>
+      key === 'lastDone' || key === 'assignedTo' || key === 'rotates');
+    if (input.remoteChangedFields === undefined && !mine.some((key) => theirs.includes(key)) &&
+      !(coupled(mine) && coupled(theirs))) {
+      const merged = { ...remote.value } as Record<keyof T, unknown>;
+      for (const key of mine) {
+        if (local.value[key] === undefined) delete merged[key];
+        else merged[key] = local.value[key];
+      }
+      return { kind: 'merged', value: merged as T, baseRevision: remote.revision };
+    }
+    return { kind: 'unresolved', reason: 'home-task-conflict' };
+  }
   // Future policy kinds must implement their own branch, never inherit a merge.
   if (policy !== 'setting-rebase' && policy !== 'task-fields') return { kind: 'unresolved', reason: 'unclassified' };
   if (!base) return { kind: 'unresolved', reason: 'concurrent-create' };
@@ -209,6 +254,7 @@ export function resolveConflict(input: ConflictInput): ConflictResult<ConflictEn
     case 'savings-contribution': return resolveEntity(input, policy, contributionFields);
     case 'todo': return resolveEntity(input, policy, todoFields);
     case 'attachment': return resolveEntity(input, policy, documentFields);
+    case 'home-task': return resolveEntity(input, policy, householdTaskFields);
     default: return { kind: 'unresolved', reason: 'unclassified' };
   }
 }

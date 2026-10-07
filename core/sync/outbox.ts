@@ -155,6 +155,47 @@ export function createOutbox(accountId: string) {
       }, true);
     },
 
+    /**
+     * Retire one entity's exact chain and append its replacements in the same single
+     * write, so a crash leaves either the old chain or the new one — never neither.
+     * Compare-and-set: returns null without writing if that entity's queued IDs are no
+     * longer exactly `expectedIds`. Replacements always receive fresh mutation IDs.
+     */
+    supersedeChain<T extends JsonValue>(
+      expectedIds: readonly string[],
+      replacements: readonly NewOutboxMutation<T>[],
+    ): Promise<OutboxMutation<T>[] | null> {
+      assertActive();
+      if (expectedIds.length === 0) throw new Error('Invalid or unsupported outbox data.');
+      replacements.forEach((input) => validateInput(input));
+      const created = replacements.map((input): OutboxMutation<T> => ({
+        dataDomain: input.dataDomain,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        operation: input.operation,
+        ...(input.payload === undefined ? {} : { payload: JSON.parse(JSON.stringify(input.payload)) as T }),
+        ...(input.baseRevision === undefined ? {} : { baseRevision: input.baseRevision }),
+        mutationId: newEntityId(),
+        createdAt: new Date().toISOString(),
+        status: 'pending',
+        attempts: 0,
+      }));
+      return run((state) => {
+        const head = state.mutations.find((entry) => entry.mutationId === expectedIds[0]);
+        if (!head) return null;
+        const same = (entry: OutboxMutation) => entry.dataDomain === head.dataDomain &&
+          entry.entityType === head.entityType && entry.entityId === head.entityId;
+        const chain = state.mutations.filter(same).map((entry) => entry.mutationId);
+        if (chain.length !== expectedIds.length || chain.some((id, index) => id !== expectedIds[index])) return null;
+        if (created.some((entry) => !same(entry) ||
+          state.mutations.some((existing) => existing.mutationId === entry.mutationId))) {
+          throw new Error('Invalid or unsupported outbox data.');
+        }
+        state.mutations = [...state.mutations.filter((entry) => !same(entry)), ...created];
+        return created;
+      }, true);
+    },
+
     acknowledge(mutationId: string): Promise<boolean> {
       return run((state) => {
         const before = state.mutations.length;

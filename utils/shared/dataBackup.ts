@@ -57,6 +57,14 @@ function buildBackupObject() {
         appliedPackingTemplates: state.appliedPackingTemplates,
         participants: state.participants,
       };
+    } else if (key === 'household') {
+      const state = useHouseholdStore.getState();
+      // APP-061: portable content only; account and revision state stay local.
+      data[key] = {
+        tasks: state.tasks,
+        shoppingItems: state.shoppingItems,
+        movingItems: state.movingItems,
+      };
     } else {
       data[key] = STORE_REGISTRY[key].getState();
     }
@@ -128,6 +136,8 @@ export async function importBackup(): Promise<ImportResult | null> {
       // APP-059: restored trips must not inherit the projection cache (or its
       // freshness) of the dataset they replace; the store clears it in the same write.
       useTripsStore.getState().restoreBackup(partial as never);
+    } else if (key === 'household') {
+      useHouseholdStore.getState().restoreBackup(partial as never);
     } else {
       (STORE_REGISTRY[key] as any).setState(partial);
     }

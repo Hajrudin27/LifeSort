@@ -64,6 +64,7 @@ function buildBackupObject() {
         tasks: state.tasks,
         shoppingItems: state.shoppingItems,
         movingItems: state.movingItems,
+        movingTemplate: state.movingTemplate,
       };
     } else {
       data[key] = STORE_REGISTRY[key].getState();

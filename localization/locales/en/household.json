@@ -50,6 +50,32 @@
       "mailForwarding": "Mail forwarding",
       "insurance": "Update insurance"
     },
+    "moving": {
+      "sections": {
+        "administration": "Administration",
+        "utilities": "Utilities",
+        "yourItems": "Your items"
+      },
+      "templates": {
+        "movingHome": "Moving checklist suggestions"
+      },
+      "authority": {
+        "lifesortEditorial": "LifeSort editorial"
+      },
+      "templateCard": {
+        "version": "Version {{version}}",
+        "source": "Source: {{source}}",
+        "reviewed": "Reviewed {{date}} by {{reviewer}}",
+        "reviewCurrent": "Review status: up to date until {{date}}",
+        "reviewDue": "Review status: due for review since {{date}}",
+        "disclaimer": "These are suggestions, not legal or safety requirements. Check what applies to you with the relevant authorities and providers."
+      },
+      "addSuggestions": "Add suggested items",
+      "startAgain": "Start a new checklist from suggestions",
+      "newSuggestions_one": "Add {{count}} new suggestion",
+      "newSuggestions_other": "Add {{count}} new suggestions",
+      "emptyHint": "Your checklist is empty. Add the suggested items, or write your own."
+    },
     "a11y": {
         "removeMovingItem": "Remove {{item}} from the moving list",
         "removeShoppingItem": "Remove {{item}} from the shopping list"

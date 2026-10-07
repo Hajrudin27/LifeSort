@@ -21,6 +21,7 @@ import { decodeShoppingItems } from '@/core/food/shopping';
 import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { supportedMoney } from '@/core/money/supportedMoney';
+import { decodeMovingItems, decodeMovingTemplateMarker, LEGACY_MOVING_MARKER } from '@/core/home/moving';
 import { parseCalendarDate as parseHouseholdCalendarDate } from '@/utils/shared/localDate';
 import { isValidIanaTimeZone } from '@/utils/shared/timeZone';
 
@@ -43,11 +44,14 @@ import { isValidIanaTimeZone } from '@/utils/shared/timeZone';
  *      bruges aldrig til at udlede, om en skabelon allerede er anvendt.
  *  9 — APP-061: Home-opgaver bærer en fast IANA-tidszone eller eksplicit null
  *      for historisk enheds-lokal semantik. Syncmetadata er aldrig en del af backup.
- * Nye eksporter skriver altid 9.
+ * 10 — APP-062: Flytte-tjeklisten bærer valgfri skabelon-herkomst pr. række og en
+ *      Household-markør for den senest eksplicit anvendte skabelonversion. Selve
+ *      skabelonkataloget eksporteres aldrig.
+ * Nye eksporter skriver altid 10.
  */
-export const BACKUP_VERSION = 9;
+export const BACKUP_VERSION = 10;
 
-type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString';
+type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString' | 'nullableObject';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -61,6 +65,7 @@ const CHECKS: Record<FieldType, (value: unknown) => boolean> = {
   string: (value) => typeof value === 'string',
   boolean: (value) => typeof value === 'boolean',
   nullableString: (value) => value === null || typeof value === 'string',
+  nullableObject: (value) => value === null || isPlainObject(value),
 };
 
 /**
@@ -96,7 +101,7 @@ export const BACKUP_FIELD_SCHEMA = {
   todos: { todos: 'array' },
   lifeGoals: { goals: 'array' },
   habits: { habits: 'array' },
-  household: { tasks: 'array', shoppingItems: 'array', movingItems: 'array' },
+  household: { tasks: 'array', shoppingItems: 'array', movingItems: 'array', movingTemplate: 'nullableObject' },
   career: { applications: 'array', skills: 'array' },
   skillCategories: { categories: 'array' },
   cv: { personalInfo: 'object', education: 'array', experience: 'array', languages: 'array', versions: 'array' },
@@ -285,6 +290,33 @@ function canonicalShoppingItems(
   return { ok: true, value: { ...partial, shoppingItems: items } };
 }
 
+/** APP-062 Moving boundary: strict items, provenance only for the five legacy seed ids before 10. */
+function canonicalMoving(
+  partial: Record<string, unknown>,
+  version: number,
+): { ok: true; value: Record<string, unknown> } | { ok: false; error: BackupParseError } {
+  const next = { ...partial };
+  if (version < 10) {
+    // A pre-10 file cannot carry a marker. Its list came from the app that auto-exposed v1.
+    delete next.movingTemplate;
+    if (next.movingItems === undefined) return { ok: true, value: next };
+    const legacy = decodeMovingItems(next.movingItems, 'legacy');
+    if (!legacy) return { ok: false, error: 'invalid_format' };
+    return { ok: true, value: { ...next, movingItems: legacy, movingTemplate: { ...LEGACY_MOVING_MARKER } } };
+  }
+  if (next.movingItems !== undefined) {
+    const items = decodeMovingItems(next.movingItems, 'current');
+    if (!items) return { ok: false, error: 'invalid_format' };
+    next.movingItems = items;
+  }
+  if (next.movingTemplate !== undefined && next.movingTemplate !== null) {
+    const marker = decodeMovingTemplateMarker(next.movingTemplate);
+    if (!marker) return { ok: false, error: 'invalid_format' };
+    next.movingTemplate = marker;
+  }
+  return { ok: true, value: next };
+}
+
 function canonicalHouseholdTasks(
   partial: Record<string, unknown>,
   version: number,
@@ -464,7 +496,9 @@ export function parseBackupFile(content: string): BackupParseResult {
     if (storeKey === 'household') {
       const household = canonicalHouseholdTasks(canonical.value, version);
       if (!household.ok) return household;
-      data[storeKey] = household.value;
+      const moving = canonicalMoving(household.value, version);
+      if (!moving.ok) return moving;
+      data[storeKey] = moving.value;
       continue;
     }
     if (storeKey !== 'expenses') {

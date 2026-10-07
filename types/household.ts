@@ -31,8 +31,22 @@ export interface HouseholdItem {
   checked: boolean;
 }
 
+/** Proof that a row was copied from a bundled Moving template. Absent means user-created. */
+export interface MovingTemplateRef {
+  templateId: string;
+  templateVersion: number;
+  templateItemId: string;
+}
+
 export interface MovingItem {
   id: string;
   label: string;
   checked: boolean;
+  templateRef?: MovingTemplateRef;
+}
+
+/** The latest template version explicitly applied to the one current checklist. */
+export interface MovingTemplateMarker {
+  id: string;
+  version: number;
 }

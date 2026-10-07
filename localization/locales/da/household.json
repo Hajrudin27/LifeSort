@@ -50,6 +50,32 @@
       "mailForwarding": "Eftersendelse af post",
       "insurance": "Opdater forsikring"
     },
+    "moving": {
+      "sections": {
+        "administration": "Administration",
+        "utilities": "Forsyning og abonnementer",
+        "yourItems": "Dine egne punkter"
+      },
+      "templates": {
+        "movingHome": "Forslag til flytte-tjekliste"
+      },
+      "authority": {
+        "lifesortEditorial": "LifeSort-redaktionen"
+      },
+      "templateCard": {
+        "version": "Version {{version}}",
+        "source": "Kilde: {{source}}",
+        "reviewed": "Gennemgået {{date}} af {{reviewer}}",
+        "reviewCurrent": "Status for gennemgang: opdateret indtil {{date}}",
+        "reviewDue": "Status for gennemgang: skal gennemgås igen siden {{date}}",
+        "disclaimer": "Det her er forslag, ikke lovkrav eller sikkerhedskrav. Tjek hvad der gælder for dig hos de relevante myndigheder og udbydere."
+      },
+      "addSuggestions": "Tilføj foreslåede punkter",
+      "startAgain": "Start en ny tjekliste fra forslag",
+      "newSuggestions_one": "Tilføj {{count}} nyt forslag",
+      "newSuggestions_other": "Tilføj {{count}} nye forslag",
+      "emptyHint": "Din tjekliste er tom. Tilføj de foreslåede punkter, eller skriv dine egne."
+    },
     "a11y": {
         "removeMovingItem": "Fjern {{item}} fra flyttelisten",
         "removeShoppingItem": "Fjern {{item}} fra indkøbslisten"

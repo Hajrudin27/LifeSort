@@ -408,15 +408,24 @@ export const DATA_DOMAINS = [
     id: 'home.household',
     title: 'Household tasks, shopping and moving lists',
     module: 'home',
-    description: 'User-created chores, household shopping items and moving checklist items.',
+    description: 'User-created chores, household shopping items and moving checklist items (rows copied from a bundled template carry provenance and are ordinary user data).',
     storageSurfaces: [
       'async-storage:lifesort-household',
       'supabase-table:household_tasks',
       'supabase-table:household_shopping_items',
       'supabase-table:household_moving_items',
     ],
-    evidence: ['store/useHouseholdStore.ts'],
+    evidence: ['store/useHouseholdStore.ts', 'core/home/moving.ts', 'supabase/migrations/20261007150000_app062_moving_template_provenance.sql'],
     ...profileA({ expectsServerSync: true }),
+  },
+  {
+    id: 'home.moving-templates',
+    title: 'Versioned Moving checklist template reference content',
+    module: 'home',
+    description: 'Immutable, globally readable editorial suggestions bundled with the app, with template-level source and review metadata. Copying one creates independent Profile A moving rows with provenance; the catalogue itself is never synced or exported.',
+    storageSurfaces: ['bundled-source:features/home/movingTemplates'],
+    evidence: ['features/home/movingTemplates.ts'],
+    ...profileD({ expectsLocalCopy: 'none' }),
   },
   {
     id: 'goals.life-goals',
@@ -666,7 +675,7 @@ export const PERSISTENCE_SURFACES = [
   surface('async-storage:lifesort-savings-goals', 'async-storage', 'Zustand key lifesort-savings-goals', 'device', ['economy.savings'], ['store/useSavingsGoalsStore.ts'], { kind: 'versioned', owner: 'core/storage/migrations/economyMoney.ts', currentVersion: 1, reason: 'APP-040: v0 major-unit goals, history and extra savings upgrade once to DKK MinorUnits before hydration; unsupported precision fails closed.' }),
   surface('async-storage:lifesort-categories', 'async-storage', 'Zustand key lifesort-categories', 'device', ['economy.categories'], ['store/useCategoriesStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useCategoriesStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-food-v2', 'async-storage', 'Zustand key lifesort-food-v2', 'device', ['food.user-grocery-finance', 'food.user-planning', 'food.seed-recipes', 'food.global-catalogue'], ['store/useFoodStore.ts'], { kind: 'versioned', owner: 'core/storage/migrations/foodIngredients.ts', currentVersion: 3, reason: 'APP-047 v0→v1 keeps recipe text; APP-050 v1→v2 keeps pantry text; APP-052 v2→v3 keeps shopping labels as manual items. Unknown shapes fail closed.' }),
-  surface('async-storage:lifesort-household', 'async-storage', 'Zustand key lifesort-household', 'device', ['home.household'], ['store/useHouseholdStore.ts'], { kind: 'versioned', currentVersion: 1, owner: 'core/storage/migrations/household.ts', reason: 'APP-061 upgrades Home task Z0 to Z1 by preserving legacy content and adding explicit null timezone semantics.' }),
+  surface('async-storage:lifesort-household', 'async-storage', 'Zustand key lifesort-household', 'device', ['home.household'], ['store/useHouseholdStore.ts'], { kind: 'versioned', currentVersion: 2, owner: 'core/storage/migrations/household.ts', reason: 'APP-061 upgrades Home task Z0 to Z1 by preserving legacy content and adding explicit null timezone semantics; APP-062 upgrades Z1 to Z2 by validating Moving rows, deriving template provenance only for the five fixed legacy seed ids, and recording the v1 template marker.' }),
   surface('async-storage:lifesort-life-goals', 'async-storage', 'Zustand key lifesort-life-goals', 'device', ['goals.life-goals'], ['store/useLifeGoalsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useLifeGoalsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-habits', 'async-storage', 'Zustand key lifesort-habits', 'device', ['habits.habits'], ['store/useHabitsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useHabitsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-todos', 'async-storage', 'Zustand key lifesort-todos', 'device', ['tasks.todos'], ['store/useTodoStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useTodoStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
@@ -746,6 +755,7 @@ export const PERSISTENCE_SURFACES = [
   surface('supabase-storage-bucket:documents', 'supabase-storage-bucket', 'Storage bucket documents', 'supabase', ['documents.files'], ['core/documents/documentSync.ts', 'supabase/migrations/20260925090000_private_document_bucket.sql']),
   surface('supabase-storage-bucket:recipe-images', 'supabase-storage-bucket', 'Storage bucket recipe-images', 'supabase', ['food.global-catalogue'], ['supabase/migrations/20260903002859_add_activity_log_and_recipe_images.sql']),
   surface('bundled-source:data/seedRecipes', 'bundled-source', 'Bundled seed recipe source files', 'bundle', ['food.seed-recipes'], ['data/seedRecipes.ts']),
+  surface('bundled-source:features/home/movingTemplates', 'bundled-source', 'Bundled versioned Moving checklist template catalogue', 'bundle', ['home.moving-templates'], ['features/home/movingTemplates.ts']),
   surface('bundled-source:features/travel/packingTemplates', 'bundled-source', 'Bundled versioned packing template catalogue', 'bundle', ['travel.packing-templates'], ['features/travel/packingTemplates.ts']),
 ] as const satisfies readonly PersistenceSurface[];
 

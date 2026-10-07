@@ -28,17 +28,18 @@ const memory = (value: unknown) => {
   };
 };
 
-describe('APP-061 Household Z0 to Z1', () => {
-  it('preserves every legacy value and list while adding only null timezone and sync cache', async () => {
+describe('APP-061 Household Z0 (chained through Z1 to the current Z2)', () => {
+  it('preserves every legacy value and list while adding null timezone, sync cache and the v1 marker', async () => {
     const storage = memory(legacy);
     await migrateLocalStore(householdMigration, storage);
     const current = JSON.parse(storage.raw());
     expect(current).toEqual({
-      version: 1,
+      version: 2,
       state: {
         ...legacy.state,
         tasks: [{ ...legacy.state.tasks[0], timeZone: null }],
         taskSync: {},
+        movingTemplate: { id: 'moving-home', version: 1 },
       },
     });
     expect(storage.setItem).toHaveBeenCalledTimes(1);
@@ -54,7 +55,7 @@ describe('APP-061 Household Z0 to Z1', () => {
   });
 
   it('rejects a future version and preserves the original bytes', async () => {
-    const storage = memory({ ...legacy, version: 2 });
+    const storage = memory({ ...legacy, version: 3 });
     const before = storage.raw();
     await expect(migrateLocalStore(householdMigration, storage)).rejects.toMatchObject({ code: 'unsupported-newer-version' });
     expect(storage.raw()).toBe(before);
@@ -63,8 +64,11 @@ describe('APP-061 Household Z0 to Z1', () => {
 
   it('rejects an invalid current timezone', async () => {
     const storage = memory({
-      version: 1,
-      state: { ...legacy.state, tasks: [{ ...legacy.state.tasks[0], timeZone: 'Bad/Zone' }], taskSync: {} },
+      version: 2,
+      state: {
+        ...legacy.state, tasks: [{ ...legacy.state.tasks[0], timeZone: 'Bad/Zone' }], taskSync: {},
+        movingTemplate: { id: 'moving-home', version: 1 },
+      },
     });
     await expect(migrateLocalStore(householdMigration, storage)).rejects.toMatchObject({ code: 'validation-failed' });
   });

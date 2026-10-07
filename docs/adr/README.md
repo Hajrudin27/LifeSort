@@ -68,6 +68,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0047](./0047-travel-spend-is-an-economy-projection-and-undated-legacy-expenses-stay-unresolved.md) | Travel spend is an Economy projection and undated legacy expenses stay unresolved | Accepted | 2026-10-05 | APP-059 |
 | [0048](./0048-packing-templates-are-versioned-sources-for-independent-copies.md) | Packing templates are versioned sources for independent copies | Accepted | 2026-10-06 | APP-060 |
 | [0049](./0049-home-tasks-use-calendar-time-and-the-durable-sync-platform.md) | Home tasks use calendar time and the durable sync platform | Accepted | 2026-10-07 | APP-061 |
+| [0050](./0050-moving-checklist-is-a-versioned-editorial-template-copied-into-user-owned-rows-with-provenance.md) | Moving checklist is a versioned editorial template copied into user-owned rows with provenance | Accepted | 2026-10-07 | APP-062 |
 
 ## When an ADR is required
 

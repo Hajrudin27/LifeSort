@@ -115,9 +115,20 @@
     "storageKey": "lifesort-household",
     "sourceCommit": "9523a34",
     "sourceVersion": 0,
-    "targetVersion": 1,
+    "targetVersion": 2,
     "serialization": "raw JSON bytes",
     "synthetic": true,
     "sensitivity": "A (synthetic Home task and list content)"
+  },
+  {
+    "file": "household/db72a8c-v1.json",
+    "storeId": "async-storage:lifesort-household",
+    "storageKey": "lifesort-household",
+    "sourceCommit": "db72a8c",
+    "sourceVersion": 1,
+    "targetVersion": 2,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A (synthetic Home task, shopping and Moving checklist content)"
   }
 ]

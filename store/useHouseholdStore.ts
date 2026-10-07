@@ -14,10 +14,18 @@ import {
   HouseholdTask,
   HouseholdTaskSyncState,
   MovingItem,
+  MovingTemplateMarker,
   TaskAssignee,
   TaskFrequency,
   TaskKind,
 } from '@/types/household';
+import { decodeRemoteMovingRow, inferMovingMarker } from '@/core/home/moving';
+import {
+  applyMovingUpgrade,
+  availableMovingUpgrade,
+  instantiateMovingItems,
+  latestSelectableMovingTemplate,
+} from '@/features/home/movingTemplates';
 import { calendarDateForTask, isValidTimeZone, resolvedDeviceTimeZone } from '@/utils/household/householdTaskSchedule';
 import { createSyncQueue } from '@/utils/shared/syncQueue';
 import { parseCalendarDate } from '@/utils/shared/localDate';
@@ -26,7 +34,6 @@ function otherAssignee(assignee: TaskAssignee): TaskAssignee {
   return assignee === 'me' ? 'partner' : 'me';
 }
 
-const DEFAULT_MOVING_KEYS = ['addressChange', 'internet', 'electricity', 'mailForwarding', 'insurance'];
 const HOME_DOMAIN = 'home.household' as const;
 const HOME_ENTITY = 'home-task' as const;
 
@@ -56,9 +63,15 @@ interface HouseholdState {
   removeShoppingItem: (id: string) => void;
 
   movingItems: MovingItem[];
+  /** Latest template version explicitly applied to the one current checklist. */
+  movingTemplate: MovingTemplateMarker | null;
   addMovingItem: (label: string) => void;
   toggleMovingItem: (id: string) => void;
   removeMovingItem: (id: string) => void;
+  /** Explicit copy of the latest selectable template into user-owned rows. Never automatic. */
+  startMovingFromTemplate: () => number;
+  /** Explicit acceptance of the suggestions that are new since the applied version. */
+  acceptMovingTemplateUpgrade: () => number;
 
   /** Runtime-only: tasks whose refused change needs an explicit user choice. */
   taskConflicts: Record<string, TaskConflict>;
@@ -66,7 +79,7 @@ interface HouseholdState {
   resolveTaskConflict: (id: string, choice: 'server' | 'mine') => Promise<boolean>;
 
   fetchFromSupabase: () => Promise<void>;
-  restoreBackup: (partial: Partial<Pick<HouseholdState, 'tasks' | 'shoppingItems' | 'movingItems'>>) => void;
+  restoreBackup: (partial: Partial<Pick<HouseholdState, 'tasks' | 'shoppingItems' | 'movingItems' | 'movingTemplate'>>) => void;
   clearLocal: () => void;
 }
 
@@ -259,7 +272,12 @@ function shoppingItemToRow(userId: string, item: HouseholdItem) {
   return { id: item.id, user_id: userId, label: item.label, checked: item.checked };
 }
 function movingItemToRow(userId: string, item: MovingItem) {
-  return { id: item.id, user_id: userId, label: item.label, checked: item.checked };
+  return {
+    id: item.id, user_id: userId, label: item.label, checked: item.checked,
+    template_id: item.templateRef?.templateId ?? null,
+    template_version: item.templateRef?.templateVersion ?? null,
+    template_item_id: item.templateRef?.templateItemId ?? null,
+  };
 }
 async function getUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getUser();
@@ -283,13 +301,27 @@ const shoppingItemToggleQueue = createSyncQueue<HouseholdItem>(async (items) => 
   const userId = await getUserId();
   if (userId) await supabase.from('household_shopping_items').upsert(items.map((item) => shoppingItemToRow(userId, item)));
 });
-async function syncUpsertMovingItem(item: MovingItem) {
-  const userId = await getUserId();
-  if (userId) await supabase.from('household_moving_items').upsert(movingItemToRow(userId, item));
+/**
+ * The Moving owner is captured when the user acts and travels with the write. After the
+ * only await the live session must still be that account; if it switched, the write is
+ * dropped. Should a request still reach the server under another session, `user_id` is
+ * the initiator's, so the owner RLS refuses it instead of re-owning the row.
+ */
+async function movingSessionStillOwnedBy(accountId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    return !error && data.session?.user.id === accountId;
+  } catch {
+    return false;
+  }
 }
-async function syncDeleteMovingItem(id: string) {
-  const userId = await getUserId();
-  if (userId) await supabase.from('household_moving_items').delete().eq('user_id', userId).eq('id', id);
+async function syncUpsertMovingItems(accountId: string | null, items: readonly MovingItem[]) {
+  if (!accountId || items.length === 0 || !(await movingSessionStillOwnedBy(accountId))) return;
+  await supabase.from('household_moving_items').upsert(items.map((item) => movingItemToRow(accountId, item)));
+}
+async function syncDeleteMovingItem(accountId: string | null, id: string) {
+  if (!accountId || !(await movingSessionStillOwnedBy(accountId))) return;
+  await supabase.from('household_moving_items').delete().eq('user_id', accountId).eq('id', id);
 }
 
 const revisionOrder = (a: string, b: string) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0);
@@ -548,20 +580,52 @@ export const useHouseholdStore = create<HouseholdState>()(
         },
 
         movingItems: [],
+        movingTemplate: null,
         addMovingItem: (label) => {
+          const accountId = initiatingAccountId();
           const item = { id: newEntityId(), label, checked: false };
           set((state) => ({ movingItems: [...state.movingItems, item] }));
-          void syncUpsertMovingItem(item);
+          void syncUpsertMovingItems(accountId, [item]);
         },
         toggleMovingItem: (id) => {
+          const accountId = initiatingAccountId();
           set((state) => ({ movingItems: state.movingItems.map((item) =>
             item.id === id ? { ...item, checked: !item.checked } : item) }));
           const item = get().movingItems.find((candidate) => candidate.id === id);
-          if (item) void syncUpsertMovingItem(item);
+          if (item) void syncUpsertMovingItems(accountId, [item]);
         },
         removeMovingItem: (id) => {
+          const accountId = initiatingAccountId();
           set((state) => ({ movingItems: state.movingItems.filter((item) => item.id !== id) }));
-          void syncDeleteMovingItem(id);
+          void syncDeleteMovingItem(accountId, id);
+        },
+        startMovingFromTemplate: () => {
+          const current = get();
+          // Explicit start: nothing yet applied, or an intentionally emptied checklist.
+          if (current.movingTemplate !== null && current.movingItems.length > 0) return 0;
+          const template = latestSelectableMovingTemplate();
+          if (!template) return 0;
+          const accountId = initiatingAccountId();
+          const added = instantiateMovingItems(template, (key) => i18n.t(`household.movingDefaults.${key}`), current.movingItems);
+          set((state) => ({
+            movingItems: [...state.movingItems, ...added],
+            movingTemplate: { id: template.id, version: template.version },
+          }));
+          void syncUpsertMovingItems(accountId, added);
+          return added.length;
+        },
+        acceptMovingTemplateUpgrade: () => {
+          const { movingTemplate, movingItems } = get();
+          const upgrade = availableMovingUpgrade(movingTemplate, movingItems);
+          if (!upgrade) return 0;
+          const accountId = initiatingAccountId();
+          const added = applyMovingUpgrade(upgrade, (key) => i18n.t(`household.movingDefaults.${key}`));
+          set((state) => ({
+            movingItems: [...state.movingItems, ...added],
+            movingTemplate: { id: upgrade.template.id, version: upgrade.template.version },
+          }));
+          void syncUpsertMovingItems(accountId, added);
+          return added.length;
         },
 
         fetchFromSupabase: async () => {
@@ -588,7 +652,8 @@ export const useHouseholdStore = create<HouseholdState>()(
               .select('id, kind, title, frequency, last_done, assigned_to, rotates, created_at, time_zone, revision::text, updated_at, deleted_at')
               .eq('user_id', accountId),
             supabase.from('household_shopping_items').select('id, label, checked').eq('user_id', accountId),
-            supabase.from('household_moving_items').select('id, label, checked').eq('user_id', accountId),
+            supabase.from('household_moving_items')
+              .select('id, label, checked, template_id, template_version, template_item_id').eq('user_id', accountId),
           ]);
           const currentSession = await supabase.auth.getSession();
           if (!stillActive() || currentSession.error || currentSession.data.session?.user.id !== accountId ||
@@ -620,14 +685,19 @@ export const useHouseholdStore = create<HouseholdState>()(
             }
             const existingShoppingIds = new Set(state.shoppingItems.map((item) => item.id));
             const existingMovingIds = new Set(state.movingItems.map((item) => item.id));
+            // Rows with malformed or partial provenance are dropped, never guessed at.
+            const remoteMoving = (movingResult.data ?? []).flatMap((row) => {
+              const decoded = decodeRemoteMovingRow(row);
+              return decoded ? [decoded] : [];
+            });
             return {
               tasks: [...tasks.values()], taskSync, myUserId: accountId,
               shoppingItems: [...state.shoppingItems, ...(shoppingResult.data ?? [])
                 .filter((row) => !existingShoppingIds.has(row.id))
                 .map((row) => ({ id: row.id, label: row.label, checked: row.checked }))],
-              movingItems: [...state.movingItems, ...(movingResult.data ?? [])
-                .filter((row) => !existingMovingIds.has(row.id))
-                .map((row) => ({ id: row.id, label: row.label, checked: row.checked }))],
+              movingItems: [...state.movingItems, ...remoteMoving.filter((item) => !existingMovingIds.has(item.id))],
+              // Only advances, and only on proven provenance (never on labels or custom rows).
+              movingTemplate: inferMovingMarker(state.movingTemplate, remoteMoving),
             };
           });
           // Tombstones are retained, so a task absent from a complete owner read was never
@@ -651,6 +721,7 @@ export const useHouseholdStore = create<HouseholdState>()(
             tasks: partial.tasks ?? state.tasks,
             shoppingItems: partial.shoppingItems ?? state.shoppingItems,
             movingItems: partial.movingItems ?? state.movingItems,
+            movingTemplate: partial.movingTemplate === undefined ? state.movingTemplate : partial.movingTemplate,
             taskSync: {},
             taskConflicts: {},
             myUserId: null,
@@ -660,30 +731,23 @@ export const useHouseholdStore = create<HouseholdState>()(
         clearLocal: () => {
           datasetEpoch += 1;
           writeChains.clear();
-          set({ tasks: [], taskSync: {}, taskConflicts: {}, myUserId: null, shoppingItems: [], movingItems: [] });
+          set({ tasks: [], taskSync: {}, taskConflicts: {}, myUserId: null, shoppingItems: [], movingItems: [], movingTemplate: null });
         },
       };
     },
     {
       name: 'lifesort-household',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
       partialize: (state) => ({
         tasks: state.tasks,
         taskSync: state.taskSync,
         shoppingItems: state.shoppingItems,
         movingItems: state.movingItems,
+        movingTemplate: state.movingTemplate,
       }),
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-        if (state.movingItems.length === 0) {
-          state.movingItems = DEFAULT_MOVING_KEYS.map((key) => ({
-            id: `default-${key}`,
-            label: i18n.t(`household.movingDefaults.${key}`),
-            checked: false,
-          }));
-        }
-      },
+      // APP-062: no hydration-time seeding. An empty checklist stays empty until the user
+      // explicitly starts from suggestions; schema upgrades live in the APP-038 migration.
     },
   ),
 );

@@ -21,6 +21,7 @@ import { decodeShoppingItems } from '@/core/food/shopping';
 import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { supportedMoney } from '@/core/money/supportedMoney';
+import { decodeGoals, decodeLegacyGoals } from '@/core/goals/persistedGoal';
 import { decodeMovingItems, decodeMovingTemplateMarker, LEGACY_MOVING_MARKER } from '@/core/home/moving';
 import { parseCalendarDate as parseHouseholdCalendarDate } from '@/utils/shared/localDate';
 import { isValidIanaTimeZone } from '@/utils/shared/timeZone';
@@ -47,9 +48,12 @@ import { isValidIanaTimeZone } from '@/utils/shared/timeZone';
  * 10 — APP-062: Flytte-tjeklisten bærer valgfri skabelon-herkomst pr. række og en
  *      Household-markør for den senest eksplicit anvendte skabelonversion. Selve
  *      skabelonkataloget eksporteres aldrig.
- * Nye eksporter skriver altid 10.
+ * 11 — APP-063: Livsmål har en eksplicit type (binary, count, amount, duration), mål og
+ *      nuværende værdi som heltal, delmål omdøbt til milestones og kun egentlige
+ *      brugerdata i eksporten. Ældre formater mappes til binary uden at opfinde tal.
+ * Nye eksporter skriver altid 11.
  */
-export const BACKUP_VERSION = 10;
+export const BACKUP_VERSION = 11;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString' | 'nullableObject';
 
@@ -317,6 +321,16 @@ function canonicalMoving(
   return { ok: true, value: next };
 }
 
+/** APP-063 Goals boundary: formats before 11 hold the old sub-goal shape and become binary goals. */
+function canonicalGoals(
+  partial: Record<string, unknown>,
+  version: number,
+): { ok: true; value: Record<string, unknown> } | { ok: false; error: BackupParseError } {
+  if (partial.goals === undefined) return { ok: true, value: partial };
+  const goals = version < 11 ? decodeLegacyGoals(partial.goals) : decodeGoals(partial.goals);
+  return goals ? { ok: true, value: { ...partial, goals } } : { ok: false, error: 'invalid_format' };
+}
+
 function canonicalHouseholdTasks(
   partial: Record<string, unknown>,
   version: number,
@@ -491,6 +505,12 @@ export function parseBackupFile(content: string): BackupParseResult {
       const shopping = canonicalShoppingItems(pantry.value, version);
       if (!shopping.ok) return shopping;
       data[storeKey] = shopping.value;
+      continue;
+    }
+    if (storeKey === 'lifeGoals') {
+      const goals = canonicalGoals(canonical.value, version);
+      if (!goals.ok) return goals;
+      data[storeKey] = goals.value;
       continue;
     }
     if (storeKey === 'household') {

@@ -40,7 +40,7 @@ const parsedHousehold = (raw: string) => {
 };
 
 describe('APP-062 backup v10', () => {
-  it('is format 10', () => expect(BACKUP_VERSION).toBe(10));
+  it('is at least format 10, where Moving provenance was introduced (now 11)', () => expect(BACKUP_VERSION).toBe(11));
 
   it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])('format %i: keeps id/label/checked, maps only the five seed ids and sets the v1 marker', (version) => {
     expect(parsedHousehold(file(version, { movingItems: legacyRows }))).toEqual({
@@ -110,7 +110,7 @@ describe('APP-062 backup through the real store', () => {
     useHouseholdStore.setState({ movingItems: mappedRows, movingTemplate: marker, taskSync: { x: { revision: '1', plannedRevision: '1', updatedAt: '', deletedAt: null } } });
     await exportBackup();
     const exported = JSON.parse(mockWritten);
-    expect(exported.version).toBe(10);
+    expect(exported.version).toBe(11);
     expect(exported.data.household.movingItems).toEqual(mappedRows);
     expect(exported.data.household.movingTemplate).toEqual(marker);
     expect(Object.keys(exported.data.household).sort()).toEqual(['movingItems', 'movingTemplate', 'shoppingItems', 'tasks']);

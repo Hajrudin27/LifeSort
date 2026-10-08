@@ -156,8 +156,8 @@ it('gives savings contributions independent IDs while preserving both goal refer
 
 it('covers each other migrated store, nested records, and CV references', () => {
   useTodoStore.getState().addTodo({ title: 'Task', importance: 'low' });
-  const goal = useLifeGoalsStore.getState().addGoal({ title: 'Goal' });
-  useLifeGoalsStore.getState().addSubGoal(goal, 'Step');
+  const goal = useLifeGoalsStore.getState().addGoal({ title: 'Goal', type: 'binary' });
+  useLifeGoalsStore.getState().addMilestone(goal, 'Step');
   useHabitsStore.getState().addHabit({ title: 'Habit', direction: 'build' });
   useHabitsStore.getState().toggleLogForDate(useHabitsStore.getState().habits[0].id, '2026-09-10');
   useCareerStore.getState().addApplication({ company: 'Example', position: 'Role', status: 'applied', appliedDate: '2026-09-10' });
@@ -188,7 +188,7 @@ it('covers each other migrated store, nested records, and CV references', () => 
   useWarrantiesStore.getState().addWarranty({ name: 'Device', type: 'warranty', expiryDate: '2027-09-01' });
   const f = useFoodStore.getState(), c = useCVStore.getState(), h = useHouseholdStore.getState();
   expectFreshIds([
-    ...useTodoStore.getState().todos, ...useLifeGoalsStore.getState().goals, ...useLifeGoalsStore.getState().goals[0].subGoals,
+    ...useTodoStore.getState().todos, ...useLifeGoalsStore.getState().goals, ...useLifeGoalsStore.getState().goals[0].milestones,
     ...useHabitsStore.getState().habits, ...useHabitsStore.getState().habits[0].logs,
     ...useCareerStore.getState().applications, ...useCareerStore.getState().skills,
     ...c.education, ...c.experience, ...c.languages, ...c.versions,

@@ -429,11 +429,11 @@ export const DATA_DOMAINS = [
   },
   {
     id: 'goals.life-goals',
-    title: 'Life goals and sub-goals',
+    title: 'Life goals and milestones',
     module: 'goals',
-    description: 'User-created long-term goals and progress.',
+    description: 'User-created goals of exactly four explicit types (count, amount, duration, binary) with optional milestones and deadline. Amounts are non-currency quantities; money goals belong to Economy.',
     storageSurfaces: ['async-storage:lifesort-life-goals', 'supabase-table:life_goals'],
-    evidence: ['store/useLifeGoalsStore.ts'],
+    evidence: ['store/useLifeGoalsStore.ts', 'core/goals/persistedGoal.ts', 'features/goals/domain/goal.ts', 'supabase/migrations/20261007180000_app063_life_goal_semantics.sql'],
     ...profileA({ expectsServerSync: true }),
   },
   {
@@ -676,7 +676,7 @@ export const PERSISTENCE_SURFACES = [
   surface('async-storage:lifesort-categories', 'async-storage', 'Zustand key lifesort-categories', 'device', ['economy.categories'], ['store/useCategoriesStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useCategoriesStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-food-v2', 'async-storage', 'Zustand key lifesort-food-v2', 'device', ['food.user-grocery-finance', 'food.user-planning', 'food.seed-recipes', 'food.global-catalogue'], ['store/useFoodStore.ts'], { kind: 'versioned', owner: 'core/storage/migrations/foodIngredients.ts', currentVersion: 3, reason: 'APP-047 v0→v1 keeps recipe text; APP-050 v1→v2 keeps pantry text; APP-052 v2→v3 keeps shopping labels as manual items. Unknown shapes fail closed.' }),
   surface('async-storage:lifesort-household', 'async-storage', 'Zustand key lifesort-household', 'device', ['home.household'], ['store/useHouseholdStore.ts'], { kind: 'versioned', currentVersion: 2, owner: 'core/storage/migrations/household.ts', reason: 'APP-061 upgrades Home task Z0 to Z1 by preserving legacy content and adding explicit null timezone semantics; APP-062 upgrades Z1 to Z2 by validating Moving rows, deriving template provenance only for the five fixed legacy seed ids, and recording the v1 template marker.' }),
-  surface('async-storage:lifesort-life-goals', 'async-storage', 'Zustand key lifesort-life-goals', 'device', ['goals.life-goals'], ['store/useLifeGoalsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useLifeGoalsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
+  surface('async-storage:lifesort-life-goals', 'async-storage', 'Zustand key lifesort-life-goals', 'device', ['goals.life-goals'], ['store/useLifeGoalsStore.ts'], { kind: 'versioned', currentVersion: 1, owner: 'core/storage/migrations/goals.ts', reason: 'APP-063 upgrades Z0 goals to canonical Z1: each becomes a binary goal with its sub-goals kept verbatim as milestones and completed restating the old all-done rule. No numeric intent is inferred; malformed rows and future versions fail closed.' }),
   surface('async-storage:lifesort-habits', 'async-storage', 'Zustand key lifesort-habits', 'device', ['habits.habits'], ['store/useHabitsStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useHabitsStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-todos', 'async-storage', 'Zustand key lifesort-todos', 'device', ['tasks.todos'], ['store/useTodoStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useTodoStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-trips', 'async-storage', 'Encrypted Zustand key lifesort-trips', 'device', ['travel.trips', 'travel.attachments'], ['store/useTripsStore.ts', 'core/storage/documentCacheStorage.ts', 'core/storage/migrations/travelMoney.ts'], { kind: 'external', currentVersion: 2, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling; APP-059 migrated inner v0 to v1 money/unresolved-date state and APP-060 migrates v1 to v2 with an empty explicit applied-template marker list.' }),

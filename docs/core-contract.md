@@ -68,6 +68,14 @@ migration and the backup parser — both core — must validate. It depends on
 nothing, and Food's other rules (substitutions, matching, planning) stay in the
 module. See [ADR-0038](./adr/0038-ingredient-identity-is-a-locale-independent-family-id.md).
 
+`core/goals/persistedGoal.ts` (APP-063) is the same kind of exception and no larger than it needs to be: the
+persisted Life Goal *format* (exact per-type shapes, the integer bound, strict decoding and the frozen
+legacy `subGoals` mapping), because the local migration and the backup parser must validate what the store
+persists. Progress, completion, mutations, input parsing and server-row mapping stay in
+`features/goals/domain`, which imports core, never the reverse. R6 does not match `@/features/*`, so
+`__tests__/goalDomainBoundary.test.ts` also holds the whole platform to "no import of a feature" with a
+one-edge baseline. See [ADR-0051](./adr/0051-life-goals-have-four-explicit-measurable-types-and-milestones-are-supporting-only.md).
+
 ## The rules
 
 | # | Rule | Enforced |

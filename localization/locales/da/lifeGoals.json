@@ -6,19 +6,76 @@
     "titlePlaceholder": "Titel (fx Lær at spille guitar)",
     "descriptionPlaceholder": "Beskrivelse (valgfrit)",
     "deadlineLabel": "Deadline (valgfrit)",
-    "subGoalsLabel": "Delmål",
-    "newSubGoalPlaceholder": "Nyt delmål",
-    "addSubGoal": "Tilføj",
-    "noSubGoals": "Ingen delmål endnu",
+    "milestonesLabel": "Milepæle",
+    "newMilestonePlaceholder": "Ny milepæl",
+    "addMilestone": "Tilføj",
+    "noMilestones": "Ingen milepæle endnu",
     "save": "Gem",
     "delete": "Slet",
     "deleteConfirmTitle": "Slet mål?",
-    "deleteConfirmMessage": "Dette sletter også alle delmål. Kan ikke fortrydes.",
-    "progressLabel": "{{done}}/{{total}} delmål",
+    "deleteConfirmMessage": "Det sletter også alle milepæle. Det kan ikke fortrydes.",
     "edit": "Rediger",
     "activeLabel": "Aktive",
     "showCompleted": "Vis fuldførte",
+    "new": {
+        "typeLabel": "Hvad slags mål er det?",
+        "types": {
+            "binary": "Gjort / ikke gjort",
+            "count": "Antal",
+            "amount": "Mængde",
+            "duration": "Varighed"
+        },
+        "typeHelp": {
+            "binary": "Ét resultat, for eksempel at få kørekort.",
+            "count": "Et antal ting, for eksempel at læse 12 bøger.",
+            "amount": "En mængde i en enhed du vælger, for eksempel 100 km eller 25 kg.",
+            "duration": "Tid brugt, for eksempel 100 timers læsning."
+        },
+        "targetLabel": "Mål",
+        "currentLabel": "Fremskridt indtil nu (valgfrit)",
+        "unitLabel": "Enhed",
+        "unitPlaceholder": "fx km, kg, sider",
+        "hoursLabel": "Timer",
+        "minutesLabel": "Minutter",
+        "amountHint": "Det her er en måling, ikke penge. Til pengemål bruger du Sparemål under Økonomi.",
+        "typeFixed": "Måltypen kan ikke ændres. Opret et nyt mål for at bruge en anden type."
+    },
+    "errors": {
+        "title": "Skriv en titel.",
+        "targetCount": "Skriv et helt tal på 1 eller mere.",
+        "targetAmount": "Skriv et tal over 0 med højst to decimaler.",
+        "targetDuration": "Skriv en varighed på mindst 1 minut (minutter 0–59).",
+        "currentCount": "Skriv et helt tal på 0 eller mere.",
+        "currentAmount": "Skriv et tal på 0 eller mere med højst to decimaler.",
+        "currentDuration": "Skriv en gyldig varighed (minutter 0–59).",
+        "unit": "Skriv en enhed på 1–24 tegn.",
+        "tooLarge": "Tallet er for stort."
+    },
+    "value": {
+        "count": "{{current}} / {{target}}",
+        "amount": "{{current}} / {{target}} {{unit}}",
+        "hoursMinutes": "{{hours}} t {{minutes}} min",
+        "hours": "{{hours}} t",
+        "minutes": "{{minutes}} min"
+    },
+    "binary": {
+        "done": "Gjort",
+        "open": "Ikke gjort endnu",
+        "markDone": "Marker som gjort",
+        "reopen": "Genåbn"
+    },
+    "progress": {
+        "title": "Fremskridt",
+        "update": "Opdater fremskridt",
+        "save": "Gem fremskridt",
+        "reached": "Målet er nået"
+    },
+    "milestoneProgress_one": "{{done}} / {{total}} milepæl",
+    "milestoneProgress_other": "{{done}} / {{total}} milepæle",
+    "removeDeadline": "Fjern frist",
     "a11y": {
-        "removeSubGoal": "Fjern delmål {{title}}"
-    }
+        "removeMilestone": "Fjern milepæl {{title}}",
+        "milestone": "Milepæl {{title}}"
+    },
+    "deadlineOn": "Frist: {{date}}"
 }

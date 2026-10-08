@@ -47,7 +47,7 @@ All listed creation actions now call `core/ids.newEntityId()`.
 | `store/useFoodStore.ts` | standard prices, grocery purchases, pantry items, shopping items, manual offers, recipes | same local newId | 6 |
 | `store/useHabitsStore.ts` | habits, embedded logs | same local newId | 2 |
 | `store/useHouseholdStore.ts` | custom tasks, shopping items, moving items | same local newId | 3 |
-| `store/useLifeGoalsStore.ts` | goals, embedded subgoals | same local newId | 2 |
+| `store/useLifeGoalsStore.ts` | goals, embedded milestones (APP-063: formerly sub-goals; both use `newEntityId()` UUIDs, historical ids stay as they were) | same local newId | 2 |
 | `store/useTodoStore.ts` | todos | same local newId | 1 |
 | `store/useTripsStore.ts` | trips, default/copied packing items, trip expenses, custom packing items | same local newId | 4 |
 | `store/useSavingsGoalsStore.ts` | savings goals; add/distribute contributions and both transfer legs | timestamp-only goal; timestamp + weak random makeContributionId | 5 |

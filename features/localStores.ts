@@ -69,7 +69,7 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
   // Includes the APP-059 projection cache, and retires any projection answer still in flight.
   { key: 'lifesort-trips', reset: () => useTripsStore.getState().clearLocal() },
   { key: 'lifesort-todos', reset: () => useTodoStore.setState({ todos: [] }) },
-  { key: 'lifesort-life-goals', reset: () => useLifeGoalsStore.setState({ goals: [] }) },
+  { key: 'lifesort-life-goals', reset: () => useLifeGoalsStore.getState().clearLocal() },
   { key: 'lifesort-habits', reset: () => useHabitsStore.setState({ habits: [] }) },
   {
     key: 'lifesort-household',

@@ -16,6 +16,7 @@ import { useLifeModuleTints } from '@/hooks/useLifeModuleTints';
 import { useCareerStore } from '@/store/useCareerStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
+import { goalIsCompleted, meanGoalProgress } from '@/features/goals/domain/goal';
 import { useLifeGoalsStore } from '@/store/useLifeGoalsStore';
 import { useTodoStore } from '@/store/useTodoStore';
 import { getCurrentStreak, getLoggedThisWeek } from '@/utils/habit/habitStreak';
@@ -49,17 +50,9 @@ export default function LifeScreen() {
   const highPriorityTodos = activeTodos.filter((item) => item.importance === 'high');
 
   const lifeGoals = useLifeGoalsStore((s) => s.goals);
-  const totalSubGoals = lifeGoals.reduce((sum, goal) => sum + goal.subGoals.length, 0);
-  const completedSubGoals = lifeGoals.reduce(
-    (sum, goal) => sum + goal.subGoals.filter((subGoal) => subGoal.completed).length,
-    0,
-  );
-  const goalProgress = totalSubGoals > 0 ? completedSubGoals / totalSubGoals : 0;
-  const activeGoals = lifeGoals.filter((goal) => {
-    const total = goal.subGoals.length;
-    const done = goal.subGoals.filter((subGoal) => subGoal.completed).length;
-    return !(total > 0 && done === total);
-  }).length;
+  // The same canonical progress and completion as the Goals screens (APP-063).
+  const goalProgress = meanGoalProgress(lifeGoals);
+  const activeGoals = lifeGoals.filter((goal) => !goalIsCompleted(goal)).length;
 
   const habits = useHabitsStore((s) => s.habits);
   const topStreak = habits.map((habit) => getCurrentStreak(habit.logs)).sort((a, b) => b - a)[0] ?? 0;

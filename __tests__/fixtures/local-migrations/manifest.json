@@ -130,5 +130,16 @@
     "serialization": "raw JSON bytes",
     "synthetic": true,
     "sensitivity": "A (synthetic Home task, shopping and Moving checklist content)"
+  },
+  {
+    "file": "goals/9c5330f-v0.json",
+    "storeId": "async-storage:lifesort-life-goals",
+    "storageKey": "lifesort-life-goals",
+    "sourceCommit": "9c5330f",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A (synthetic goal titles, descriptions, deadlines and milestones)"
   }
 ]

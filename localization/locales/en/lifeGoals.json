@@ -6,19 +6,76 @@
     "titlePlaceholder": "Title (e.g. Learn to play guitar)",
     "descriptionPlaceholder": "Description (optional)",
     "deadlineLabel": "Deadline (optional)",
-    "subGoalsLabel": "Sub-goals",
-    "newSubGoalPlaceholder": "New sub-goal",
-    "addSubGoal": "Add",
-    "noSubGoals": "No sub-goals yet",
+    "milestonesLabel": "Milestones",
+    "newMilestonePlaceholder": "New milestone",
+    "addMilestone": "Add",
+    "noMilestones": "No milestones yet",
     "save": "Save",
     "delete": "Delete",
     "deleteConfirmTitle": "Delete goal?",
-    "deleteConfirmMessage": "This will also delete all sub-goals. This cannot be undone.",
-    "progressLabel": "{{done}}/{{total}} sub-goals",
+    "deleteConfirmMessage": "This will also delete all milestones. This cannot be undone.",
     "edit": "Edit",
     "activeLabel": "Active",
     "showCompleted": "Show completed",
+    "new": {
+        "typeLabel": "What kind of goal is it?",
+        "types": {
+            "binary": "Done / not done",
+            "count": "Count",
+            "amount": "Amount",
+            "duration": "Duration"
+        },
+        "typeHelp": {
+            "binary": "One outcome, for example getting your driver's licence.",
+            "count": "A number of things, for example reading 12 books.",
+            "amount": "A quantity in a unit you choose, for example 100 km or 25 kg.",
+            "duration": "Time spent, for example 100 hours of study."
+        },
+        "targetLabel": "Target",
+        "currentLabel": "Progress so far (optional)",
+        "unitLabel": "Unit",
+        "unitPlaceholder": "e.g. km, kg, pages",
+        "hoursLabel": "Hours",
+        "minutesLabel": "Minutes",
+        "amountHint": "This is a measurement, not money. For money goals use Savings goals in Economy.",
+        "typeFixed": "The goal type cannot be changed. Create a new goal to use another type."
+    },
+    "errors": {
+        "title": "Enter a title.",
+        "targetCount": "Enter a whole number of 1 or more.",
+        "targetAmount": "Enter a number above 0 with at most two decimals.",
+        "targetDuration": "Enter a duration of at least 1 minute (minutes 0–59).",
+        "currentCount": "Enter a whole number of 0 or more.",
+        "currentAmount": "Enter a number of 0 or more with at most two decimals.",
+        "currentDuration": "Enter a valid duration (minutes 0–59).",
+        "unit": "Enter a unit of 1–24 characters.",
+        "tooLarge": "That number is too large."
+    },
+    "value": {
+        "count": "{{current}} / {{target}}",
+        "amount": "{{current}} / {{target}} {{unit}}",
+        "hoursMinutes": "{{hours}} h {{minutes}} min",
+        "hours": "{{hours}} h",
+        "minutes": "{{minutes}} min"
+    },
+    "binary": {
+        "done": "Done",
+        "open": "Not done yet",
+        "markDone": "Mark as done",
+        "reopen": "Reopen"
+    },
+    "progress": {
+        "title": "Progress",
+        "update": "Update progress",
+        "save": "Save progress",
+        "reached": "Target reached"
+    },
+    "milestoneProgress_one": "{{done}} / {{total}} milestone",
+    "milestoneProgress_other": "{{done}} / {{total}} milestones",
+    "removeDeadline": "Remove deadline",
     "a11y": {
-        "removeSubGoal": "Remove sub-goal {{title}}"
-    }
+        "removeMilestone": "Remove milestone {{title}}",
+        "milestone": "Milestone {{title}}"
+    },
+    "deadlineOn": "Deadline: {{date}}"
 }

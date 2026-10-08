@@ -117,14 +117,18 @@ describe('oversættelser', () => {
 describe('leverandørerne rører ikke Home', () => {
   it('importerer ingen anden feature end deres egen', async () => {
     // Et modul må hente sine egne stores; det må ikke låne naboens.
+    // Recursive since APP-063 (features/goals/domain): nested files are held to the same rule.
+    const sourceFilesIn = (dir: string): string[] =>
+      fs.readdirSync(path.join(REPO_ROOT, dir), { withFileTypes: true }).flatMap((entry) => {
+        const relative = path.join(dir, entry.name);
+        if (entry.isDirectory()) return sourceFilesIn(relative);
+        return /\.(ts|tsx)$/.test(entry.name) ? [relative] : [];
+      });
     const featureFiles = fs
       .readdirSync(path.join(REPO_ROOT, 'features'), { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
-      .flatMap((entry) =>
-        fs
-          .readdirSync(path.join(REPO_ROOT, 'features', entry.name))
-          .map((file) => path.join('features', entry.name, file)),
-      );
+      .flatMap((entry) => sourceFilesIn(path.join('features', entry.name)));
+    expect(featureFiles).toContain(path.join('features', 'goals', 'domain', 'goal.ts'));
 
     for (const file of featureFiles) {
       const source = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');

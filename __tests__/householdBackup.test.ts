@@ -33,7 +33,7 @@ describe('APP-061 backup v9', () => {
   });
 
   it('round-trips canonical v9 tasks and rejects malformed zones or sync metadata', () => {
-    expect(BACKUP_VERSION).toBe(10);
+    expect(BACKUP_VERSION).toBe(11);
     const canonical = { ...oldTask, timeZone: 'Europe/Copenhagen' };
     expect(parseBackupFile(JSON.stringify({
       version: 9,

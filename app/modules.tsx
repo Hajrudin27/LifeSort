@@ -33,7 +33,7 @@ const MODULE_ICONS: Record<string, { ios: string; android: string; web: string }
   food: { ios: 'cart.fill', android: 'shopping_cart', web: 'shopping_cart' },
   home: { ios: 'house.fill', android: 'home', web: 'home' },
   goals: { ios: 'flag.fill', android: 'flag', web: 'flag' },
-  habits: { ios: 'flame.fill', android: 'local_fire_department', web: 'local_fire_department' },
+  habits: { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },
   tasks: { ios: 'checklist', android: 'checklist', web: 'checklist' },
   travel: { ios: 'airplane', android: 'flight', web: 'flight' },
   warranties: { ios: 'shield.lefthalf.filled', android: 'shield', web: 'shield' },

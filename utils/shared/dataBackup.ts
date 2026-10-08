@@ -60,6 +60,9 @@ function buildBackupObject() {
     } else if (key === 'lifeGoals') {
       // APP-063: the goals themselves; no runtime or sync state, no functions, no validators.
       data[key] = { goals: useLifeGoalsStore.getState().goals };
+    } else if (key === 'habits') {
+      // APP-064: the habits themselves; never a derived status, week fact, streak or sync metadata.
+      data[key] = { habits: useHabitsStore.getState().habits };
     } else if (key === 'household') {
       const state = useHouseholdStore.getState();
       // APP-061: portable content only; account and revision state stay local.
@@ -142,6 +145,8 @@ export async function importBackup(): Promise<ImportResult | null> {
       useTripsStore.getState().restoreBackup(partial as never);
     } else if (key === 'lifeGoals') {
       useLifeGoalsStore.getState().restoreBackup(partial as never);
+    } else if (key === 'habits') {
+      useHabitsStore.getState().restoreBackup(partial as never);
     } else if (key === 'household') {
       useHouseholdStore.getState().restoreBackup(partial as never);
     } else {

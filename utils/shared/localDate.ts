@@ -54,6 +54,23 @@ export function addDaysIso(iso: string, days: number): string {
   return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;
 }
 
+/**
+ * ISO-ugedag for en kalenderdato: mandag = 1 … søndag = 7. Udregnes af dato-
+ * tallene i UTC, så hverken enhedens tidszone eller sommertid kan flytte dagen —
+ * `parseIsoDate(iso).getDay()` på en gemt dato kan, hvis ur og tidszone skifter.
+ */
+export function isoWeekday(iso: string): number {
+  const [year, month, day] = iso.split('-').map(Number);
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day); // Date.UTC tolker årstal 0–99 som 1900–1999
+  return date.getUTCDay() || 7; // søndag = 7, ikke 0
+}
+
+/** Ugens mandag (ISO-ugen mandag–søndag) for en kalenderdato. Uafhængig af sprog og region. */
+export function startOfIsoWeek(iso: string): string {
+  return addDaysIso(iso, -(isoWeekday(iso) - 1));
+}
+
 /** Hele kalenderdage fra i dag til den givne dato. Negativ hvis den er passeret. */
 export function daysUntilIso(iso: string): number {
   return daysBetweenIso(todayIso(), iso);

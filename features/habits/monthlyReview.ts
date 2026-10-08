@@ -3,8 +3,10 @@ import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useHabitsStore } from '@/store/useHabitsStore';
 
 /**
- * Vaner. Antal registreringer i måneden — ikke en streak og ikke en procent af
- * et mål. En streak, der brydes, er præcis den slags tal, der bebrejder.
+ * Vaner. Antal registreringer i måneden — ikke en streak, ikke en procent af et mål og
+ * aldrig antal "misser". En registrering betyder, at forpligtelsen blev holdt den dag
+ * (APP-064); fraværet af en registrering tæller ikke, og en streak, der brydes, er præcis
+ * den slags tal, der bebrejder (ADR-0012). Vaner er personlige data (APP-064).
  */
 export async function habitsMonthlyReview(monthKey: string): Promise<MonthlyFact[]> {
   await whenStoresHydrated([useHabitsStore]);
@@ -20,7 +22,7 @@ export async function habitsMonthlyReview(monthKey: string): Promise<MonthlyFact
       moduleId: 'habits',
       labelKey: 'review.habitsLogged',
       params: { count: logs.length, habits: habitsWithLogs.length },
-      sensitivity: 'ordinary',
+      sensitivity: 'personal',
     },
   ];
 }

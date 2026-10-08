@@ -23,6 +23,7 @@ import { sharedStyles } from '@/constants/sharedStyles';
 import Kicker from '@/components/Kicker';
 import { useAccentTints } from '@/hooks/useAccentTints';
 import { useBrandTints } from '@/hooks/useBrandTints';
+import { useToday } from '@/hooks/useToday';
 import { useFoodStore } from '@/store/useFoodStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
@@ -32,14 +33,15 @@ import { useProfileStore } from '@/store/useProfileStore';
 import { useTodoStore } from '@/store/useTodoStore';
 import { useTripsStore } from '@/store/useTripsStore';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
-import { getCurrentStreak, hasLoggedToday } from '@/utils/habit/habitStreak';
+import { HabitError } from '@/features/habits/domain/habitCommands';
+import { hasEntryOn, scheduledTodaySummary } from '@/features/habits/domain/habitStatus';
+import { dayAction, todayText, weekFactsText } from '@/features/habits/habitDisplay';
 import { isDateInCurrentWeek } from '@/utils/habit/habitWeek';
 import { daysUntilDue } from '@/utils/household/householdTaskSchedule';
 import { daysUntil } from '@/utils/shared/dateDays';
 import { getGreetingPeriod } from '@/utils/shared/greeting';
 import { budgetPeriodForInstant } from '@/core/dates/budgetPeriod';
 import { monthlyFoodBudget } from '@/features/food/budgetReadModel';
-import { toLocalIsoDate } from '@/utils/shared/localDate';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PAGE_WIDTH = SCREEN_WIDTH - 32;
@@ -66,7 +68,8 @@ export default function HomeScreen() {
   const now = new Date();
   // APP-045: the budget month is Copenhagen's, like Economy's and Food's.
   const budgetPeriod = budgetPeriodForInstant(now);
-  const todayKey = toLocalIsoDate(now);
+  // Re-read at midnight and on return to the foreground, so the day cards roll over without a manual refresh.
+  const todayKey = useToday();
   const greetingPeriod = getGreetingPeriod(now);
   const dateLabel = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
 
@@ -178,7 +181,7 @@ export default function HomeScreen() {
   const toggleTodo = useTodoStore((s) => s.toggleTodo);
   const overdueTodosCount = todos.filter((td) => !td.completed && td.dueDate && daysUntil(td.dueDate) < 0).length;
   const todosToday = todos.filter((td) => !td.completed && td.dueDate && daysUntil(td.dueDate) === 0);
-  const todosThisWeek = todos.filter((td) => !td.completed && td.dueDate && isDateInCurrentWeek(td.dueDate, locale));
+  const todosThisWeek = todos.filter((td) => !td.completed && td.dueDate && isDateInCurrentWeek(td.dueDate));
 
   const householdTasks = useHouseholdStore((s) => s.tasks);
   const overdueHouseholdCount = householdTasks.filter((ht) => daysUntilDue(ht) < 0).length;
@@ -188,12 +191,16 @@ export default function HomeScreen() {
   }).length;
 
   const habits = useHabitsStore((s) => s.habits);
-  const toggleLogForDate = useHabitsStore((s) => s.toggleLogForDate);
-
-  const topStreak = habits
-    .map((h) => ({ habit: h, streak: getCurrentStreak(h.logs) }))
-    .filter((x) => x.streak > 0)
-    .sort((a, b) => b.streak - a.streak)[0];
+  const setHabitDateCompleted = useHabitsStore((s) => s.setHabitDateCompleted);
+  // APP-064: the same canonical status as the Habits screens. Facts only — no streak, no miss count.
+  const habitsToday = scheduledTodaySummary(habits, todayKey);
+  const toggleHabitToday = (habitId: string, mark: boolean) => {
+    try {
+      setHabitDateCompleted(habitId, todayKey, mark);
+    } catch (error) {
+      if (!(error instanceof HabitError)) throw error;
+    }
+  };
 
 
   // ---- Attention items ----
@@ -326,11 +333,6 @@ export default function HomeScreen() {
         <Text style={[styles.heroSubtitle, { color: brand.onBrand }]}>
           {totalAttentionCount > 0 ? t('home.attentionSubtitle', { count: totalAttentionCount }) : t('home.allGoodSubtitle')}
         </Text>
-        {topStreak && (
-          <Text style={[styles.heroStreak, { color: brand.onBrand }]}>
-            {t('home.heroStreak', { days: topStreak.streak, habit: topStreak.habit.title })}
-          </Text>
-        )}
       </Card>
 
       {/* Invitationer til delte rejser */}
@@ -441,15 +443,28 @@ export default function HomeScreen() {
               <Text style={{ color: textMuted, fontSize: 13 }}>{t('home.noHabitsYet')}</Text>
             ) : (
               <View style={sharedStyles.chipRow}>
-                {habits.map((h) => (
-                  <Chip
-                    key={h.id}
-                    label={h.title}
-                    active={hasLoggedToday(h.logs)}
-                    onPress={() => toggleLogForDate(h.id, todayKey)}
-                  />
-                ))}
+                {habits.map((h) => {
+                  const action = dayAction(h, todayKey, todayKey);
+                  return (
+                    <Chip
+                      key={h.id}
+                      label={h.title}
+                      active={hasEntryOn(h, todayKey)}
+                      disabled={action === 'none'}
+                      accessibilityRole="checkbox"
+                      accessibilityLabel={`${h.title}, ${todayText(h, todayKey, t, i18n.language)}`}
+                      accessibilityState={{ checked: hasEntryOn(h, todayKey), disabled: action === 'none' }}
+                      style={{ minHeight: 44, justifyContent: 'center' }}
+                      onPress={() => toggleHabitToday(h.id, action === 'mark')}
+                    />
+                  );
+                })}
               </View>
+            )}
+            {habitsToday.scheduled > 0 && (
+              <Text style={{ color: textMuted, fontSize: 12 }}>
+                {t('home.habitsTodaySummary', { done: habitsToday.completed, total: habitsToday.scheduled })}
+              </Text>
             )}
           </Card>
 
@@ -505,15 +520,14 @@ export default function HomeScreen() {
               {habits.length > 0 && (
                 <Card style={styles.todayCard}>
                   <Text style={[styles.todaySubLabel, { color: textMuted }]}>{t('home.weekHabitsLabel')}</Text>
-                  {habits.map((h) => {
-                    const loggedThisWeek = h.logs.filter((l) => isDateInCurrentWeek(l.date.slice(0, 10), locale)).length;
-                    return (
-                      <View key={h.id} style={styles.weekHabitRow}>
-                        <Text style={styles.weekHabitTitle}>{h.title}</Text>
-                        <Text style={{ color: textMuted, fontSize: 12 }}>{loggedThisWeek}/7</Text>
-                      </View>
-                    );
-                  })}
+                  {habits.map((h) => (
+                    <View key={h.id} style={styles.weekHabitRow}>
+                      <Text style={styles.weekHabitTitle}>{h.title}</Text>
+                      <Text style={{ color: textMuted, fontSize: 12, flexShrink: 1, textAlign: 'right' }}>
+                        {weekFactsText(h, todayKey, t, i18n.language)}
+                      </Text>
+                    </View>
+                  ))}
                 </Card>
               )}
             </>
@@ -673,7 +687,6 @@ const styles = {
   heroGreeting: { fontSize: 26, fontWeight: '800' as const, backgroundColor: 'transparent' },
   heroDate: { fontSize: 14, opacity: 0.9, textTransform: 'capitalize' as const, marginTop: 2 },
   heroSubtitle: { fontSize: 13, opacity: 0.85, marginTop: 10, backgroundColor: 'transparent' },
-  heroStreak: { fontSize: 13, fontWeight: '700' as const, marginTop: 8, backgroundColor: 'transparent' },
   invitationsSection: { gap: 8 },
   invitationCard: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10, borderWidth: 1.5 },
   invitationTextGroup: { flex: 1, gap: 1 },
@@ -691,7 +704,7 @@ const styles = {
   todoTitle: { fontSize: 14, fontWeight: '600' as const },
   weekRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
   weekRowText: { fontSize: 14, fontWeight: '600' as const },
-  weekHabitRow: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, paddingVertical: 3 },
+  weekHabitRow: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, paddingVertical: 3, gap: 12 },
   weekHabitTitle: { fontSize: 13, fontWeight: '600' as const },
   dotsRow: { flexDirection: 'row' as const, justifyContent: 'center' as const, gap: 6, marginTop: -4 },
   dot: { width: 6, height: 6, borderRadius: 3 },

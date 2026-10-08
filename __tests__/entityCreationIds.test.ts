@@ -49,6 +49,7 @@ import { useCycleStore } from '@/store/useCycleStore';
 import { useFoodStore } from '@/store/useFoodStore';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
+import { todayIso } from '@/utils/shared/localDate';
 import { scheduleTripPackingReminder } from '@/utils/trip/tripReminder';
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -158,8 +159,8 @@ it('covers each other migrated store, nested records, and CV references', () => 
   useTodoStore.getState().addTodo({ title: 'Task', importance: 'low' });
   const goal = useLifeGoalsStore.getState().addGoal({ title: 'Goal', type: 'binary' });
   useLifeGoalsStore.getState().addMilestone(goal, 'Step');
-  useHabitsStore.getState().addHabit({ title: 'Habit', direction: 'build' });
-  useHabitsStore.getState().toggleLogForDate(useHabitsStore.getState().habits[0].id, '2026-09-10');
+  useHabitsStore.getState().addHabit({ title: 'Habit', direction: 'build', schedule: { kind: 'open' } });
+  useHabitsStore.getState().setHabitDateCompleted(useHabitsStore.getState().habits[0].id, todayIso(), true);
   useCareerStore.getState().addApplication({ company: 'Example', position: 'Role', status: 'applied', appliedDate: '2026-09-10' });
   useCareerStore.getState().addSkill({ name: 'Writing', category: 'soft', level: 'beginner' });
   const cv = useCVStore.getState();

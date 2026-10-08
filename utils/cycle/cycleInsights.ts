@@ -1,6 +1,6 @@
 import { CycleEntry } from "@/types/cycle";
 import { CyclePhase, getPhaseForCycleDay } from "@/utils/cycle/cyclePredictions";
-import { addDaysIso, daysBetweenIso, toLocalIsoDate } from "@/utils/shared/localDate";
+import { daysBetweenIso, toLocalIsoDate } from "@/utils/shared/localDate";
 
 // Finder hvilken cyklusfase en given dato faldt i, baseret på den nærmeste
 // forudgående registrerede cyklusstart — virker for enhver historisk dato,
@@ -72,21 +72,29 @@ export function computeAmountsByPhase(
 }
 
 export interface HabitPhaseStat {
+  /** Scheduled days on which the habit was completed. */
   logged: number;
+  /** Scheduled days that have an outcome: completed, or strictly before today with no entry. */
   possible: number;
   rate: number;
 }
 
-// For hver dag, en vane har eksisteret, tjekker vi hvilken fase dagen faldt i,
-// og om vanen blev logget den dag — giver en reel gennemførselsrate per fase,
-// ikke kun et øjebliksbillede.
+/** One scheduled day of one habit and whether it was completed (APP-064: features/habits/domain `scheduledDayOutcomes`). */
+export interface DatedOutcome {
+  date: string;
+  completed: boolean;
+}
+
+// For hver planlagt dag med et udfald (gennemført, eller en tidligere dag uden registrering)
+// tjekker vi hvilken fase dagen faldt i. Kun dage, vanen faktisk forventede noget af, indgår:
+// en dag uden fast plan er hverken en succes eller en fejl, så vaner med et ugentligt antal
+// eller uden tidsplan bidrager ikke. Udfaldene kommer færdige — herfra kendes tidsplanen ikke.
 export function computeHabitRateByPhase(
-  habits: { createdAt: string; logs: { date: string }[] }[],
+  outcomes: readonly DatedOutcome[],
   cycles: CycleEntry[],
   avgCycleLength: number,
   periodLength: number,
   lutealPhaseLength: number,
-  today: Date,
 ): Record<CyclePhase, HabitPhaseStat> {
   const result: Record<CyclePhase, HabitPhaseStat> = {
     menstrual: { logged: 0, possible: 0, rate: 0 },
@@ -95,26 +103,17 @@ export function computeHabitRateByPhase(
     luteal: { logged: 0, possible: 0, rate: 0 },
   };
 
-  const todayKey = toLocalIsoDate(today);
-
-  for (const habit of habits) {
-    const loggedDates = new Set(habit.logs.map((l) => l.date.slice(0, 10)));
-    let dateKey = toLocalIsoDate(new Date(habit.createdAt));
-
-    while (dateKey <= todayKey) {
-      const phase = getPhaseForDate(
-        dateKey,
-        cycles,
-        avgCycleLength,
-        periodLength,
-        lutealPhaseLength,
-      );
-      if (phase) {
-        result[phase].possible += 1;
-        if (loggedDates.has(dateKey)) result[phase].logged += 1;
-      }
-      dateKey = addDaysIso(dateKey, 1);
-    }
+  for (const outcome of outcomes) {
+    const phase = getPhaseForDate(
+      outcome.date,
+      cycles,
+      avgCycleLength,
+      periodLength,
+      lutealPhaseLength,
+    );
+    if (!phase) continue;
+    result[phase].possible += 1;
+    if (outcome.completed) result[phase].logged += 1;
   }
 
   for (const phase of Object.keys(result) as CyclePhase[]) {

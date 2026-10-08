@@ -1,22 +1,131 @@
 {
-    "screenTitle": "Vaner",
-    "newScreenTitle": "Ny vane",
-    "emptyState": "Ingen vaner endnu",
-    "addButton": "+ Tilføj vane",
-    "titlePlaceholder": "Titel (fx Løb 20 minutter)",
-    "directionLabel": "Type",
-    "direction": {
-      "build": "Vane jeg vil opbygge",
-      "quit": "Vane jeg vil af med"
+  "screenTitle": "Vaner",
+  "newScreenTitle": "Ny vane",
+  "emptyState": "Ingen vaner endnu",
+  "addButton": "+ Tilføj vane",
+  "titlePlaceholder": "Titel (fx Løb 20 minutter)",
+  "directionLabel": "Type",
+  "direction": {
+    "build": "Vane jeg vil opbygge",
+    "quit": "Vane jeg vil af med"
+  },
+  "directionHelp": {
+    "build": "Du markerer en dag, når du har gjort det.",
+    "quit": "Du markerer en dag, når du har holdt din forpligtelse og undladt det."
+  },
+  "directionLocked": "Typen kan ikke ændres, når en dag er markeret. Fjern alle markeringer for at ændre den.",
+  "scheduleLabel": "Tidsplan",
+  "schedule": {
+    "everyDay": "Hver dag",
+    "selectedDays": "Valgte dage",
+    "weekly": "Gange om ugen",
+    "open": "Ingen fast tidsplan",
+    "weeklyInput": "Gange om ugen (1–7)",
+    "pickDays": "Vælg mindst én dag.",
+    "weeklyInvalid": "Skriv et helt tal fra 1 til 7.",
+    "weeklySummary_one": "{{count}} gang om ugen",
+    "weeklySummary_other": "{{count}} gange om ugen",
+    "effectiveToday": "En ny tidsplan gælder fra i dag. Tidligere dage beholder den tidsplan, de havde.",
+    "effectiveNextMonday": "Ændringer til ugentlige tidsplaner gælder fra næste mandag.",
+    "pending": "Fra {{date}}: {{schedule}}",
+    "currentTitle": "Tidsplan"
+  },
+  "weekday": {
+    "long": {
+      "1": "mandag",
+      "2": "tirsdag",
+      "3": "onsdag",
+      "4": "torsdag",
+      "5": "fredag",
+      "6": "lørdag",
+      "7": "søndag"
     },
-    "targetLabel": "Mål per uge (valgfrit)",
-    "logToday": "Registrér i dag",
-    "loggedToday": "Registreret i dag",
-    "streakLabel": "{{count}} dage i træk",
-    "weekLabel": "{{count}}/{{target}} denne uge",
-    "save": "Gem",
-    "delete": "Slet",
-    "deleteConfirmTitle": "Slet vane?",
-    "deleteConfirmMessage": "Denne handling kan ikke fortrydes.",
-    "edit": "Rediger"
-  }
+    "short": {
+      "1": "man",
+      "2": "tir",
+      "3": "ons",
+      "4": "tor",
+      "5": "fre",
+      "6": "lør",
+      "7": "søn"
+    },
+    "narrow": {
+      "1": "M",
+      "2": "T",
+      "3": "O",
+      "4": "T",
+      "5": "F",
+      "6": "L",
+      "7": "S"
+    }
+  },
+  "status": {
+    "completed": {
+      "build": "Gennemført",
+      "quit": "Holdt"
+    },
+    "missed": {
+      "build": "Ikke gennemført",
+      "quit": "Ikke markeret som holdt"
+    },
+    "pending": "Planlagt i dag",
+    "optional": "Ingen registrering",
+    "future": "Kommende",
+    "beforeStart": "Før start"
+  },
+  "today": {
+    "completed": {
+      "build": "Gennemført i dag",
+      "quit": "Holdt i dag"
+    },
+    "pending": "Planlagt i dag",
+    "notScheduled": "Ikke planlagt i dag",
+    "noEntry": "Ingen registrering i dag",
+    "notStarted": "Starter {{date}}"
+  },
+  "week": {
+    "weekdays": "{{done}} af {{total}} planlagte dage denne uge",
+    "weekdaysExtra_one": "{{count}} registrering mere på andre dage",
+    "weekdaysExtra_other": "{{count}} registreringer mere på andre dage",
+    "weekly": "{{done}} af {{target}} denne uge",
+    "open_one": "{{count}} registrering denne uge",
+    "open_other": "{{count}} registreringer denne uge",
+    "notStarted": "Starter {{date}}"
+  },
+  "mark": {
+    "build": "Markér som gennemført",
+    "quit": "Markér som holdt",
+    "clearBuild": "Fjern gennemført",
+    "clearQuit": "Fjern holdt"
+  },
+  "startedLabel": "Tæller fra {{date}}",
+  "historyTitle": "Historik",
+  "historyHelp": "Tryk på en dag for at markere eller fjerne den. Dage før start og kommende dage kan ikke markeres.",
+  "legend": {
+    "completed": "Gennemført / holdt",
+    "missed": "Ikke gennemført",
+    "pending": "Planlagt i dag",
+    "optional": "Intet forventet",
+    "future": "Kommende"
+  },
+  "a11y": {
+    "scheduled": "planlagt",
+    "notScheduled": "ikke planlagt",
+    "noFixedDay": "ingen fast dag",
+    "completedEntry": "gennemført",
+    "hintMark": {
+      "build": "Dobbelttryk for at markere dagen som gennemført.",
+      "quit": "Dobbelttryk for at markere dagen som holdt."
+    },
+    "hintClear": "Dobbelttryk for at fjerne markeringen af dagen.",
+    "weekdayChoice": "{{day}}",
+    "scheduleChoices": "Tidsplan"
+  },
+  "edit": "Rediger",
+  "editTitle": "Rediger vane",
+  "save": "Gem",
+  "invalid": "Tjek titel og tidsplan og prøv igen.",
+  "delete": "Slet",
+  "deleteConfirmTitle": "Slet vane?",
+  "deleteConfirmMessage": "Denne handling kan ikke fortrydes."
+}

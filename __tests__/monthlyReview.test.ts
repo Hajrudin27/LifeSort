@@ -115,7 +115,10 @@ describe('determinisme', () => {
   it('leverer nøgler og tal, ikke færdige sætninger', async () => {
     // Så en model senere kan formulere dem — men aldrig producere dem.
     useHabitsStore.setState({
-      habits: [{ id: 'h', title: 'Løb', direction: 'build', logs: [{ id: 'l', date: '2026-08-04' }], createdAt: '2026-01-01T00:00:00.000Z' }],
+      habits: [{
+        id: 'h', title: 'Løb', direction: 'build', createdAt: '2026-01-01T00:00:00.000Z', startDate: '2026-01-01',
+        scheduleHistory: [{ effectiveFrom: '2026-01-01', schedule: { kind: 'open' } }], logs: [{ id: 'l', date: '2026-08-04' }],
+      }],
     });
     const facts = await MONTHLY_REVIEW_PROVIDERS.habits!(MONTH);
     expect(facts[0].labelKey).toMatch(/^review\./);

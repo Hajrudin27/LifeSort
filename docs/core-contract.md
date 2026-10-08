@@ -76,6 +76,14 @@ persists. Progress, completion, mutations, input parsing and server-row mapping 
 `__tests__/goalDomainBoundary.test.ts` also holds the whole platform to "no import of a feature" with a
 one-edge baseline. See [ADR-0051](./adr/0051-life-goals-have-four-explicit-measurable-types-and-milestones-are-supporting-only.md).
 
+`core/habits/persistedHabit.ts` (APP-064) is the same kind of exception, again no larger than it needs to be: the
+persisted Habit *format* (exact key set, the three schedule shapes, the schedule-history invariants, one entry per
+local date, strict decoding and the frozen legacy `targetPerWeek` mapping), because the local migration and the
+backup parser must validate what the store persists. It never reads the clock. Day status, schedule resolution,
+week facts, how a schedule may change, input parsing and server-row mapping stay in `features/habits/domain`, which
+imports core, never the reverse; `__tests__/habitDomainBoundary.test.ts` holds that line. See
+[ADR-0052](./adr/0052-habits-are-recurring-commitments-with-derived-status-and-effective-dated-schedules.md).
+
 ## The rules
 
 | # | Rule | Enforced |

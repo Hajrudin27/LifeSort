@@ -5,6 +5,7 @@ import Card from "@/components/Card";
 import { Text, useThemeColor, View } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import { CycleTints } from "@/constants/Colors";
+import { scheduledDayOutcomes } from '@/features/habits/domain/habitStatus';
 import { useCycleStore } from "@/store/useCycleStore";
 import { useFoodStore } from "@/store/useFoodStore";
 import { useHabitsStore } from "@/store/useHabitsStore";
@@ -15,6 +16,7 @@ import {
   computeTodoOverdueRateByPhase,
   generateCycleInsights,
 } from '@/utils/cycle/cycleInsights';
+import { todayIso } from '@/utils/shared/localDate';
 
 const PERIOD_LENGTH = 5;
 
@@ -38,13 +40,13 @@ export default function CycleInsightsCard() {
     PERIOD_LENGTH,
     lutealPhaseLength,
   );
+  // Only days a weekdays schedule asked for count (APP-064); the Habits domain names them, this card never reads a schedule.
   const habitRateByPhase = computeHabitRateByPhase(
-    habits,
+    scheduledDayOutcomes(habits, todayIso()),
     cycles,
     avgCycleLength,
     PERIOD_LENGTH,
     lutealPhaseLength,
-    new Date(),
   );
   const todoOverdueByPhase = computeTodoOverdueRateByPhase(
     todos,

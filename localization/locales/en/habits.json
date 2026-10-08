@@ -1,22 +1,131 @@
 {
-    "screenTitle": "Habits",
-    "newScreenTitle": "New habit",
-    "emptyState": "No habits yet",
-    "addButton": "+ Add habit",
-    "titlePlaceholder": "Title (e.g. Run for 20 minutes)",
-    "directionLabel": "Type",
-    "direction": {
-      "build": "Habit to build",
-      "quit": "Habit to quit"
+  "screenTitle": "Habits",
+  "newScreenTitle": "New habit",
+  "emptyState": "No habits yet",
+  "addButton": "+ Add habit",
+  "titlePlaceholder": "Title (e.g. Run for 20 minutes)",
+  "directionLabel": "Type",
+  "direction": {
+    "build": "Habit to build",
+    "quit": "Habit to quit"
+  },
+  "directionHelp": {
+    "build": "You mark a day when you did it.",
+    "quit": "You mark a day when you kept your commitment and held off."
+  },
+  "directionLocked": "The type can't be changed once a day has been marked. Clear every marked day to change it.",
+  "scheduleLabel": "Schedule",
+  "schedule": {
+    "everyDay": "Every day",
+    "selectedDays": "Selected days",
+    "weekly": "Times a week",
+    "open": "No fixed schedule",
+    "weeklyInput": "Times per week (1–7)",
+    "pickDays": "Pick at least one day.",
+    "weeklyInvalid": "Enter a whole number from 1 to 7.",
+    "weeklySummary_one": "{{count}} time a week",
+    "weeklySummary_other": "{{count}} times a week",
+    "effectiveToday": "A new schedule applies from today. Earlier days keep the schedule they had.",
+    "effectiveNextMonday": "Changes to weekly schedules apply next Monday.",
+    "pending": "From {{date}}: {{schedule}}",
+    "currentTitle": "Schedule"
+  },
+  "weekday": {
+    "long": {
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday",
+      "7": "Sunday"
     },
-    "targetLabel": "Weekly target (optional)",
-    "logToday": "Log today",
-    "loggedToday": "Logged today",
-    "streakLabel": "{{count}} day streak",
-    "weekLabel": "{{count}}/{{target}} this week",
-    "save": "Save",
-    "delete": "Delete",
-    "deleteConfirmTitle": "Delete habit?",
-    "deleteConfirmMessage": "This action cannot be undone.",
-    "edit": "Edit"
-  }
+    "short": {
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat",
+      "7": "Sun"
+    },
+    "narrow": {
+      "1": "M",
+      "2": "T",
+      "3": "W",
+      "4": "T",
+      "5": "F",
+      "6": "S",
+      "7": "S"
+    }
+  },
+  "status": {
+    "completed": {
+      "build": "Completed",
+      "quit": "Kept"
+    },
+    "missed": {
+      "build": "Not completed",
+      "quit": "Not marked as kept"
+    },
+    "pending": "Scheduled today",
+    "optional": "No entry",
+    "future": "Upcoming",
+    "beforeStart": "Before start"
+  },
+  "today": {
+    "completed": {
+      "build": "Completed today",
+      "quit": "Kept today"
+    },
+    "pending": "Scheduled today",
+    "notScheduled": "Not scheduled today",
+    "noEntry": "No entry today",
+    "notStarted": "Starts {{date}}"
+  },
+  "week": {
+    "weekdays": "{{done}} of {{total}} scheduled days this week",
+    "weekdaysExtra_one": "{{count}} more entry on other days",
+    "weekdaysExtra_other": "{{count}} more entries on other days",
+    "weekly": "{{done}} of {{target}} this week",
+    "open_one": "{{count}} entry this week",
+    "open_other": "{{count}} entries this week",
+    "notStarted": "Starts {{date}}"
+  },
+  "mark": {
+    "build": "Mark completed",
+    "quit": "Mark kept",
+    "clearBuild": "Clear completed",
+    "clearQuit": "Clear kept"
+  },
+  "startedLabel": "Counting from {{date}}",
+  "historyTitle": "History",
+  "historyHelp": "Tap a day to mark or clear it. Days before the start and upcoming days can't be marked.",
+  "legend": {
+    "completed": "Completed / kept",
+    "missed": "Not completed",
+    "pending": "Scheduled today",
+    "optional": "Nothing expected",
+    "future": "Upcoming"
+  },
+  "a11y": {
+    "scheduled": "scheduled",
+    "notScheduled": "not scheduled",
+    "noFixedDay": "no fixed day",
+    "completedEntry": "completed",
+    "hintMark": {
+      "build": "Double tap to mark this day as completed.",
+      "quit": "Double tap to mark this day as kept."
+    },
+    "hintClear": "Double tap to clear this day.",
+    "weekdayChoice": "{{day}}",
+    "scheduleChoices": "Schedule"
+  },
+  "edit": "Edit",
+  "editTitle": "Edit habit",
+  "save": "Save",
+  "invalid": "Check the title and schedule and try again.",
+  "delete": "Delete",
+  "deleteConfirmTitle": "Delete habit?",
+  "deleteConfirmMessage": "This action cannot be undone."
+}

@@ -176,7 +176,7 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
     availability: 'available',
     titleKey: 'modules.names.habits',
     descriptionKey: 'modules.descriptions.habits',
-    sensitivity: ['ordinary'],
+    sensitivity: ['personal'],
     routeRoots: ['/habits'],
   },
   tasks: {

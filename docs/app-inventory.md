@@ -86,7 +86,7 @@ itself is APP-005 and is **not** implemented here.
 | `food` | `food` | available | `/food/*` | `useFoodStore` | ordinary, financial | Hajrudin Kardasevic |
 | `home` | `home` | available | `/household/*` | `useHouseholdStore` | ordinary | Hajrudin Kardasevic |
 | `goals` | `goals` | available | `/life-goals/*` | `useLifeGoalsStore` | personal | Hajrudin Kardasevic |
-| `habits` | `habits` | available | `/habits/*` | `useHabitsStore` | ordinary | Hajrudin Kardasevic |
+| `habits` | `habits` | available | `/habits/*` | `useHabitsStore` | personal | Hajrudin Kardasevic |
 | `tasks` | – (spec has no `tasks` id; see §8-F3) | available | `/todos/*` | `useTodoStore` | ordinary | Hajrudin Kardasevic |
 | `travel` | `travel` | available | `/travel/*` | `useTripsStore` | personal, financial, document | Hajrudin Kardasevic |
 | `warranties` | `warranties` | available | `/warranties/*` | `useWarrantiesStore` | document, financial | Hajrudin Kardasevic |
@@ -176,9 +176,9 @@ to Supabase tables in §3.
 | `/food/select-stores` | `app/food/select-stores.tsx` | `food` | `useFoodStore` | ordinary | Hajrudin Kardasevic |
 | `/food/shopping-list` | `app/food/shopping-list.tsx` | `food` | `useFoodStore`<br>`useToastStore` | ordinary | Hajrudin Kardasevic |
 | `/food/weekly-plan` | `app/food/weekly-plan.tsx` | `food` | `useFoodStore`<br>`useToastStore` | ordinary | Hajrudin Kardasevic |
-| `/habits/[id]` | `app/habits/[id].tsx` | `habits` | `useHabitsStore` | ordinary | Hajrudin Kardasevic |
-| `/habits` | `app/habits/index.tsx` | `habits` | `useHabitsStore` | ordinary | Hajrudin Kardasevic |
-| `/habits/new` | `app/habits/new.tsx` | `habits` | `useHabitsStore` | ordinary | Hajrudin Kardasevic |
+| `/habits/[id]` | `app/habits/[id].tsx` | `habits` | `useHabitsStore` | personal | Hajrudin Kardasevic |
+| `/habits` | `app/habits/index.tsx` | `habits` | `useHabitsStore` | personal | Hajrudin Kardasevic |
+| `/habits/new` | `app/habits/new.tsx` | `habits` | `useHabitsStore` | personal | Hajrudin Kardasevic |
 | `/household` | `app/household/index.tsx` | `home` | `useHouseholdStore` | ordinary | Hajrudin Kardasevic |
 | `/household/moving` | `app/household/moving.tsx` | `home` | `useHouseholdStore`<br>`useToastStore` | ordinary | Hajrudin Kardasevic |
 | `/household/shopping-list` | `app/household/shopping-list.tsx` | `home` | `useHouseholdStore`<br>`useToastStore` | ordinary | Hajrudin Kardasevic |
@@ -256,7 +256,7 @@ the key material in SecureStore.
 | `useFoodStore` | `store/useFoodStore.ts` | `food` | `lifesort-food-v2` | AsyncStorage (plain) | `food_standard_prices`, `food_monthly_budget`, `food_saved_plans`, `food_purchases`, `food_pantry_items`, `food_shopping_items`, `food_shopping_item_derivations`, `food_recipes`, `food_offers`, `food_selected_stores`, `global_offers`, `global_standard_prices` | ordinary, financial | Hajrudin Kardasevic |
 | `useHouseholdStore` | `store/useHouseholdStore.ts` | `home` | `lifesort-household` | AsyncStorage (plain), versioned Z2 | `household_tasks` via durable outbox/RPC; shopping and moving retain existing best-effort paths (APP-062 adds Moving template provenance and an account-bound owner) | ordinary | Hajrudin Kardasevic |
 | `useLifeGoalsStore` | `store/useLifeGoalsStore.ts` | `goals` | `lifesort-life-goals` | AsyncStorage (plain), versioned Z1 | `life_goals` (best-effort sync, account-bound writes) | personal | Hajrudin Kardasevic |
-| `useHabitsStore` | `store/useHabitsStore.ts` | `habits` | `lifesort-habits` | AsyncStorage (plain) | `habits` | ordinary | Hajrudin Kardasevic |
+| `useHabitsStore` | `store/useHabitsStore.ts` | `habits` | `lifesort-habits` | AsyncStorage (plain), versioned Z1 | `habits` (best-effort sync, account-bound writes; not production-sync-ready) | personal | Hajrudin Kardasevic |
 | `useTodoStore` | `store/useTodoStore.ts` | `tasks` | `lifesort-todos` | AsyncStorage (plain) | `todos` | ordinary | Hajrudin Kardasevic |
 | `useTripsStore` | `store/useTripsStore.ts` | `travel` | `lifesort-trips` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts`; includes independent APP-060 template copies plus Trip-scoped applied id/version markers, stale-labelled minimal trip financial projections, unresolved legacy Travel rows, and narrow account-bound pending new-expense drafts for restart-safe identity | `trips`, legacy `trip_expenses`, `trip_packing_items`, private `trip_packing_template_applications`, `trip_participants`; canonical spend is created in `expenses` and linked by server-only `trip_expense_links` through APP-059 RPCs | personal, financial, document | Hajrudin Kardasevic |
 | `useWarrantiesStore` | `store/useWarrantiesStore.ts` | `warranties` | `lifesort-warranties` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `warranties` | document, financial | Hajrudin Kardasevic |
@@ -308,7 +308,7 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `household_shopping_items` | `home` | `store/useHouseholdStore.ts` | ordinary | Hajrudin Kardasevic |
 | `household_moving_items` | `home` | `store/useHouseholdStore.ts` | ordinary | Hajrudin Kardasevic |
 | `life_goals` | `goals` | `store/useLifeGoalsStore.ts` | personal | Hajrudin Kardasevic |
-| `habits` | `habits` | `store/useHabitsStore.ts` | ordinary | Hajrudin Kardasevic |
+| `habits` | `habits` | `store/useHabitsStore.ts` | personal | Hajrudin Kardasevic |
 | `todos` | `tasks` | `store/useTodoStore.ts` | ordinary | Hajrudin Kardasevic |
 | `trips` | `travel` | `store/useTripsStore.ts` | personal | Hajrudin Kardasevic |
 | `trip_expenses` | `travel` | `store/useTripsStore.ts` (unresolved legacy rows only after APP-059) | financial | Hajrudin Kardasevic |
@@ -394,7 +394,10 @@ module that owns it.
 | `SavingsHistoryChart` | `components/SavingsHistoryChart.tsx` | `economy` | Hajrudin Kardasevic |
 | `SavingsIconPicker` | `components/SavingsIconPicker.tsx` | `economy` | Hajrudin Kardasevic |
 | `AssigneeSelector` | `components/AssigneeSelector.tsx` | `home` | Hajrudin Kardasevic |
+| `HabitDayCell` | `components/HabitDayCell.tsx` | `habits` | Hajrudin Kardasevic |
+| `habitGrid` | `components/habitGrid.ts` | `habits` | Hajrudin Kardasevic |
 | `HabitMonthCalendar` | `components/HabitMonthCalendar.tsx` | `habits` | Hajrudin Kardasevic |
+| `HabitScheduleChooser` | `components/HabitScheduleChooser.tsx` | `habits` | Hajrudin Kardasevic |
 | `HabitWeekRow` | `components/HabitWeekRow.tsx` | `habits` | Hajrudin Kardasevic |
 | `TripAttachmentGrid` | `components/TripAttachmentGrid.tsx` | `travel` | Hajrudin Kardasevic |
 | `TripDeleteFlow` | `components/TripDeleteFlow.tsx` | `travel` | Hajrudin Kardasevic |
@@ -419,7 +422,7 @@ Directory-level map of the remaining shared code. Not enforced by the test.
 | `food` | `utils/food/`, `data/seedRecipes*.ts` | `types/food.ts` | `food` |
 | `home` | `utils/household/` | `types/household.ts` | `household` |
 | `goals` | – | `types/life.ts` | `lifeGoals` |
-| `habits` | `utils/habit/` | `types/life.ts` | `habits` |
+| `habits` | `core/habits/` (persisted format), `features/habits/` (domain rules, display, monthly review), `utils/habit/` (calendar layout) | `types/life.ts` | `habits` |
 | `tasks` | `utils/todo/` (`calendarSync`) | `types/life.ts` | `todos` |
 | `travel` | `utils/trip/` | `types/trip.ts` | `travel` |
 | `warranties` | `utils/warranty/` | `types/warranty.ts` | `warranties` |
@@ -434,7 +437,7 @@ name.
 
 | Value | Meaning in LifeSort |
 | --- | --- |
-| `ordinary` | Low-risk personal productivity data (chores, shopping list, habits, recipes). |
+| `ordinary` | Low-risk personal productivity data (chores, shopping list, recipes). |
 | `personal` | Identifies or profiles the user (profile, trips, job applications, CV content). |
 | `financial` | Amounts, budgets, income, savings, purchase prices. |
 | `health` | Cycle, symptoms and reproductive-health settings. Special category under GDPR. |

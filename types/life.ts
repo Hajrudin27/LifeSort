@@ -58,18 +58,43 @@ export interface DurationGoal extends GoalBase {
 export type LifeGoal = BinaryGoal | CountGoal | AmountGoal | DurationGoal;
 export type GoalType = LifeGoal['type'];
 
-export type HabitDirection = 'build' | 'quit'; // en vane du vil opbygge, eller en du vil af med
+/** What the habit is about. A log means the commitment was kept on that date in BOTH directions. */
+export type HabitDirection = 'build' | 'quit';
 
+/** ISO weekday: Monday = 1 … Sunday = 7. Independent of locale and device timezone. */
+export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/**
+ * What the habit asks of a day or week. `weekdays` names the days (ascending, unique;
+ * "every day" is all seven), `weekly` is a count of 1–7 completions in an ISO week with no
+ * fixed day, `open` has no expectation at all.
+ */
+export type HabitSchedule =
+  | { kind: 'weekdays'; days: IsoWeekday[] }
+  | { kind: 'weekly'; target: number }
+  | { kind: 'open' };
+
+/** The schedule applies from `effectiveFrom` (a local calendar date) until the next period starts. */
+export interface HabitSchedulePeriod {
+  effectiveFrom: string; // LocalDate, YYYY-MM-DD
+  schedule: HabitSchedule;
+}
+
+/** One kept-the-commitment entry on a local calendar date. At most one per habit per date. */
 export interface HabitLog {
   id: string;
-  date: string; // ISO-dato, kun dagen tæller ("2026-08-23")
+  date: string; // LocalDate, YYYY-MM-DD
 }
 
 export interface Habit {
   id: string;
   title: string;
   direction: HabitDirection;
-  targetPerWeek?: number; // valgfrit mål, fx "3 gange om ugen"
-  logs: HabitLog[];
+  /** The moment of creation (an instant). Never used to decide which day anything belongs to. */
   createdAt: string;
+  /** First local calendar date the habit counts from. Stored; never moves with the timezone. */
+  startDate: string;
+  /** At least one period; the first starts on `startDate`; strictly increasing `effectiveFrom`. */
+  scheduleHistory: HabitSchedulePeriod[];
+  logs: HabitLog[];
 }

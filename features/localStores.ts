@@ -70,7 +70,8 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
   { key: 'lifesort-trips', reset: () => useTripsStore.getState().clearLocal() },
   { key: 'lifesort-todos', reset: () => useTodoStore.setState({ todos: [] }) },
   { key: 'lifesort-life-goals', reset: () => useLifeGoalsStore.getState().clearLocal() },
-  { key: 'lifesort-habits', reset: () => useHabitsStore.setState({ habits: [] }) },
+  // Retires any fetch still in flight, so a response for the previous account cannot repopulate the cleared store.
+  { key: 'lifesort-habits', reset: () => useHabitsStore.getState().clearLocal() },
   {
     key: 'lifesort-household',
     reset: () => useHouseholdStore.getState().clearLocal(),

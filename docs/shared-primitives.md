@@ -42,9 +42,11 @@ neither timezone nor DST can shift. It exists because both bugs had already
 happened once.
 
 **Divergence:** `utils/food/foodWeek.ts` computes ISO week keys with its own
-`Date.UTC` arithmetic, while `utils/habit/habitWeek.ts` computes the same
-Monday-start week through the canonical helpers. Both carry the same `|| 7`
-Sunday trick, written twice.
+`Date.UTC` arithmetic. *(APP-064: Habits no longer carries its own copy of the
+`|| 7` Sunday trick. `isoWeekday` and `startOfIsoWeek` now live beside the other
+calendar maths in `utils/shared/localDate.ts` — integer arithmetic on the date's
+own numbers in UTC, never `getDay()` on a stored date — and `utils/habit/habitWeek.ts`
+and the Habits domain use them.)*
 
 **Consequence:** low today — `getISOWeekKey` is deliberately UTC-based and is
 correct for that purpose. But the week boundary now has two definitions, and

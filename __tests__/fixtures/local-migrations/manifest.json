@@ -141,5 +141,16 @@
     "serialization": "raw JSON bytes",
     "synthetic": true,
     "sensitivity": "A (synthetic goal titles, descriptions, deadlines and milestones)"
+  },
+  {
+    "file": "habits/a818c9d-v0.json",
+    "storeId": "async-storage:lifesort-habits",
+    "storageKey": "lifesort-habits",
+    "sourceCommit": "a818c9d",
+    "sourceVersion": 0,
+    "targetVersion": 1,
+    "serialization": "raw JSON bytes",
+    "synthetic": true,
+    "sensitivity": "A (synthetic habit titles, schedules and completion dates)"
   }
 ]

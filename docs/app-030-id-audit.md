@@ -45,7 +45,7 @@ All listed creation actions now call `core/ids.newEntityId()`.
 | `store/useCareerStore.ts` | job applications, skills | same local newId | 2 |
 | `store/useCycleStore.ts` | cycles, new symptom logs | same local newId | 2 |
 | `store/useFoodStore.ts` | standard prices, grocery purchases, pantry items, shopping items, manual offers, recipes | same local newId | 6 |
-| `store/useHabitsStore.ts` | habits, embedded logs | same local newId | 2 |
+| `store/useHabitsStore.ts` | habits, embedded completion entries (APP-064: both use `newEntityId()` UUIDs; a repeated mark for a date keeps the existing entry id and creates no new one; historical ids stay as they were) | same local newId | 2 |
 | `store/useHouseholdStore.ts` | custom tasks, shopping items, moving items | same local newId | 3 |
 | `store/useLifeGoalsStore.ts` | goals, embedded milestones (APP-063: formerly sub-goals; both use `newEntityId()` UUIDs, historical ids stay as they were) | same local newId | 2 |
 | `store/useTodoStore.ts` | todos | same local newId | 1 |

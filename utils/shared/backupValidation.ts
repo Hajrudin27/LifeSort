@@ -22,6 +22,7 @@ import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { supportedMoney } from '@/core/money/supportedMoney';
 import { decodeGoals, decodeLegacyGoals } from '@/core/goals/persistedGoal';
+import { decodeHabits, decodeLegacyHabits } from '@/core/habits/persistedHabit';
 import { decodeMovingItems, decodeMovingTemplateMarker, LEGACY_MOVING_MARKER } from '@/core/home/moving';
 import { parseCalendarDate as parseHouseholdCalendarDate } from '@/utils/shared/localDate';
 import { isValidIanaTimeZone } from '@/utils/shared/timeZone';
@@ -51,9 +52,14 @@ import { isValidIanaTimeZone } from '@/utils/shared/timeZone';
  * 11 — APP-063: Livsmål har en eksplicit type (binary, count, amount, duration), mål og
  *      nuværende værdi som heltal, delmål omdøbt til milestones og kun egentlige
  *      brugerdata i eksporten. Ældre formater mappes til binary uden at opfinde tal.
- * Nye eksporter skriver altid 11.
+ * 12 — APP-064: Vaner har en eksplicit retning, en startdato, en datosat tidsplanshistorik
+ *      (valgte ugedage, et ugentligt antal eller ingen) og højst én registrering pr.
+ *      lokal dato; en registrering betyder altid "forpligtelsen blev holdt". Ældre
+ *      formater mappes uden at opfinde ugedage, og dubletdatoer afvises. Afledte
+ *      status, ugetal og serier eksporteres aldrig.
+ * Nye eksporter skriver altid 12.
  */
-export const BACKUP_VERSION = 11;
+export const BACKUP_VERSION = 12;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString' | 'nullableObject';
 
@@ -331,6 +337,16 @@ function canonicalGoals(
   return goals ? { ok: true, value: { ...partial, goals } } : { ok: false, error: 'invalid_format' };
 }
 
+/** APP-064 Habits boundary: formats before 12 hold the old target-per-week shape and are mapped, never guessed. */
+function canonicalHabits(
+  partial: Record<string, unknown>,
+  version: number,
+): { ok: true; value: Record<string, unknown> } | { ok: false; error: BackupParseError } {
+  if (partial.habits === undefined) return { ok: true, value: partial };
+  const habits = version < 12 ? decodeLegacyHabits(partial.habits) : decodeHabits(partial.habits);
+  return habits ? { ok: true, value: { ...partial, habits } } : { ok: false, error: 'invalid_format' };
+}
+
 function canonicalHouseholdTasks(
   partial: Record<string, unknown>,
   version: number,
@@ -511,6 +527,12 @@ export function parseBackupFile(content: string): BackupParseResult {
       const goals = canonicalGoals(canonical.value, version);
       if (!goals.ok) return goals;
       data[storeKey] = goals.value;
+      continue;
+    }
+    if (storeKey === 'habits') {
+      const habits = canonicalHabits(canonical.value, version);
+      if (!habits.ok) return habits;
+      data[storeKey] = habits.value;
       continue;
     }
     if (storeKey === 'household') {

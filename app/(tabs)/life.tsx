@@ -11,15 +11,16 @@ import SectionHeader from '@/components/SectionHeader';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import type { ModuleId } from '@/core/modules/moduleRegistry';
 import { useEnabledModuleIds } from '@/core/modules/useModuleEnabled';
+import { scheduledTodaySummary, weekEntryCount } from '@/features/habits/domain/habitStatus';
 import { useBrandTints } from '@/hooks/useBrandTints';
 import { useLifeModuleTints } from '@/hooks/useLifeModuleTints';
+import { useToday } from '@/hooks/useToday';
 import { useCareerStore } from '@/store/useCareerStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
 import { goalIsCompleted, meanGoalProgress } from '@/features/goals/domain/goal';
 import { useLifeGoalsStore } from '@/store/useLifeGoalsStore';
 import { useTodoStore } from '@/store/useTodoStore';
-import { getCurrentStreak, getLoggedThisWeek } from '@/utils/habit/habitStreak';
 import { daysUntilDue } from '@/utils/household/householdTaskSchedule';
 import { daysUntil } from '@/utils/shared/dateDays';
 
@@ -55,8 +56,12 @@ export default function LifeScreen() {
   const activeGoals = lifeGoals.filter((goal) => !goalIsCompleted(goal)).length;
 
   const habits = useHabitsStore((s) => s.habits);
-  const topStreak = habits.map((habit) => getCurrentStreak(habit.logs)).sort((a, b) => b - a)[0] ?? 0;
-  const habitLogsThisWeek = habits.reduce((sum, habit) => sum + getLoggedThisWeek(habit.logs), 0);
+  const today = useToday();
+  // APP-064: facts only. Scheduled habits (a weekdays schedule asks for them today) and how many
+  // already have an entry; plus this ISO week's entries. No streak, no miss count, no verdict.
+  const habitsToday = scheduledTodaySummary(habits, today);
+  const habitsUnmarkedToday = habitsToday.scheduled - habitsToday.completed;
+  const habitEntriesThisWeek = weekEntryCount(habits, today);
 
   const householdTasks = useHouseholdStore((s) => s.tasks);
   const dueHouseholdCount = householdTasks.filter((task) => daysUntilDue(task) <= 0).length;
@@ -90,11 +95,11 @@ export default function LifeScreen() {
               route: '/household/tasks',
               tone: '#2563EB',
             }
-          : habits.length > 0 && topStreak === 0
+          : habitsUnmarkedToday > 0
             ? {
-                icon: { ios: 'flame.fill', android: 'local_fire_department', web: 'local_fire_department' },
+                icon: { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },
                 title: t('life.focusHabitTitle'),
-                subtitle: t('life.focusHabitSubtitle'),
+                subtitle: t('life.focusHabitSubtitle', { count: habitsUnmarkedToday }),
                 route: '/habits',
                 tone: brand.glowPrimary,
               }
@@ -146,11 +151,11 @@ export default function LifeScreen() {
     },
     {
       key: 'habits',
-      icon: { ios: 'flame.fill', android: 'local_fire_department', web: 'local_fire_department' },
+      icon: { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },
       title: t('life.habitsLabel'),
       subtitle: t('life.habitsDesc'),
-      value: String(topStreak),
-      helper: t('life.habitsHelper', { count: habitLogsThisWeek }),
+      value: `${habitsToday.completed}/${habitsToday.scheduled}`,
+      helper: t('life.habitsHelper', { count: habitEntriesThisWeek }),
       route: '/habits',
       tone: '#16A34A',
     },
@@ -238,10 +243,10 @@ export default function LifeScreen() {
 
       <View style={styles.metricGrid}>
         <MetricCard
-          icon={{ ios: 'flame.fill', android: 'local_fire_department', web: 'local_fire_department' }}
-          label={t('life.topStreakLabel')}
-          value={String(topStreak)}
-          helper={t('life.topStreakHelper')}
+          icon={{ ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' }}
+          label={t('life.habitsTodayLabel')}
+          value={`${habitsToday.completed}/${habitsToday.scheduled}`}
+          helper={t('life.habitsTodayHelper')}
           tone="#16A34A"
           onPress={() => router.push('/habits')}
           style={styles.metricItem}

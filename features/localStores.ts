@@ -1,4 +1,5 @@
 import type { LocalStoreReset } from '@/core/auth/clearLocalUserData';
+import '@/features/habits/habitRemoval';
 import { ZERO_MINOR_UNITS } from '@/core/money/minorUnits';
 import { useAppLockStore } from '@/store/useAppLockStore';
 import { useCVStore } from '@/store/useCVStore';
@@ -9,6 +10,7 @@ import { useDocumentsStore } from '@/store/useDocumentsStore';
 import { useEnabledModulesStore } from '@/store/useEnabledModulesStore';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useFoodStore } from '@/store/useFoodStore';
+import { useHabitPreferencesStore } from '@/store/useHabitPreferencesStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
 import { useHomeLayoutStore } from '@/store/useHomeLayoutStore';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
@@ -72,6 +74,7 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
   { key: 'lifesort-life-goals', reset: () => useLifeGoalsStore.getState().clearLocal() },
   // Retires any fetch still in flight, so a response for the previous account cannot repopulate the cleared store.
   { key: 'lifesort-habits', reset: () => useHabitsStore.getState().clearLocal() },
+  { key: 'lifesort-habit-preferences', reset: () => useHabitPreferencesStore.getState().clearLocal() },
   {
     key: 'lifesort-household',
     reset: () => useHouseholdStore.getState().clearLocal(),

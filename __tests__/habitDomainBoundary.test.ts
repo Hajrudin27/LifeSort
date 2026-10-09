@@ -64,11 +64,11 @@ describe('APP-064 Habit domain (features/habits/domain)', () => {
   const DIR = path.join(ROOT, 'features/habits/domain');
   const files = listFiles(DIR).filter((file) => file.endsWith('.ts'));
   /** Inward and shared only: the core contract, entity types, the calendar primitive, itself. */
-  const ALLOWED = [/^\.\/habit(Status|Commands|Row|Input)$/, /^@\/features\/habits\/domain\/habit(Status|Commands|Row|Input)$/,
+  const ALLOWED = [/^\.\/habit(Status|Commands|Row|Input|Streak)$/, /^@\/features\/habits\/domain\/habit(Status|Commands|Row|Input|Streak)$/,
     /^@\/core\/habits\/persistedHabit$/, /^@\/types\/life$/, /^@\/utils\/shared\/localDate$/];
 
   it('finds the domain files', () => {
-    expect(files.map((file) => path.basename(file)).sort()).toEqual(['habitCommands.ts', 'habitInput.ts', 'habitRow.ts', 'habitStatus.ts']);
+    expect(files.map((file) => path.basename(file)).sort()).toEqual(['habitCommands.ts', 'habitInput.ts', 'habitRow.ts', 'habitStatus.ts', 'habitStreak.ts']);
   });
 
   it('is a pure leaf: no store, UI, routes, sync, money, i18n or network', () => {
@@ -108,8 +108,11 @@ describe('APP-064 Habit domain (features/habits/domain)', () => {
       'components/HabitDayCell.tsx',
       'components/HabitMonthCalendar.tsx',
       'components/HabitScheduleChooser.tsx',
+      'components/HabitStreakCard.tsx',
       'components/HabitWeekRow.tsx',
       'features/habits/habitDisplay.ts',
+      // Loads features/habits/habitRemoval.ts (it imports stores only, not the domain).
+      'features/localStores.ts',
       'store/useHabitsStore.ts',
     ].sort());
   });
@@ -122,14 +125,46 @@ describe('APP-064 Habit domain (features/habits/domain)', () => {
   });
 });
 
-describe('APP-064 streaks are gone from every surface', () => {
-  it('has no streak module and no streak helper in runtime code', () => {
+describe('APP-064/APP-065 streaks are optional, per habit, and live in one closed place', () => {
+  /** The only runtime files allowed to mention a streak. Everything else (Home, Life, review, Cycle, Search, the list) stays streak-free. */
+  const UNRELATED_CYCLE_FILE = 'utils/cycle/symptomPatterns.ts';
+  const STREAK_OWNERS = [
+    'app/habits/[id].tsx',
+    'components/HabitStreakCard.tsx',
+    'core/storage/dataProfileRegistry.ts',
+    'features/habits/domain/habitStreak.ts',
+    // Pre-existing, unrelated: Cycle's symptom-months-in-a-row wording. Not an APP-065 owner (pinned below).
+    UNRELATED_CYCLE_FILE,
+    'store/useHabitPreferencesStore.ts',
+  ];
+
+  it('mentions a streak only in the closed allowlist, and the old helper is still gone', () => {
     expect(fs.existsSync(path.join(ROOT, 'utils/habit/habitStreak.ts'))).toBe(false);
     const offenders = sourceFiles('app', 'components', 'features', 'store', 'utils', 'hooks', 'core', 'lib')
       .filter((file) => /streak|getCurrentStreak|hasLoggedToday|getLoggedThisWeek/i.test(stripComments(fs.readFileSync(file, 'utf8'))))
-      // symptomPatterns.ts is the Cycle module's own symptom-months-in-a-row logic, unrelated to Habits.
-      .map(rel).filter((file) => file !== 'utils/cycle/symptomPatterns.ts');
-    expect(offenders).toEqual([]);
+      .map(rel).sort();
+    expect(offenders).toEqual([...STREAK_OWNERS].sort());
+  });
+
+  it('lets only the streak card import the streak helper, and only the card, the logout registry and the removal link the preference store', () => {
+    const importing = (needle: RegExp) => sourceFiles('app', 'components', 'features', 'store', 'utils', 'hooks', 'core', 'lib')
+      .filter((file) => importsOf(file).some((specifier) => needle.test(specifier))).map(rel).sort();
+    expect(importing(/habitStreak$/)).toEqual(['components/HabitStreakCard.tsx']);
+    expect(importing(/useHabitPreferencesStore$/)).toEqual([
+      'components/HabitStreakCard.tsx', 'features/habits/habitRemoval.ts', 'features/localStores.ts']);
+  });
+
+  it('pins the one unrelated Cycle exception: it uses nothing from Habits or the streak code', () => {
+    expect(importsOf(path.join(ROOT, UNRELATED_CYCLE_FILE)).filter((specifier) => /habit|Preferences/i.test(specifier))).toEqual([]);
+  });
+
+  it('keeps Home, Life, the monthly review, Cycle, Search and the Habits list free of streaks', () => {
+    for (const file of ['app/(tabs)/index.tsx', 'app/(tabs)/life.tsx', 'app/habits/index.tsx', 'app/habits/new.tsx', 'app/review.tsx',
+      'features/habits/monthlyReview.ts', 'utils/cycle/cycleInsights.ts', 'components/CycleInsightsCard.tsx', 'components/HabitWeekRow.tsx']) {
+      expect({ file, streak: /streak/i.test(code(file)) }).toEqual({ file, streak: false });
+    }
+    const search = sourceFiles('core', 'app', 'features').map(rel).filter((file) => /search/i.test(file));
+    for (const file of search) expect({ file, streak: /streak/i.test(code(file)) }).toEqual({ file, streak: false });
   });
 
   it('maps Habits to no flame icon anywhere: a flame is the streak symbol, and an icon needs no word to say it', () => {
@@ -145,6 +180,7 @@ describe('APP-064 streaks are gone from every surface', () => {
 
   it('has no streak, restart or broken-chain wording in the Habits, Life, Home or module strings (EN and DA)', () => {
     const wording = /streak|restart|broken|bad day|failed|failure|i træk|dage i træk|bedste|start din/i;
+    const streakCopyWording = /\blost\b|\blose\b|broke|broken|restart|reset|don't break|save your|fail|behind|bad day|pressure|\bbest\b|longest|record|🔥|mistet|brudt|brød|nulstil|genstart|fejl|bagud|dårlig dag|\bbedste\b|længste|rekord|i træk/i;
     const offenders: string[] = [];
     for (const lang of ['en', 'da']) {
       for (const name of ['habits', 'life', 'home', 'modules']) {
@@ -154,7 +190,9 @@ describe('APP-064 streaks are gone from every surface', () => {
         for (const entry of flat(JSON.parse(text), `${lang}.${name}`)) {
           const [key, ...rest] = entry.split('=');
           const isHabitCopy = name === 'habits' || /habit/i.test(key);
-          if (isHabitCopy && wording.test(rest.join('='))) offenders.push(entry);
+          // The one place the word "streak" is allowed is the optional-streak copy, which has its own, stricter-in-spirit list.
+          const pattern = key.startsWith(`${lang}.habits.streak.`) ? streakCopyWording : wording;
+          if (isHabitCopy && pattern.test(rest.join('='))) offenders.push(entry);
         }
       }
     }

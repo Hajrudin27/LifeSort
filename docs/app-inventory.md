@@ -86,7 +86,7 @@ itself is APP-005 and is **not** implemented here.
 | `food` | `food` | available | `/food/*` | `useFoodStore` | ordinary, financial | Hajrudin Kardasevic |
 | `home` | `home` | available | `/household/*` | `useHouseholdStore` | ordinary | Hajrudin Kardasevic |
 | `goals` | `goals` | available | `/life-goals/*` | `useLifeGoalsStore` | personal | Hajrudin Kardasevic |
-| `habits` | `habits` | available | `/habits/*` | `useHabitsStore` | personal | Hajrudin Kardasevic |
+| `habits` | `habits` | available | `/habits/*` | `useHabitsStore`, `useHabitPreferencesStore` | personal | Hajrudin Kardasevic |
 | `tasks` | – (spec has no `tasks` id; see §8-F3) | available | `/todos/*` | `useTodoStore` | ordinary | Hajrudin Kardasevic |
 | `travel` | `travel` | available | `/travel/*` | `useTripsStore` | personal, financial, document | Hajrudin Kardasevic |
 | `warranties` | `warranties` | available | `/warranties/*` | `useWarrantiesStore` | document, financial | Hajrudin Kardasevic |
@@ -257,6 +257,7 @@ the key material in SecureStore.
 | `useHouseholdStore` | `store/useHouseholdStore.ts` | `home` | `lifesort-household` | AsyncStorage (plain), versioned Z2 | `household_tasks` via durable outbox/RPC; shopping and moving retain existing best-effort paths (APP-062 adds Moving template provenance and an account-bound owner) | ordinary | Hajrudin Kardasevic |
 | `useLifeGoalsStore` | `store/useLifeGoalsStore.ts` | `goals` | `lifesort-life-goals` | AsyncStorage (plain), versioned Z1 | `life_goals` (best-effort sync, account-bound writes) | personal | Hajrudin Kardasevic |
 | `useHabitsStore` | `store/useHabitsStore.ts` | `habits` | `lifesort-habits` | AsyncStorage (plain), versioned Z1 | `habits` (best-effort sync, account-bound writes; not production-sync-ready) | personal | Hajrudin Kardasevic |
+| `useHabitPreferencesStore` | `store/useHabitPreferencesStore.ts` | `habits` | `lifesort-habit-preferences` | AsyncStorage (plain) | – (device-local only; not in backup) | personal | Hajrudin Kardasevic |
 | `useTodoStore` | `store/useTodoStore.ts` | `tasks` | `lifesort-todos` | AsyncStorage (plain) | `todos` | ordinary | Hajrudin Kardasevic |
 | `useTripsStore` | `store/useTripsStore.ts` | `travel` | `lifesort-trips` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts`; includes independent APP-060 template copies plus Trip-scoped applied id/version markers, stale-labelled minimal trip financial projections, unresolved legacy Travel rows, and narrow account-bound pending new-expense drafts for restart-safe identity | `trips`, legacy `trip_expenses`, `trip_packing_items`, private `trip_packing_template_applications`, `trip_participants`; canonical spend is created in `expenses` and linked by server-only `trip_expense_links` through APP-059 RPCs | personal, financial, document | Hajrudin Kardasevic |
 | `useWarrantiesStore` | `store/useWarrantiesStore.ts` | `warranties` | `lifesort-warranties` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `warranties` | document, financial | Hajrudin Kardasevic |
@@ -398,6 +399,7 @@ module that owns it.
 | `habitGrid` | `components/habitGrid.ts` | `habits` | Hajrudin Kardasevic |
 | `HabitMonthCalendar` | `components/HabitMonthCalendar.tsx` | `habits` | Hajrudin Kardasevic |
 | `HabitScheduleChooser` | `components/HabitScheduleChooser.tsx` | `habits` | Hajrudin Kardasevic |
+| `HabitStreakCard` | `components/HabitStreakCard.tsx` | `habits` | Hajrudin Kardasevic |
 | `HabitWeekRow` | `components/HabitWeekRow.tsx` | `habits` | Hajrudin Kardasevic |
 | `TripAttachmentGrid` | `components/TripAttachmentGrid.tsx` | `travel` | Hajrudin Kardasevic |
 | `TripDeleteFlow` | `components/TripDeleteFlow.tsx` | `travel` | Hajrudin Kardasevic |

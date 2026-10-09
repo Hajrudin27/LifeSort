@@ -437,6 +437,15 @@ export const DATA_DOMAINS = [
     ...profileA({ expectsServerSync: true }),
   },
   {
+    id: 'habits.streak-preference',
+    title: 'Habit streak choice',
+    module: 'habits',
+    description: 'The ids of the habits the user chose to see an optional streak for. Device-local, off by default, never synced or backed up; no streak number is stored.',
+    storageSurfaces: ['async-storage:lifesort-habit-preferences'],
+    evidence: ['store/useHabitPreferencesStore.ts', 'features/habits/domain/habitStreak.ts'],
+    ...profileA({ expectsServerSync: false }),
+  },
+  {
     id: 'habits.habits',
     title: 'Habits, schedules and completion history',
     module: 'habits',
@@ -678,6 +687,7 @@ export const PERSISTENCE_SURFACES = [
   surface('async-storage:lifesort-household', 'async-storage', 'Zustand key lifesort-household', 'device', ['home.household'], ['store/useHouseholdStore.ts'], { kind: 'versioned', currentVersion: 2, owner: 'core/storage/migrations/household.ts', reason: 'APP-061 upgrades Home task Z0 to Z1 by preserving legacy content and adding explicit null timezone semantics; APP-062 upgrades Z1 to Z2 by validating Moving rows, deriving template provenance only for the five fixed legacy seed ids, and recording the v1 template marker.' }),
   surface('async-storage:lifesort-life-goals', 'async-storage', 'Zustand key lifesort-life-goals', 'device', ['goals.life-goals'], ['store/useLifeGoalsStore.ts'], { kind: 'versioned', currentVersion: 1, owner: 'core/storage/migrations/goals.ts', reason: 'APP-063 upgrades Z0 goals to canonical Z1: each becomes a binary goal with its sub-goals kept verbatim as milestones and completed restating the old all-done rule. No numeric intent is inferred; malformed rows and future versions fail closed.' }),
   surface('async-storage:lifesort-habits', 'async-storage', 'Zustand key lifesort-habits', 'device', ['habits.habits'], ['store/useHabitsStore.ts'], { kind: 'versioned', currentVersion: 1, owner: 'core/storage/migrations/habits.ts', reason: 'APP-064 upgrades Z0 habits to canonical Z1: ids, titles, directions, creation instants and every log id and date are kept verbatim; the start date and a single initial schedule period are derived (targetPerWeek 1-7 becomes weekly, anything else open). A log is read as the commitment kept on that date. Malformed rows, duplicate dates and future versions fail closed.' }),
+  surface('async-storage:lifesort-habit-preferences', 'async-storage', 'Zustand key lifesort-habit-preferences', 'device', ['habits.streak-preference'], ['store/useHabitPreferencesStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useHabitPreferencesStore.ts', reason: 'APP-065: additive list of habit ids; an absent or malformed value reads as no streaks (fails closed) in the store merge, so no schema migration exists or is needed.' }),
   surface('async-storage:lifesort-todos', 'async-storage', 'Zustand key lifesort-todos', 'device', ['tasks.todos'], ['store/useTodoStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useTodoStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-trips', 'async-storage', 'Encrypted Zustand key lifesort-trips', 'device', ['travel.trips', 'travel.attachments'], ['store/useTripsStore.ts', 'core/storage/documentCacheStorage.ts', 'core/storage/migrations/travelMoney.ts'], { kind: 'external', currentVersion: 2, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling; APP-059 migrated inner v0 to v1 money/unresolved-date state and APP-060 migrates v1 to v2 with an empty explicit applied-template marker list.' }),
   surface('async-storage:lifesort-warranties', 'async-storage', 'Encrypted Zustand key lifesort-warranties', 'device', ['warranties.records', 'warranties.attachments'], ['store/useWarrantiesStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),

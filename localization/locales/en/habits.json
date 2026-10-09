@@ -127,5 +127,18 @@
   "invalid": "Check the title and schedule and try again.",
   "delete": "Delete",
   "deleteConfirmTitle": "Delete habit?",
-  "deleteConfirmMessage": "This action cannot be undone."
+  "deleteConfirmMessage": "This action cannot be undone.",
+  "streak": {
+    "title": "Streak",
+    "switchLabel": "Show a streak for this habit",
+    "switchHint": "Counts scheduled days kept one after another. Off unless you turn it on, and only on this device.",
+    "countBuild_one": "{{count}} scheduled day completed in a row",
+    "countBuild_other": "{{count}} scheduled days completed in a row",
+    "countQuit_one": "{{count}} scheduled day kept in a row",
+    "countQuit_other": "{{count}} scheduled days kept in a row",
+    "zeroBuild": "Streak tracking is on. It starts after a scheduled day is completed.",
+    "zeroQuit": "Streak tracking is on. It starts after a scheduled day is kept.",
+    "ineligible": "Streaks are available for habits scheduled on specific days.",
+    "ineligibleEnabled": "Streak tracking is on for this habit. It shows again when the habit is scheduled on specific days."
+  }
 }

@@ -50,7 +50,7 @@ or production CRUD flow changes. Runtime execution remains deferred.
 
 ## Logical Domains
 
-Counts are enforced in tests: **A = 24, B = 7, C = 2, D = 4, total = 37**.
+Counts are enforced in tests: **A = 25, B = 7, C = 2, D = 6, total = 40**.
 
 | Domain | Profile | Module | Current physical surfaces | Notes |
 | --- | --- | --- | --- | --- |
@@ -80,6 +80,7 @@ Counts are enforced in tests: **A = 24, B = 7, C = 2, D = 4, total = 37**.
 | `home.household` | A | home | `async-storage:lifesort-household`, `supabase-table:household_tasks`, `supabase-table:household_shopping_items`, `supabase-table:household_moving_items` | Chores, household shopping and moving lists. APP-061 moves HouseholdTask writes to the account-bound outbox and revision/tombstone RPC while retaining the existing shopping and moving paths. APP-062 adds nullable template provenance columns to `household_moving_items`; copied rows are ordinary user data. |
 | `goals.life-goals` | A | goals | `async-storage:lifesort-life-goals`, `supabase-table:life_goals` | User-created goals of exactly four explicit types (count, amount, duration, binary) with optional milestones and deadline. Amounts are non-currency quantities; money goals belong to Economy. APP-063 adds nullable typed columns to `life_goals`; sync stays best-effort until the Goals durable-sync follow-up. |
 | `habits.habits` | A | habits | `async-storage:lifesort-habits`, `supabase-table:habits` | User-created recurring habits: a build or quit direction, an effective-dated schedule history (selected weekdays, a weekly count or none) and one kept-the-commitment entry per local date. Personal (not health) data: Profile A, no encryption, no medical meaning is inferred. APP-064 adds nullable `start_date` and `schedule_history` to `habits`; sync stays best-effort until the Habits durable-sync follow-up. |
+| `habits.streak-preference` | A | habits | `async-storage:lifesort-habit-preferences` | APP-065: ids of the habits with an optional streak. Device-local, not synced, off by default; no streak number is stored. |
 | `tasks.todos` | A | tasks | `async-storage:lifesort-todos`, `supabase-table:todos` | To-do list. |
 | `home.moving-templates` | D | home | `bundled-source:features/home/movingTemplates` | Immutable versioned editorial Moving suggestions with template-level source and review metadata. An explicit copy creates independent Profile A rows with provenance; the catalogue is never synced or exported. |
 | `travel.packing-templates` | D | travel | `bundled-source:features/travel/packingTemplates` | Immutable versioned global suggestions. An explicit apply creates independent Profile A rows; the catalogue is never personal Trip state. |
@@ -96,7 +97,7 @@ Counts are enforced in tests: **A = 24, B = 7, C = 2, D = 4, total = 37**.
 
 ## Physical Surfaces
 
-The code-level registry is the exhaustive machine-readable mobile list: **98
+The code-level registry is the exhaustive machine-readable mobile list: **99
 physical persistence surfaces**. Its tests prove
 that it covers every current Zustand persist key, every direct AsyncStorage key
 outside Zustand that belongs to this app, every client-referenced Supabase table,

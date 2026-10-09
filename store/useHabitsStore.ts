@@ -49,6 +49,17 @@ interface HabitsState {
 
 let datasetEpoch = 0;
 
+/**
+ * Called with the id of every habit deleted by `removeHabit`. A store may not import another
+ * domain's store (architectureBoundaries R3), so device-local data keyed by habit id registers
+ * here instead — see features/habits/habitRemoval.ts.
+ */
+const habitRemovedListeners = new Set<(habitId: string) => void>();
+export function onHabitRemoved(listener: (habitId: string) => void): () => void {
+  habitRemovedListeners.add(listener);
+  return () => habitRemovedListeners.delete(listener);
+}
+
 /** Resolved only when an action or fetch runs, so a read-only import does not start the auth flow. */
 function initiatingAccountId(): string | null {
   const { useAuthStore } = require('@/store/useAuthStore') as typeof import('@/store/useAuthStore');
@@ -116,7 +127,16 @@ export const useHabitsStore = create<HabitsState>()(
         removeHabit: (id) => {
           const accountId = initiatingAccountId();
           set((state) => ({ habits: state.habits.filter((habit) => habit.id !== id) }));
+          // The cloud delete is queued first and each listener is isolated, so cleanup of device-local
+          // data keyed by this habit (APP-065: its streak choice) can never block or undo the deletion.
           void syncDeleteHabit(accountId, id);
+          habitRemovedListeners.forEach((listener) => {
+            try {
+              listener(id);
+            } catch (error) {
+              console.warn('Habit removal listener failed', error instanceof Error ? error.name : 'unknown');
+            }
+          });
         },
 
         fetchFromSupabase: async () => {

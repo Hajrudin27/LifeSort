@@ -286,7 +286,9 @@ describe('APP-064 habit detail', () => {
     for (const expected of ['Habit to build', 'Mon, Wed', 'Counting from Sep 28', 'Not scheduled today', '1 of 2 scheduled days this week']) {
       expect(text).toContain(expected);
     }
-    expect(text).not.toMatch(/streak|in a row|log today/i);
+    // APP-065: the optional streak card is here, off by default, and shows no number until it is turned on.
+    expect(text).toContain('Show a streak for this habit');
+    expect(text).not.toMatch(/in a row|log today|\b0\b.*streak/i);
     expect(button('Mark completed')).toBeDefined();
   });
 

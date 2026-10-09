@@ -127,5 +127,18 @@
   "invalid": "Tjek titel og tidsplan og prøv igen.",
   "delete": "Slet",
   "deleteConfirmTitle": "Slet vane?",
-  "deleteConfirmMessage": "Denne handling kan ikke fortrydes."
+  "deleteConfirmMessage": "Denne handling kan ikke fortrydes.",
+  "streak": {
+    "title": "Streak",
+    "switchLabel": "Vis en streak for denne vane",
+    "switchHint": "Tæller planlagte dage, der er holdt efter hinanden. Slået fra, medmindre du slår det til, og kun på denne enhed.",
+    "countBuild_one": "{{count}} planlagt dag gennemført efter hinanden",
+    "countBuild_other": "{{count}} planlagte dage gennemført efter hinanden",
+    "countQuit_one": "{{count}} planlagt dag holdt efter hinanden",
+    "countQuit_other": "{{count}} planlagte dage holdt efter hinanden",
+    "zeroBuild": "Streak er slået til. Den starter, når en planlagt dag er gennemført.",
+    "zeroQuit": "Streak er slået til. Den starter, når en planlagt dag er holdt.",
+    "ineligible": "Streaks er til vaner, der er planlagt på bestemte dage.",
+    "ineligibleEnabled": "Streak er slået til for denne vane. Den vises igen, når vanen er planlagt på bestemte dage."
+  }
 }

@@ -181,6 +181,12 @@ Removed from the Habits list and detail, the Home hero, the Life tab (metric, mo
 algorithm exists (APP-065). `habitDomainBoundary.test.ts` fails if a streak helper or streak wording
 (EN or DA) reappears in runtime code or in the Habits, Life, Home or module strings.
 
+> **Update 2026-10-09 (APP-065):** the statement above described APP-064 as shipped. APP-065 adds an
+> optional, per-habit, device-local streak on the Habit detail screen only, as a new derived helper
+> (`features/habits/domain/habitStreak.ts`); the old `utils/habit/habitStreak.ts` stays deleted and
+> Home, Life, the monthly review, Cycle, Search and the Habits list remain streak-free. See
+> [APP-065](./app-065-optional-streaks.md) and ADR-0053.
+
 ## Consumers
 
 | Consumer | After |

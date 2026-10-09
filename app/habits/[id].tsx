@@ -7,6 +7,7 @@ import { Alert, Modal, Pressable, ScrollView, TextInput } from 'react-native';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Chip from '@/components/Chip';
+import HabitStreakCard from '@/components/HabitStreakCard';
 import HabitMonthCalendar from '@/components/HabitMonthCalendar';
 import HabitScheduleChooser from '@/components/HabitScheduleChooser';
 import { Text, useThemeColor, View } from '@/components/Themed';
@@ -133,6 +134,8 @@ export default function HabitDetailScreen() {
         <Text style={{ color: textMuted }}>{weekFactsText(habit, today, t, i18n.language)}</Text>
         <Button label={markLabel} variant={done ? 'secondary' : 'primary'} disabled={todayAction === 'none'} onPress={toggleToday} />
       </Card>
+
+      <HabitStreakCard habit={habit} today={today} />
 
       <Card>
         <Text style={styles.historyTitle} accessibilityRole="header">{t('habits.historyTitle')}</Text>

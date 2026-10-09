@@ -93,6 +93,10 @@ APP-141's job, not something to leave half-built here.
 
 ## What remains — applying the migrations
 
+> **Superseded for routine deployments.** Migrations now reach Staging and Production only through the
+> gated GitHub workflows described in [`database-deployment.md`](./database-deployment.md). The steps
+> below are the record of the original one-off batch; do not paste files into the SQL editor as a routine step.
+
 These require the Supabase project's credentials and are **not** possible from
 this repository:
 

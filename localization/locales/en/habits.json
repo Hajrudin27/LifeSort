@@ -140,5 +140,24 @@
     "zeroQuit": "Streak tracking is on. It starts after a scheduled day is kept.",
     "ineligible": "Streaks are available for habits scheduled on specific days.",
     "ineligibleEnabled": "Streak tracking is on for this habit. It shows again when the habit is scheduled on specific days."
+  },
+  "summary": {
+    "title": {
+      "week": "This week so far",
+      "month": "This month so far"
+    },
+    "selectorLabel": "Period",
+    "kind": {
+      "week": "Week",
+      "month": "Month"
+    },
+    "scheduled_one": "{{done}} of {{count}} scheduled commitment recorded so far",
+    "scheduled_other": "{{done}} of {{count}} scheduled commitments recorded so far",
+    "other_one": "{{count}} additional habit entry",
+    "other_other": "{{count}} additional habit entries",
+    "empty": {
+      "week": "No habit activity recorded this week.",
+      "month": "No habit activity recorded this month."
+    }
   }
 }

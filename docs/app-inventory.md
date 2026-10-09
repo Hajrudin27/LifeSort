@@ -398,6 +398,7 @@ module that owns it.
 | `HabitDayCell` | `components/HabitDayCell.tsx` | `habits` | Hajrudin Kardasevic |
 | `habitGrid` | `components/habitGrid.ts` | `habits` | Hajrudin Kardasevic |
 | `HabitMonthCalendar` | `components/HabitMonthCalendar.tsx` | `habits` | Hajrudin Kardasevic |
+| `HabitPeriodSummaryCard` | `components/HabitPeriodSummaryCard.tsx` | `habits` | Hajrudin Kardasevic |
 | `HabitScheduleChooser` | `components/HabitScheduleChooser.tsx` | `habits` | Hajrudin Kardasevic |
 | `HabitStreakCard` | `components/HabitStreakCard.tsx` | `habits` | Hajrudin Kardasevic |
 | `HabitWeekRow` | `components/HabitWeekRow.tsx` | `habits` | Hajrudin Kardasevic |

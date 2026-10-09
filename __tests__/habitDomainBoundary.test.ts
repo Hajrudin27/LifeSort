@@ -64,11 +64,11 @@ describe('APP-064 Habit domain (features/habits/domain)', () => {
   const DIR = path.join(ROOT, 'features/habits/domain');
   const files = listFiles(DIR).filter((file) => file.endsWith('.ts'));
   /** Inward and shared only: the core contract, entity types, the calendar primitive, itself. */
-  const ALLOWED = [/^\.\/habit(Status|Commands|Row|Input|Streak)$/, /^@\/features\/habits\/domain\/habit(Status|Commands|Row|Input|Streak)$/,
+  const ALLOWED = [/^\.\/habit(Status|Commands|Row|Input|Streak|PeriodSummary)$/, /^@\/features\/habits\/domain\/habit(Status|Commands|Row|Input|Streak|PeriodSummary)$/,
     /^@\/core\/habits\/persistedHabit$/, /^@\/types\/life$/, /^@\/utils\/shared\/localDate$/];
 
   it('finds the domain files', () => {
-    expect(files.map((file) => path.basename(file)).sort()).toEqual(['habitCommands.ts', 'habitInput.ts', 'habitRow.ts', 'habitStatus.ts', 'habitStreak.ts']);
+    expect(files.map((file) => path.basename(file)).sort()).toEqual(['habitCommands.ts', 'habitInput.ts', 'habitPeriodSummary.ts', 'habitRow.ts', 'habitStatus.ts', 'habitStreak.ts']);
   });
 
   it('is a pure leaf: no store, UI, routes, sync, money, i18n or network', () => {
@@ -107,6 +107,7 @@ describe('APP-064 Habit domain (features/habits/domain)', () => {
       'components/CycleInsightsCard.tsx',
       'components/HabitDayCell.tsx',
       'components/HabitMonthCalendar.tsx',
+      'components/HabitPeriodSummaryCard.tsx',
       'components/HabitScheduleChooser.tsx',
       'components/HabitStreakCard.tsx',
       'components/HabitWeekRow.tsx',
@@ -208,6 +209,65 @@ describe('APP-064/APP-065 streaks are optional, per habit, and live in one close
       const home = JSON.parse(fs.readFileSync(path.join(ROOT, `localization/locales/${lang}/home.json`), 'utf8'));
       expect(home).not.toHaveProperty('heroStreak');
     }
+  });
+});
+
+describe('APP-066 the period summary is Habits-only, derived, and consumed by exactly one card', () => {
+  const HELPER = 'features/habits/domain/habitPeriodSummary.ts';
+  const CARD = 'components/HabitPeriodSummaryCard.tsx';
+  const everything = () => sourceFiles('app', 'components', 'features', 'store', 'utils', 'hooks', 'core', 'lib');
+
+  it('is imported by exactly the summary card, and the card by exactly the Habits list', () => {
+    const importing = (needle: RegExp) => everything().filter((file) => importsOf(file).some((specifier) => needle.test(specifier))).map(rel).sort();
+    expect(importing(/habitPeriodSummary$/)).toEqual([CARD]);
+    expect(importing(/HabitPeriodSummaryCard$/)).toEqual(['app/habits/index.tsx']);
+  });
+
+  it('imports only Habit types and the calendar primitive (domain) and a closed set of UI pieces (card)', () => {
+    expect(importsOf(path.join(ROOT, HELPER)).sort()).toEqual(['./habitStatus', '@/types/life', '@/utils/shared/localDate']);
+    expect(importsOf(path.join(ROOT, CARD)).sort()).toEqual([
+      '@/components/Card', '@/components/Chip', '@/components/Themed', '@/features/habits/domain/habitPeriodSummary', '@/types/life',
+      'react', 'react-i18next', 'react-native',
+    ]);
+  });
+
+  it('does not depend on Goals, Home, Life, Cycle, the monthly review, streaks, a store, persistence, the network or an AI SDK', () => {
+    for (const file of [HELPER, CARD]) {
+      const specifiers = importsOf(path.join(ROOT, file)).filter((specifier) => specifier !== '@/types/life'); // the entity types, not the Life tab
+      expect({ file, bad: specifiers.filter((specifier) => /goal|home|life|cycle|monthlyReview|review|streak|preferences|store|storage|async-storage|supabase|sync|fetch|anthropic|openai|\bai\b/i.test(specifier)) })
+        .toEqual({ file, bad: [] });
+      expect({ file, text: /useLifeGoalsStore|LifeGoal|goalProgress|scheduledDayOutcomes|habitWeekFacts|habitsMonthlyReview|AsyncStorage|fetch\(|streak|flame|fire_department/i.test(code(file)) })
+        .toEqual({ file, text: false });
+    }
+  });
+
+  it('has no clock, no getDay() and no parse of a stored date', () => {
+    for (const file of [HELPER, CARD]) {
+      expect({ file, bad: /Date\.now\(|new Date\(|todayIso|toLocalIsoDate|parseIsoDate|\.getDay\(|getTimezoneOffset|Math\.random/.test(code(file)) }).toEqual({ file, bad: false });
+    }
+  });
+
+  it('does no percentage arithmetic and exposes no score, rate, best or missed field', () => {
+    for (const file of [HELPER, CARD]) {
+      expect({ file, bad: /percent|\*\s*100|toFixed|\bscore\b|\brate\b|\bbest\b|\bmissed\b|progress/i.test(code(file)) }).toEqual({ file, bad: false });
+    }
+  });
+
+  it('leaves Home, Life, the monthly review, Cycle and the old week helper without the summary', () => {
+    for (const file of ['app/(tabs)/index.tsx', 'app/(tabs)/life.tsx', 'app/review.tsx', 'features/habits/monthlyReview.ts', 'core/modules/monthlyReview.ts',
+      'utils/cycle/cycleInsights.ts', 'components/CycleInsightsCard.tsx', 'features/habits/domain/habitStatus.ts']) {
+      expect({ file, uses: /habitPeriodSummary|HabitPeriodSummary/.test(code(file)) }).toEqual({ file, uses: false });
+    }
+  });
+
+  it('adds no store, key, backup field or database object: nothing about the summary is persisted', () => {
+    expect(everything().filter((file) => /habitPeriodSummary|HabitPeriodSummary|habits\.summary/.test(code(rel(file)))).map(rel).sort())
+      .toEqual([CARD, HELPER, 'app/habits/index.tsx'].sort());
+    for (const file of ['core/storage/dataProfileRegistry.ts', 'utils/shared/backupValidation.ts', 'utils/shared/dataBackup.ts', 'store/useHabitsStore.ts']) {
+      expect({ file, uses: /period.?summary/i.test(code(file)) }).toEqual({ file, uses: false });
+    }
+    const sql = listFiles(path.join(ROOT, 'supabase')).filter((file) => /\.sql$/.test(file));
+    expect(sql.filter((file) => /period_summary|habit_summary/i.test(fs.readFileSync(file, 'utf8')))).toEqual([]);
   });
 });
 

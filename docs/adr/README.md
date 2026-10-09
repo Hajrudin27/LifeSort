@@ -72,6 +72,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0051](./0051-life-goals-have-four-explicit-measurable-types-and-milestones-are-supporting-only.md) | Life goals have four explicit measurable types and milestones are supporting only | Accepted | 2026-10-07 | APP-063 |
 | [0052](./0052-habits-are-recurring-commitments-with-derived-status-and-effective-dated-schedules.md) | Habits are recurring commitments with derived status and effective-dated schedules | Accepted | 2026-10-08 | APP-064 |
 | [0053](./0053-streaks-are-an-optional-per-habit-device-local-view-of-scheduled-commitments.md) | Streaks are an optional, per-habit, device-local view of scheduled commitments | Accepted | 2026-10-09 | APP-065 |
+| [0054](./0054-habit-period-summaries-are-derived-current-period-counts-of-resolved-commitments.md) | Habit period summaries are derived, current-period counts of resolved commitments | Accepted | 2026-10-09 | APP-066 |
 
 ## When an ADR is required
 

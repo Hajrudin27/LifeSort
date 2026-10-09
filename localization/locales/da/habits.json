@@ -140,5 +140,24 @@
     "zeroQuit": "Streak er slået til. Den starter, når en planlagt dag er holdt.",
     "ineligible": "Streaks er til vaner, der er planlagt på bestemte dage.",
     "ineligibleEnabled": "Streak er slået til for denne vane. Den vises igen, når vanen er planlagt på bestemte dage."
+  },
+  "summary": {
+    "title": {
+      "week": "Denne uge indtil nu",
+      "month": "Denne måned indtil nu"
+    },
+    "selectorLabel": "Periode",
+    "kind": {
+      "week": "Uge",
+      "month": "Måned"
+    },
+    "scheduled_one": "{{done}} af {{count}} planlagt forpligtelse registreret indtil nu",
+    "scheduled_other": "{{done}} af {{count}} planlagte forpligtelser registreret indtil nu",
+    "other_one": "{{count}} ekstra vaneregistrering",
+    "other_other": "{{count}} ekstra vaneregistreringer",
+    "empty": {
+      "week": "Ingen vaneaktivitet registreret denne uge.",
+      "month": "Ingen vaneaktivitet registreret denne måned."
+    }
   }
 }

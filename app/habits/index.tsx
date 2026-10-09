@@ -4,6 +4,7 @@ import { FlatList, Pressable } from 'react-native';
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import HabitPeriodSummaryCard from '@/components/HabitPeriodSummaryCard';
 import HabitWeekRow from '@/components/HabitWeekRow';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
@@ -23,6 +24,7 @@ export default function HabitsScreen() {
         data={habits}
         keyExtractor={(item) => item.id}
         contentContainerStyle={sharedStyles.list}
+        ListHeaderComponent={habits.length > 0 ? <HabitPeriodSummaryCard habits={habits} today={today} /> : null}
         ListEmptyComponent={
           <Card style={sharedStyles.emptyCard}>
             <Text style={{ color: textMuted }}>{t('habits.emptyState')}</Text>

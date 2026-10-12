@@ -11,7 +11,7 @@
  * har alt med sig. Se ADR-0004 og ADR-0010.
  */
 
-import { MODULE_IDS, type ModuleId, PLATFORM_MODULE_IDS } from './moduleRegistry';
+import { getModule, MODULE_IDS, type ModuleId, PLATFORM_MODULE_IDS } from './moduleRegistry';
 
 /** Brugerens valg pr. modul. Et modul der ikke står her, har standardværdien. */
 export type ModuleEnablement = Partial<Record<ModuleId, boolean>>;
@@ -31,16 +31,38 @@ export function canToggleModule(moduleId: ModuleId): boolean {
 export const TOGGLEABLE_MODULE_IDS = MODULE_IDS.filter(canToggleModule);
 
 /**
- * Standarden er "slået til".
+ * Hvad et modul er, når brugeren aldrig har svaret (APP-071, ADR-0059).
  *
- * Valget er bevidst: en eksisterende bruger må ikke miste adgang til noget, hun
- * allerede bruger, fordi en ny funktion blev udrullet. Onboarding må gerne
- * spørge og indsnævre bagefter (APP-020) — men fraværet af et svar må aldrig
- * skjule data, brugeren har lagt ind.
+ * Standarden følger registret og er ikke gættet pr. skærm:
+ *
+ * - Et modul, hvis data er HELBRED, starter slået FRA. Det er særlige
+ *   kategorier af oplysninger, og at have dem slået til er en følge af et valg
+ *   — aldrig af en standard, et køn eller andre profilfelter. Det gælder også
+ *   moduler, der først kommer senere: de arver reglen af deres klassificering.
+ * - Alt andet starter slået TIL, som før (ADR-0010). En eksisterende bruger må
+ *   ikke miste adgang til noget, der allerede bruges, fordi en ny funktion blev
+ *   rullet ud.
+ * - Platformen (skallen og kontoen) er altid til og kan ikke vælges fra.
+ *
+ * Den siger kun, hvad FRAVÆRET af et svar betyder. Et gemt valg — til eller fra
+ * — vinder altid.
+ */
+export function defaultModuleEnabled(moduleId: ModuleId): boolean {
+  if (!canToggleModule(moduleId)) return true;
+  return !getModule(moduleId).sensitivity.includes('health');
+}
+
+/**
+ * Er modulet valgt til? Et gemt valg vinder; uden et svar gælder modulets
+ * standard (`defaultModuleEnabled`).
+ *
+ * Fraværet af et svar må aldrig skjule data, brugeren har lagt ind — og
+ * omvendt må det aldrig slå helbred til. Onboarding må gerne spørge og
+ * indsnævre bagefter (APP-020), men det er brugerens eget svar, der tæller.
  */
 export function isModuleEnabled(moduleId: ModuleId, enablement: ModuleEnablement): boolean {
   if (!canToggleModule(moduleId)) return true;
-  return enablement[moduleId] ?? true;
+  return enablement[moduleId] ?? defaultModuleEnabled(moduleId);
 }
 
 export function enabledModuleIds(enablement: ModuleEnablement): ModuleId[] {
@@ -50,8 +72,10 @@ export function enabledModuleIds(enablement: ModuleEnablement): ModuleId[] {
 /**
  * Oversætter serverens rækker til et valg. Som med kill switches droppes alt
  * uforståeligt i stilhed — men bemærk at tvivlen her falder den anden vej:
- * en række vi ikke forstår, efterlader modulet slået TIL. Et ødelagt svar må
- * ikke kunne skjule brugerens data.
+ * en række vi ikke forstår, efterlader modulet på dets STANDARD, som er slået
+ * til for de fleste moduler. Et ødelagt svar må ikke kunne skjule brugerens
+ * data. Et helbredsmodul er slået fra som standard (APP-071), så tvivlen kan
+ * heller ikke aktivere det.
  */
 /**
  * Et valg der stadig ligger i den holdbare kø, er nyere end enhver række

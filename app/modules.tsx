@@ -10,7 +10,7 @@ import { useModuleFlagsStore } from '@/store/useModuleFlagsStore';
 import { resolveModuleAvailability } from '@/core/feature-flags/moduleFlags';
 import { rankModuleIds } from '@/core/modules/homeRanking';
 import { evaluateModuleAccess } from '@/core/modules/moduleAvailability';
-import { TOGGLEABLE_MODULE_IDS } from '@/core/modules/moduleEnablement';
+import { isModuleEnabled, TOGGLEABLE_MODULE_IDS } from '@/core/modules/moduleEnablement';
 import { getModule, type ModuleId } from '@/core/modules/moduleRegistry';
 import { matchesModuleQuery } from '@/core/modules/moduleSearch';
 import { useModuleEnabled } from '@/core/modules/useModuleEnabled';
@@ -24,7 +24,7 @@ import { useHomeLayoutStore } from '@/store/useHomeLayoutStore';
  * stabile; her er der plads til dem alle, og listen kommer fra registret, så et
  * nyt modul dukker op af sig selv.
  *
- * Kun moduler brugeren har valgt til OG som er udgivet. Et modul lukket ned af
+ * Kun moduler brugeren har valgt til (eller som er til som standard) OG som er udgivet. Et modul lukket ned af
  * en kill switch står ikke og lokker med en dør, der ikke kan åbnes.
  */
 
@@ -118,7 +118,8 @@ export default function ModuleLauncherScreen() {
   const lastOpenedAt = useHomeLayoutStore((s) => s.lastOpenedAt);
 
   const active = TOGGLEABLE_MODULE_IDS.filter((moduleId) => {
-    if (enablement[moduleId] === false) return false;
+    // Det delte svar, ikke en lokal tolkning af "intet svar": et helbredsmodul uden valg er slået fra (APP-071).
+    if (!isModuleEnabled(moduleId, enablement)) return false;
     return evaluateModuleAccess(resolveModuleAvailability(moduleId, overrides)).showInNavigation;
   });
 

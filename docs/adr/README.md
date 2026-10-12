@@ -77,6 +77,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0056](./0056-gifts-are-a-flat-device-local-list-that-joins-backups-through-an-injected-participant.md) | Gifts are a flat, device-local list that joins backups through an injected participant | Accepted | 2026-10-12 | APP-069 |
 | [0057](./0057-gift-person-labels-may-be-copied-once-from-an-ios-contact-the-user-picks.md) | Gift person labels may be copied once from an iOS contact the user picks | Accepted | 2026-10-12 | APP-070 |
 | [0058](./0058-ios-first-v1-release-scope.md) | LifeSort v1 is iOS-first and Android is deferred | Accepted | 2026-10-12 | Project-wide release policy |
+| [0059](./0059-health-sensitive-modules-require-explicit-activation.md) | Health-sensitive modules require explicit activation | Accepted | 2026-10-13 | APP-071 |
 
 ## When an ADR is required
 

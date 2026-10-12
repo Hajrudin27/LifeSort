@@ -54,6 +54,12 @@ someone has.
 - Onboarding is two screens rather than one, and neither can be failed — both
   can be completed without entering anything.
 
+*Amended 2026-10-13 (APP-071 / [ADR-0059](./0059-health-sensitive-modules-require-explicit-activation.md)): "Everything starts
+enabled" now has one exception. A health-classified module (today Cycle) starts **off** for a user with no stored choice, so
+that a default is never what activates reproductive-health features. The one-time gender seed described above is unchanged,
+and existing users with Cycle data and no stored choice are preserved by the data-only migration
+`20261013120000_app071_preserve_cycle_choice`. This amendment does not supersede the decision.*
+
 ## Alternatives considered
 
 - **Default cycle off for everyone and let users find it.** Rejected: existing

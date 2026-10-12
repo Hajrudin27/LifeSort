@@ -55,7 +55,8 @@ export default function TabLayout() {
 
   // Cyklus vises, fordi brugeren har valgt modulet til — ikke fordi appen har
   // gættet ud fra et køn (APP-020). Den tidligere udledning blev oversat til et
-  // eksplicit valg i migrationen, så ingen oplevede en ændring.
+  // eksplicit valg i migrationen, så ingen oplevede en ændring. Uden et valg er
+  // Cyklus slået fra, fordi det er et helbredsmodul (APP-071, ADR-0059).
   const showCycleTab = useModuleEnabled('cycle');
   const navBorder = 'rgba(253,246,237,0.1)';
   const headerButtonBackground = colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(22,19,15,0.05)';

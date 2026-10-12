@@ -48,6 +48,12 @@ data with no justification.
   would have shown the cycle tab to every user by default, which is a bigger
   change than this story owns.
 
+*Amended 2026-10-13 (APP-071): the bullet above that says gender "remains a gate for the cycle tab until APP-071" has been
+stale since APP-020 ([ADR-0016](./0016-modules-are-chosen-never-inferred.md)), which moved the Cycle tab to the user's own
+module choice. Gender gates nothing today, and APP-071 ([ADR-0059](./0059-health-sensitive-modules-require-explicit-activation.md))
+also removed the default that showed Cycle to everyone: a health module now starts off. This note records the correction and
+does not change the decision.*
+
 ## Alternatives considered
 
 - **Keep the fields but make them optional at sign-up.** Rejected: an optional

@@ -14,8 +14,11 @@ import { useProfileStore } from '@/store/useProfileStore';
  * Tidligere blev cyklus-modulet udledt af køn; nu spørger vi, og svaret er
  * brugerens eget — og kan ændres igen når som helst i Indstillinger.
  *
- * Alt er slået til fra start. Onboarding er en anledning til at fravælge, ikke
- * en port man skal forcere: en tom app er en dårligere start end en fuld.
+ * Alle moduler undtagen helbredsmoduler er slået til fra start. Onboarding er en
+ * anledning til at fravælge, ikke en port man skal forcere: en tom app er en
+ * dårligere start end en fuld. Et helbredsmodul (Cyklus) er slået FRA, til
+ * brugeren selv slår det til — det følger af modulets klassificering, aldrig af
+ * profilfelter (APP-071, ADR-0059).
  */
 export default function OnboardingModulesScreen() {
   const { t } = useTranslation();

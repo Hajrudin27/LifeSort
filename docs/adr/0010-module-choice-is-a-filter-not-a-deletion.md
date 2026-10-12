@@ -52,6 +52,11 @@ because hiding them would hide the route to export and account deletion.
 - Every surface that lists modules must now filter. Missing one means a disabled
   module still appears, which is a visible bug rather than a silent one.
 
+*Amended 2026-10-13 (APP-071 / [ADR-0059](./0059-health-sensitive-modules-require-explicit-activation.md)): "the default is
+on, and doubt resolves to on" no longer holds for a module whose registry `sensitivity` includes `'health'`. Such a module
+is off until the user chooses it, and an unparseable row leaves it at that default. Every other module keeps the default
+described above, and disabling still hides without deleting. This amendment does not supersede the decision.*
+
 ## Alternatives considered
 
 - **Delete the module's data on disable**, as a "clean slate". Rejected: it

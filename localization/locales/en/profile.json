@@ -3,7 +3,7 @@
   "nameLabel": "Name",
   "namePlaceholder": "Your name",
   "genderLabel": "Gender",
-  "genderHint": "Only used to show relevant modules in the app.",
+  "genderHint": "Optional. It does not decide which modules you can use.",
   "gender": {
     "female": "Female",
     "male": "Male",

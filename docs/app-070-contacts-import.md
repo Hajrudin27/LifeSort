@@ -89,8 +89,8 @@ The `expo-contacts` config plugin adds **both** `android.permission.READ_CONTACT
 `android.blockedPermissions`, which Expo turns into `tools:node="remove"` entries. A config test fails if either block
 is removed. A disposable prebuild (outside the repository; nothing generated is committed) confirmed that the
 generated source `AndroidManifest.xml` removes both. **A merged APK manifest has not been inspected** (no Android SDK
-or device is available here); that is manual QA. No Google Play Contacts Permissions declaration is needed for this
-story.
+or device is available here); that check is **DEFERRED — outside v1 release scope** (ADR-0058; see Manual QA). No
+Google Play Contacts Permissions declaration is needed for this story.
 
 ## iOS configuration
 
@@ -148,26 +148,45 @@ logging), the form (`giftContactsUi`: iOS, Android and web; new and edit; no aut
 (`giftContactsScope`: backup 14, nine keys, storage, server), the dependency and scope guards (`giftDomainBoundary`,
 replaced rather than removed by this story) and the SDK inventory (`dataSdkInventory`).
 
-## Manual QA still required
+## Manual QA
 
-Not claimed by the automated tests:
+*Updated after physical QA and ADR-0058 (LifeSort v1 is iOS-first; Android is deferred).*
 
-**iOS physical device (on a new native build):**
-- the picker opens, and **no Contacts authorization prompt appears**;
-- picking a contact with first and last name, first name only, last name only, no name, and a Unicode name;
-- cancel; behaviour with Contacts authorization already denied or revoked in Settings;
-- the edit-Gift form; VoiceOver on the button and the notices; the largest Dynamic Type; dark mode;
-- the purpose string and the App Store build/validation behaviour.
+**iOS physical device (new native build): PASS.** Verified on a physical iPhone:
 
-**Android:** manual Gift entry; no Contacts button; the **merged APK manifest** contains neither an active
-`READ_CONTACTS` nor `WRITE_CONTACTS`.
+- Gifts visible directly on the Life tab: PASS
+- final Modules launcher above the floating tab bar, and physically tappable: PASS
+- Gifts card opens Gifts: PASS
+- Contacts button visible: PASS
+- no broad Contacts permission prompt: PASS
+- first + last name selection: PASS
+- no phone, email or company copied: PASS
+- manual edit and save: PASS
+- cancel leaves the field unchanged: PASS
+- edit without Save leaves the persisted Gift unchanged: PASS
+- Unicode contact name: PASS
+- single-name contact: PASS
+- nameless contact does not fall back to phone, email or company: PASS
+- dark mode: PASS
+- large text: PASS
+- VoiceOver on the Contacts button: PASS
+- VoiceOver on the Person field: PASS
 
-**Web:** manual Gift entry; no Contacts button.
+Not part of the recorded iPhone results, so not claimed here: behaviour with Contacts authorization already denied or
+revoked in Settings, and the App Store build/validation behaviour of the purpose string. The App Store privacy review
+remains a release/compliance gate.
 
-**Native rebuild / dev client:** pending.
+**Android:** DEFERRED — outside v1 release scope per ADR-0058. Not run, and not a PASS. The merged APK manifest
+check (neither an active `READ_CONTACTS` nor `WRITE_CONTACTS`) and manual Gift entry on a device belong to the future
+Android release track. It is no longer an open blocker for APP-070.
+
+**Web:** manual Gift entry; no Contacts button (not part of the recorded results).
+
+**Native rebuild / dev client:** the Staging iOS native binary was rebuilt (staging variant, `expo run:ios --device`)
+and installed on the physical iPhone before the QA above.
 
 ## Before Gifts is activated
 
-Everything under Manual QA; the App Store privacy label and Google Data Safety review for the contact selection; the
-Privacy Center (APP-096), which remains an activation/release gate rather than a merge blocker; and the existing APP-069
-activation checks. APP-104 (a shared permission framework) is separate: APP-070 requests no permission.
+The Manual QA above (iOS passed; Android deferred); the **Apple App Store** privacy label review for the contact
+selection (the Google Data Safety review moves to the deferred Android track, ADR-0058); the Privacy Center (APP-096),
+which remains an activation/release gate rather than a merge blocker; and the existing APP-069 activation checks. APP-104 (a shared permission framework) is separate: APP-070 requests no permission.

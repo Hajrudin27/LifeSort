@@ -106,6 +106,12 @@ rests on:
 - A merged Android manifest from a real build has not been inspected: only the generated source manifest was
   (disposable prebuild). It is manual QA before activation.
 
+*Amended after APP-070 physical QA / ADR-0058: the iOS picker was verified on a physical iPhone. ADR-0058 then made
+LifeSort v1 iOS-first, so the merged Android manifest check and Android device QA above are **DEFERRED — outside v1
+release scope**, to the future Android release track. They were not run and are **not** a PASS. They no longer block
+APP-070 from closing for the current iOS v1 scope. The Apple App Store privacy and purpose-string review remains a
+release/compliance gate. This amendment does not supersede the decision: the Contacts architecture stands.*
+
 ## Alternatives considered
 
 - **Android import through `READ_CONTACTS`.** Rejected: a broad, runtime-prompted permission for a typed name, and an

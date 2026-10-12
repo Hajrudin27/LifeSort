@@ -12,8 +12,12 @@ import { getModule } from '@/core/modules/moduleRegistry';
  *   store / screens / form        the APP-069 runtime: local-only, no Contacts, no Economy, no AI
  *
  * These are closed, APP-069-scoped guards. They do not ban a future, separately reviewed feature
- * (Contacts import in APP-070, an Economy allocation bridge, Gift sync) from existing; they ban it
- * from appearing here without that review.
+ * (an Economy allocation bridge, Gift sync) from existing; they ban it from appearing here without
+ * that review.
+ *
+ * APP-070 (ADR-0057) deliberately replaced the original blanket "no Contacts anywhere" rule with a narrow
+ * one: exactly one adapter, features/gifts/contacts/pickContactName.ts, may load `expo-contacts/legacy`,
+ * to let an iOS user pick ONE contact and copy its name. Every other Gift file stays free of Contacts.
  */
 const ROOT = path.resolve(__dirname, '..');
 const stripComments = (text: string) => text.replace(/\/\*[\s\S]*?\*\/|(^|[^:])\/\/.*$/gm, '$1');
@@ -26,6 +30,8 @@ const listFiles = (dir: string): string[] => fs.existsSync(path.join(ROOT, dir))
     entry.isDirectory() ? listFiles(`${dir}/${entry.name}`) : [`${dir}/${entry.name}`])
   : [];
 const code = (file: string) => stripComments(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+/** The one file allowed to load expo-contacts (APP-070, ADR-0057). */
+const ADAPTER = 'features/gifts/contacts/pickContactName.ts';
 const sourceFiles = (...dirs: string[]) => dirs.flatMap(listFiles).filter((file) => /\.(ts|tsx)$/.test(file));
 
 /** Every file that runs the Gift planner. */
@@ -68,7 +74,7 @@ describe('APP-069 persisted-format contract (core/gifts)', () => {
 });
 
 describe('APP-069 Gift domain (features/gifts/domain)', () => {
-  const FILES = listFiles('features/gifts');
+  const FILES = listFiles('features/gifts/domain');
   const ALLOWED = [
     /^@\/core\/gifts\/persistedGift$/, /^@\/core\/money\/minorUnits$/, /^@\/core\/money\/supportedMoney$/, /^@\/types\/gift$/, /^@\/utils\/shared\/localDate$/,
   ];
@@ -108,6 +114,7 @@ describe('APP-069 is local-only: no Supabase, no outbox, no sync (ADR-0056)', ()
       'app/gifts/new.tsx',
       'components/GiftForm.tsx',
       'core/gifts/persistedGift.ts',
+      'features/gifts/contacts/pickContactName.ts',
       'features/gifts/domain/gift.ts',
       'store/useGiftsStore.ts',
       'types/gift.ts',
@@ -208,36 +215,27 @@ describe('APP-069 reaches no other module, and Economy only through core money p
   });
 });
 
-describe('APP-069 holds no Contacts, calendar, notification, AI, commerce or analytics surface', () => {
+describe('APP-069 holds no calendar, notification, AI, commerce or analytics surface (Contacts: see APP-070 below)', () => {
   const BANNED_IMPORTS = [
-    /^expo-contacts$/, /^expo-calendar$/, /^expo-notifications$/, /^expo-mail/, /^expo-document-picker$/, /^expo-file-system/, /^expo-image-picker$/, /^expo-image$/,
+    /^expo-contacts/, /^expo-calendar$/, /^expo-notifications$/, /^expo-mail/, /^expo-document-picker$/, /^expo-file-system/, /^expo-image-picker$/, /^expo-image$/,
     /^expo-camera$/, /^expo-sharing$/, /^expo-print$/, /^expo-linking$/, /^expo-web-browser$/, /^expo-location$/, /^expo-barcode/,
     /openai|anthropic|@ai-sdk|langchain|llm|gemini|mistral|embedding/i,
     /analytics|sentry|amplitude|posthog|mixpanel/i,
     /useDocumentsStore|core\/documents|utils\/shared\/attachment|documentCacheStorage$/,
   ];
 
-  it('imports none of: Contacts, calendar, notifications, files, camera, links, an AI provider, analytics', () => {
+  it('imports none of: calendar, notifications, files, camera, links, an AI provider, analytics, and Contacts anywhere but the adapter', () => {
     for (const file of RUNTIME) {
-      for (const specifier of importsOf(file)) {
+      // The adapter's own `expo-contacts/legacy` is the single approved Contacts import.
+      for (const specifier of importsOf(file).filter((s) => !(file === ADAPTER && s === 'expo-contacts/legacy'))) {
         expect({ file, specifier, banned: BANNED_IMPORTS.some((rule) => rule.test(specifier)) }).toEqual({ file, specifier, banned: false });
       }
     }
   });
 
-  it('contains no Contacts reference at all: no contact id, no permission request, no native contact class', () => {
-    for (const file of RUNTIME) {
-      expect({ file, hit: /contactId|contacts?\b|READ_CONTACTS|CNContact|requestPermissionsAsync|requestPermission|getPermissionsAsync|\bphone\b|\bavatar\b|relationship/i.test(code(file)) }).toEqual({ file, hit: false });
-    }
-  });
-
-  it('installs and declares nothing for Contacts, calendar or notifications: no dependency, plugin or permission', () => {
+  it('installs only the expo-contacts package for Contacts, and declares nothing else for calendar or notifications beyond what existed', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-    expect(Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((name) => /contacts/i.test(name))).toEqual([]);
-    for (const file of ['app.json', 'app.config.js']) {
-      const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
-      expect({ file, hit: /contacts|READ_CONTACTS|NSContactsUsageDescription/i.test(text) }).toEqual({ file, hit: false });
-    }
+    expect(Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((name) => /contacts/i.test(name))).toEqual(['expo-contacts']);
   });
 
   it('contains no recommendation, price lookup, product, image, shop, link, scraping or prompt logic', () => {
@@ -336,5 +334,104 @@ describe('APP-069 adds no Home, Life, Search or reminder surface', () => {
     // The launcher navigates there; the module registry only declares which routes the module owns.
     expect(linking).toEqual(['app/modules.tsx', 'core/modules/moduleRegistry.ts']);
     expect(code('core/modules/moduleRegistry.ts')).toContain("routeRoots: ['/gifts']");
+  });
+});
+
+describe('APP-070 Contacts: one iOS adapter, one name, nothing else (ADR-0057)', () => {
+  const PLAIN = [
+    'store/useGiftsStore.ts', 'types/gift.ts', 'app/gifts/index.tsx', 'app/gifts/new.tsx', 'app/gifts/[id].tsx',
+    ...listFiles('core/gifts'), ...listFiles('features/gifts/domain'),
+  ];
+
+  it('the adapter is the only file in features/gifts/contacts, and the domain stays one file', () => {
+    expect(listFiles('features/gifts/contacts')).toEqual([ADAPTER]);
+    expect(listFiles('features/gifts/domain')).toEqual(['features/gifts/domain/gift.ts']);
+    expect(listFiles('features/gifts').sort()).toEqual([ADAPTER, 'features/gifts/domain/gift.ts']);
+  });
+
+  it('B1/B2/B3/B4/B5: the adapter loads only expo-contacts/legacy, and only to open the single-contact picker', () => {
+    expect(importsOf(ADAPTER).filter((s) => /contacts/i.test(s))).toEqual(expect.arrayContaining(['expo-contacts/legacy']));
+    expect(new Set(importsOf(ADAPTER).filter((s) => /contacts/i.test(s)))).toEqual(new Set(['expo-contacts/legacy']));
+    const text = code(ADAPTER);
+    // No permission API (B1, B2), no new-API picker or access picker or button (B3), no enumeration or lookup (B4),
+    // no write (B5), no groups or containers.
+    expect(text).not.toMatch(/requestPermission|getPermission|PermissionsAsync|PermissionResponse|presentPicker|presentAccessPicker|ContactAccessButton|expo-contacts\/next|from ['"]expo-contacts['"]/);
+    expect(text).not.toMatch(/getContacts|getContactById|getContactsAsync|getAll|getAllDetails|getCount|hasAny|\.search|getGroups|getContainers|getDefaultContainer|Group\b|Container\b/);
+    expect(text).not.toMatch(/addContact|updateContact|removeContact|deleteContact|createContact|\.create\(|\.update\(|\.patch\(|\.delete\(|\.add\w*\(|\.remove\w*\(|writeContact|presentCreateForm|editWithForm|presentFormAsync|shareContact/);
+    expect(text.match(/presentContactPickerAsync/g)).toHaveLength(1);
+  });
+
+  it('B6/B11: the adapter reads only firstName and lastName, and returns nothing but { ok, name } or a reason code', () => {
+    const text = code(ADAPTER);
+    expect(text).not.toMatch(/phoneNumbers|emails|birthday|company|imageAvailable|\bimage\b|addresses|contactType|jobTitle|department|\bnote\b|nickname|middleName|namePrefix|nameSuffix|maidenName|relationships|urlAddresses|socialProfiles|instantMessage|lookupKey|\.id\b|\bid\s*[:,}]|\.name\b|rawContacts|phonetic/);
+    expect(text.match(/\b(?:firstName|lastName)\b/g)?.length).toBeGreaterThan(0);
+    expect(text).not.toMatch(/return\s+(?:picked|contact)\b|ok:\s*true,\s*(?:contact|picked|\.\.\.)/);
+    // Native error text can carry an identifier: it is never read, returned or logged.
+    expect(text).not.toMatch(/\.message|\.stack|String\(error\)|JSON\.stringify/);
+  });
+
+  it('B8: the adapter logs nothing', () => {
+    expect(code(ADAPTER)).not.toMatch(/\bconsole\b|logger|safeLog|reportError|captureException|Sentry/i);
+  });
+
+  it('the adapter fails closed off iOS before it loads anything', () => {
+    const text = code(ADAPTER);
+    expect(text).toMatch(/Platform\.OS\s*===\s*'ios'/);
+    expect(text.indexOf('isContactPickerSupported()')).toBeLessThan(text.indexOf("require('expo-contacts/legacy')"));
+    // Lazy: no static import of the native package, so Gifts renders without it.
+    expect(importsOf(ADAPTER).filter((s) => s.startsWith('expo-contacts')).length).toBeGreaterThan(0);
+    expect(code(ADAPTER)).not.toMatch(/^\s*import[^;]*['"]expo-contacts/m);
+  });
+
+  it('nothing but the adapter loads expo-contacts, anywhere in the app', () => {
+    const importers = sourceFiles('app', 'components', 'core', 'features', 'store', 'utils', 'hooks', 'lib', 'types', 'constants')
+      .filter((file) => importsOf(file).some((specifier) => specifier.startsWith('expo-contacts')));
+    expect(importers).toEqual([ADAPTER]);
+  });
+
+  it('B7: the Gift type, the persisted format, the domain, the store and the screens have no Contact concept at all', () => {
+    for (const file of PLAIN) {
+      expect({ file, hit: /contact|READ_CONTACTS|CNContact|phoneNumbers?|\bphone\b|\bemails?\b|\bavatar\b|birthday|relationship/i.test(code(file)) }).toEqual({ file, hit: false });
+    }
+    expect(code('types/gift.ts')).not.toMatch(/contact|phone|email|avatar|birthday|organi[sz]ation|address|relationship/i);
+  });
+
+  it('B11: GiftForm receives the normalised result only: it imports the adapter and nothing else from Contacts', () => {
+    const file = 'components/GiftForm.tsx';
+    expect(importsOf(file).filter((s) => /contact/i.test(s))).toEqual(['@/features/gifts/contacts/pickContactName']);
+    const text = code(file);
+    expect(text).not.toMatch(/expo-contacts|ExistingContact|\bContact\b|contactId|contactIdentifier|READ_CONTACTS|CNContact|requestPermission|getPermission|phoneNumbers?|\bphone\b|\bemails?\b|\bavatar\b|birthday|relationship|company|imageAvailable/);
+    // The component keeps a reason code and a name string, never a contact object.
+    expect(text).toContain('result.name');
+    expect(text).not.toMatch(/useState<[^>]*Contact\b|setContact\(|contactRecord|rawContact/);
+    // The adapter's answer is only ever read through .ok, .name and .reason: it is never stored, passed on or serialised whole.
+    expect([...text.matchAll(/\bresult\b(?!\.(?:ok|name|reason)\b)/g)]).toHaveLength(1); // the `const result = await pickContactName()` declaration
+    // Only the form's own explicit handler calls the adapter, and never on mount.
+    expect(text.match(/pickContactName\(/g)).toHaveLength(1);
+    expect(text).not.toMatch(/useEffect|useFocusEffect|useLayoutEffect/);
+  });
+
+  it('GiftForm shows the action only where the adapter supports it, never on Android or web', () => {
+    const text = code('components/GiftForm.tsx');
+    expect(text).toContain('isContactPickerSupported()');
+    expect(text).not.toMatch(/Platform\.OS\s*[!=]==\s*'(?:android|web)'/);
+  });
+
+  it('B12: the adapter and the form import no Supabase, network, sync or analytics', () => {
+    for (const file of [ADAPTER, 'components/GiftForm.tsx']) {
+      expect({ file, hit: /supabase|\bfetch\(|XMLHttpRequest|WebSocket|outbox|analytics|trackEvent|AsyncStorage|SecureStore|useGiftsStore/i.test(code(file)) }).toEqual({ file, hit: false });
+    }
+  });
+
+  it('no Contacts API call exists anywhere in the app outside the adapter (permission, enumeration, picker, write, button)', () => {
+    const everywhere = sourceFiles('app', 'components', 'core', 'features', 'store', 'utils', 'hooks', 'lib', 'types', 'constants').filter((file) => file !== ADAPTER);
+    for (const file of everywhere) {
+      expect({ file, hit: /presentContactPickerAsync|getContactsAsync|ContactAccessButton|presentAccessPicker|Contacts\.(?:requestPermissionsAsync|getPermissionsAsync)|expo-contacts/.test(code(file)) }).toEqual({ file, hit: false });
+    }
+  });
+
+  it('B13: the backup format was not bumped and the Gift schema was not widened', () => {
+    expect(code('utils/shared/backupValidation.ts')).toMatch(/export const BACKUP_VERSION = 14;/);
+    expect(code('core/gifts/persistedGift.ts')).not.toMatch(/contact/i);
   });
 });

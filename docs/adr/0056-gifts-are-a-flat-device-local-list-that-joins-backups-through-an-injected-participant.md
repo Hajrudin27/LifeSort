@@ -8,6 +8,8 @@
 | **Story** | APP-069 |
 | **Superseded by** | – |
 
+> Contacts decision amended by [ADR-0057](./0057-gift-person-labels-may-be-copied-once-from-an-ios-contact-the-user-picks.md) for APP-070. The statement below that APP-069 contains no Contacts integration remains true of APP-069.
+
 ## Context
 
 APP-069 asks for a gift planner: "As a user I want to track ideas/budget/occasion without Contacts

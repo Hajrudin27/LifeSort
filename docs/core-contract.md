@@ -99,7 +99,7 @@ dates, supported non-negative DKK minor units, the rule that `paid` needs `purch
 a stored and a backup decoder that are the same strict rules, because the domain is greenfield), because the backup
 parser, which is core, must validate what the store persists. It never reads the clock. Form validation, creating and
 editing, the purchase rules and ordering stay in `features/gifts/domain`, which imports core, never the reverse;
-`__tests__/giftDomainBoundary.test.ts` holds that line and the local-only, no-Contacts, no-Economy scope. See
+`__tests__/giftDomainBoundary.test.ts` holds that line and the local-only, no-Economy scope and, since APP-070, the rule that exactly one adapter may load Contacts. See
 [ADR-0056](./adr/0056-gifts-are-a-flat-device-local-list-that-joins-backups-through-an-injected-participant.md).
 
 **The backup participant seam (APP-069).** `utils/shared/dataBackup.ts` gained a minimal `BackupParticipant` shape

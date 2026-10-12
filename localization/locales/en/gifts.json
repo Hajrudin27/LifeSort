@@ -8,6 +8,13 @@
   "addButton": "+ Add gift idea",
   "personLabel": "Person",
   "personPlaceholder": "Who is it for?",
+  "chooseContact": "Choose from Contacts",
+  "contactHelp": "Opens Contacts so you can pick one person. Only the first and last name are used.",
+  "contactNotice": {
+    "no_name": "This contact has no usable name. You can enter one manually.",
+    "unavailable": "Contacts can't be opened here. You can enter a name manually.",
+    "error": "Couldn't read the contact. You can enter a name manually."
+  },
   "ideaLabel": "Gift idea",
   "ideaPlaceholder": "What could you give?",
   "occasionLabel": "Occasion (optional)",

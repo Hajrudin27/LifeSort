@@ -75,6 +75,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0054](./0054-habit-period-summaries-are-derived-current-period-counts-of-resolved-commitments.md) | Habit period summaries are derived, current-period counts of resolved commitments | Accepted | 2026-10-09 | APP-066 |
 | [0055](./0055-career-applications-are-private-local-only-and-user-declared.md) | Career applications are private, local-only and user-declared | Accepted | 2026-10-09 | APP-067 |
 | [0056](./0056-gifts-are-a-flat-device-local-list-that-joins-backups-through-an-injected-participant.md) | Gifts are a flat, device-local list that joins backups through an injected participant | Accepted | 2026-10-12 | APP-069 |
+| [0057](./0057-gift-person-labels-may-be-copied-once-from-an-ios-contact-the-user-picks.md) | Gift person labels may be copied once from an iOS contact the user picks | Accepted | 2026-10-12 | APP-070 |
 
 ## When an ADR is required
 

@@ -437,7 +437,7 @@ Directory-level map of the remaining shared code. Not enforced by the test.
 | `travel` | `utils/trip/` | `types/trip.ts` | `travel` |
 | `warranties` | `utils/warranty/` | `types/warranty.ts` | `warranties` |
 | `career` | `core/career/` (persisted application format), `features/career/domain/` (application rules; APP-067), `utils/cv/` | `types/career.ts`, `types/cv.ts` | `career`, `cv` |
-| `gifts` | `core/gifts/` (persisted gift format), `features/gifts/domain/` (gift rules; APP-069), `features/backupParticipants.ts` (backup composition) | `types/gift.ts` | `gifts` |
+| `gifts` | `core/gifts/` (persisted gift format), `features/gifts/domain/` (gift rules; APP-069), `features/gifts/contacts/` (the one iOS contact-name adapter; APP-070), `features/backupParticipants.ts` (backup composition) | `types/gift.ts` | `gifts` |
 | `cycle` | `utils/cycle/` | `types/cycle.ts`, `types/healthInfo.ts` | `cycle`, `healthInfo` |
 
 ## §7 Sensitivity legend

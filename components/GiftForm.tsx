@@ -9,6 +9,7 @@ import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { minorUnitsToInputText } from '@/core/money/decimal';
 import { decimalSeparatorFor, moneyLocaleFor } from '@/core/money/format';
+import { isContactPickerSupported, pickContactName } from '@/features/gifts/contacts/pickContactName';
 import type { GiftErrors, GiftField, GiftInput } from '@/features/gifts/domain/gift';
 import type { Gift } from '@/types/gift';
 import { todayIso } from '@/utils/shared/localDate';
@@ -40,6 +41,10 @@ function pickerWindow(value: string): { yearsBack: number; yearsForward: number 
  * It owns text and error presentation only. Every rule lives in features/gifts/domain and is applied
  * by the store; the form never decides what is valid and never saves anything itself.
  *
+ * APP-070: on iOS only, the Person field has an optional "Choose from Contacts" action. It copies the picked
+ * name's text into the field, one way, and nothing else: it saves nothing, keeps no reference to the contact,
+ * and the text is then ordinary, editable form input checked by the normal rules on Save.
+ *
  * Budget and Paid are two different things and are labelled as such: what the user plans to spend,
  * and what was actually paid. Neither is an expense, and the form says so next to the purchase.
  */
@@ -61,6 +66,9 @@ export default function GiftForm({ initial, submitLabel, onSubmit }: Props) {
   const [purchasedOn, setPurchasedOn] = useState(initial?.purchasedOn ?? '');
   const [paid, setPaid] = useState(initial?.paid !== undefined ? minorUnitsToInputText(initial.paid, separator) : '');
   const [errors, setErrors] = useState<GiftErrors>({});
+  const [picking, setPicking] = useState(false);
+  const [contactNotice, setContactNotice] = useState<'no_name' | 'unavailable' | 'error' | null>(null);
+  const contactPickerShown = isContactPickerSupported();
 
   const clear = (field: GiftField) => {
     if (errors[field]) setErrors(({ [field]: _removed, ...rest }) => rest);
@@ -72,6 +80,21 @@ export default function GiftForm({ initial, submitLabel, onSubmit }: Props) {
     if (next && purchasedOn === '') setPurchasedOn(todayIso());
     clear('purchasedOn');
     clear('paid');
+  };
+
+  const chooseContact = async () => {
+    if (picking) return;
+    setPicking(true);
+    const result = await pickContactName();
+    setPicking(false);
+    if (result.ok) {
+      setPersonLabel(result.name);
+      clear('personLabel');
+      setContactNotice(null);
+    } else {
+      // A cancelled picker is silent; the field is never changed by anything but a picked name.
+      setContactNotice(result.reason === 'cancelled' ? null : result.reason);
+    }
   };
 
   const save = () => {
@@ -119,6 +142,25 @@ export default function GiftForm({ initial, submitLabel, onSubmit }: Props) {
             returnKeyType="next"
           />
           {errorText('personLabel')}
+          {contactPickerShown && (
+            <>
+              <Button
+                label={t('gifts.chooseContact')}
+                accessibilityLabel={t('gifts.chooseContact')}
+                accessibilityHint={t('gifts.contactHelp')}
+                variant="secondary"
+                disabled={picking}
+                style={styles.minTarget}
+                onPress={chooseContact}
+              />
+              <Text style={[styles.help, { color: textMuted }]}>{t('gifts.contactHelp')}</Text>
+              {contactNotice !== null && (
+                <Text accessibilityLiveRegion="polite" style={[styles.help, { color: textMuted }]}>
+                  {t(`gifts.contactNotice.${contactNotice}`)}
+                </Text>
+              )}
+            </>
+          )}
         </View>
 
         <View style={styles.field}>

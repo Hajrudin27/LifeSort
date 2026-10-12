@@ -599,7 +599,7 @@ export const DATA_DOMAINS = [
     id: 'gifts.gifts',
     title: 'Gift ideas and purchase history',
     module: 'gifts',
-    description: 'APP-069: one flat gift per row: a typed person label, an idea, an optional occasion label and date, an optional planned budget and, once purchased, the purchase date and an optional paid amount (DKK minor units). Person labels are third-party personal data and the amounts are personal financial planning values (module sensitivity: personal, financial); neither makes the domain Profile B under the current data contracts. Device-local: no server sync is expected or performed and there is no table.',
+    description: 'APP-069: one flat gift per row: a person label (typed, or copied one way from a single iOS contact the user picked; no contact id or record is kept), an idea, an optional occasion label and date, an optional planned budget and, once purchased, the purchase date and an optional paid amount (DKK minor units). Person labels are third-party personal data and the amounts are personal financial planning values (module sensitivity: personal, financial); neither makes the domain Profile B under the current data contracts. Device-local: no server sync is expected or performed and there is no table.',
     storageSurfaces: ['async-storage:lifesort-gifts'],
     evidence: ['store/useGiftsStore.ts', 'core/gifts/persistedGift.ts', 'features/gifts/domain/gift.ts'],
     ...profileA({ expectsServerSync: false }),

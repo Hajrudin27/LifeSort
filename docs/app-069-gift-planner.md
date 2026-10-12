@@ -122,8 +122,13 @@ or changes an Economy expense (tested against the real Economy stores).
 
 ## No Contacts
 
-APP-069 has zero Contacts integration: no `expo-contacts`, no contact id, no phone, email or avatar, no permission
-request, no `app.json` plugin or permission. The person is a label the user types. APP-070 owns any future import.
+APP-069 itself has zero Contacts integration: no `expo-contacts`, no contact id, no phone, email or avatar, no permission
+request, no `app.json` plugin or permission. The person is a label the user types.
+
+> **Amended later by APP-070.** APP-070 adds an optional, iOS-only "Choose from Contacts" action that copies the first
+> and last name of one picked contact into the Person field, one way, with no permission request, no stored reference
+> and no schema change. The statement above remains true of APP-069 as shipped. See
+> [APP-070](./app-070-contacts-import.md) and [ADR-0057](./adr/0057-gift-person-labels-may-be-copied-once-from-an-ios-contact-the-user-picks.md).
 
 ## Visibility
 
@@ -136,7 +141,7 @@ changed (`user_modules` only excludes the platform modules).
 
 ## Non-goals
 
-Contacts or any contact-derived field; an Economy link, expense, savings goal or trip link; sync, a server table,
+Contacts or any contact-derived field (APP-069 itself; APP-070 later adds a one-way iOS name copy only); an Economy link, expense, savings goal or trip link; sync, a server table,
 a mirror; reminders, notifications, calendar; recurrence or birthday inference; "overdue" or priority; a status
 enum, an archive, filters, grouping or search; a Recipient/Occasion/Purchase entity or a purchase event log;
 AI suggestions, recommendations, product search, images, shops, affiliate links, price lookup, scraping, adverts;

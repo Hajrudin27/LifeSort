@@ -9,7 +9,7 @@ import type { MinorUnits } from '@/core/money/minorUnits';
  */
 export interface Gift {
   id: string;
-  /** A label the user typed. Never a contact, never resolved against anything. */
+  /** A label: typed by the user, or copied one way from a contact they picked (APP-070). Never resolved against anything. */
   personLabel: string;
   idea: string;
   occasionLabel?: string;

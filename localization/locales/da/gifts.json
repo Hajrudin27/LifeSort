@@ -8,6 +8,13 @@
   "addButton": "+ Tilføj gaveidé",
   "personLabel": "Person",
   "personPlaceholder": "Hvem er den til?",
+  "chooseContact": "Vælg fra Kontakter",
+  "contactHelp": "Åbner Kontakter, så du kan vælge én person. Kun for- og efternavn bruges.",
+  "contactNotice": {
+    "no_name": "Denne kontakt har intet brugbart navn. Du kan skrive et manuelt.",
+    "unavailable": "Kontakter kan ikke åbnes her. Du kan skrive et navn manuelt.",
+    "error": "Kontakten kunne ikke læses. Du kan skrive et navn manuelt."
+  },
   "ideaLabel": "Gaveidé",
   "ideaPlaceholder": "Hvad kunne du give?",
   "occasionLabel": "Anledning (valgfrit)",

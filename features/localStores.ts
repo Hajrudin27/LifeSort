@@ -112,18 +112,9 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
       }),
   },
 
-  {
-    key: 'lifesort-cycle',
-    reset: () =>
-      useCycleStore.setState({
-        cycles: [],
-        symptomLogs: [],
-        avgCycleLength: 28,
-        lutealPhaseLength: 14,
-        reminderEnabled: false,
-        reminderDaysBefore: 1,
-      }),
-  },
+  // Retires any Cycle fetch still in flight, so a response for the previous account cannot repopulate
+  // the cleared store (APP-072). Reviewed reference content is not the user's and stays.
+  { key: 'lifesort-cycle', reset: () => useCycleStore.getState().clearLocal() },
 
   { key: 'lifesort-enabled-modules', reset: () => useEnabledModulesStore.getState().clearLocal() },
 

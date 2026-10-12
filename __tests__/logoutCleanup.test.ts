@@ -315,3 +315,66 @@ describe('log ud rydder faktisk op', () => {
     expect(good).toHaveBeenCalled();
   });
 });
+
+describe('APP-072 the two encryption keys are independent mandatory cleanups', () => {
+  const docKey = () => require('@/core/storage/documentCacheStorage').clearDocumentCacheEncryptionKey as jest.Mock;
+  const cycleKey = () => require('@/core/storage/cycleHealthEncryptedStorage').clearCycleHealthEncryptionKey as jest.Mock;
+  const pin = () => require('@/utils/auth/pinAuth').clearLocalPin as jest.Mock;
+
+  beforeEach(() => {
+    docKey().mockClear();
+    cycleKey().mockClear();
+    pin().mockClear();
+  });
+
+  it('still deletes the Cycle key when the document-cache key deletion rejects', async () => {
+    docKey().mockRejectedValueOnce(new Error('document key delete failed'));
+    await expect(clearLocalUserData([])).rejects.toThrow('document key delete failed');
+    expect(docKey()).toHaveBeenCalled();
+    expect(cycleKey()).toHaveBeenCalled();
+  });
+
+  it('still attempts the document-cache key when the Cycle key deletion rejects', async () => {
+    cycleKey().mockRejectedValueOnce(new Error('cycle key delete failed'));
+    await expect(clearLocalUserData([])).rejects.toThrow('cycle key delete failed');
+    expect(docKey()).toHaveBeenCalled();
+    expect(cycleKey()).toHaveBeenCalled();
+  });
+
+  it('attempts both keys when an earlier cleanup step failed, and reports that earlier failure', async () => {
+    pin().mockRejectedValueOnce(new Error('pin cleanup failed'));
+    docKey().mockRejectedValueOnce(new Error('document key delete failed'));
+    cycleKey().mockRejectedValueOnce(new Error('cycle key delete failed'));
+    await expect(clearLocalUserData([])).rejects.toThrow('pin cleanup failed');
+    expect(docKey()).toHaveBeenCalledTimes(1);
+    expect(cycleKey()).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the first key failure deterministically when both key deletions fail', async () => {
+    docKey().mockRejectedValueOnce(new Error('document key delete failed'));
+    cycleKey().mockRejectedValueOnce(new Error('cycle key delete failed'));
+    await expect(clearLocalUserData([])).rejects.toThrow('document key delete failed');
+    expect(cycleKey()).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases both cleanup windows even when a key deletion fails', async () => {
+    const { withCycleHealthEncryptedStorageCleanup } = require('@/core/storage/cycleHealthEncryptedStorage');
+    const events: string[] = [];
+    withCycleHealthEncryptedStorageCleanup.mockImplementationOnce(async (cleanup: () => Promise<unknown>) => {
+      try {
+        return await cleanup();
+      } finally {
+        events.push('finish-cycle-cleanup');
+      }
+    });
+    docKey().mockRejectedValueOnce(new Error('document key delete failed'));
+    await expect(clearLocalUserData([])).rejects.toThrow();
+    expect(events).toEqual(['finish-cycle-cleanup']);
+  });
+
+  it('resolves normally, deleting both keys, when nothing fails', async () => {
+    await expect(clearLocalUserData([])).resolves.toBeUndefined();
+    expect(docKey()).toHaveBeenCalledTimes(1);
+    expect(cycleKey()).toHaveBeenCalledTimes(1);
+  });
+});

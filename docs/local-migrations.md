@@ -237,3 +237,9 @@ is absent, and no tracked CI YAML/Jenkins configuration exists).
 The current checkout is not shallow and the unchanged git-show provenance tests
 pass against the referenced commits. No CI infrastructure was added. Future CI
 must fetch those source commits/full history before running the fixture tests.
+
+APP-072 (health storage profile) needed **no local migration**. It adds no persisted shape, no envelope version and no
+fixture: the Cycle adapter, its AES-GCM v1 envelope and the retained `cycle/94f39eb-plaintext-v0.json` fixture are
+unchanged, and the new real-store test (`cycleStoreEncryptedWiring.test.ts`) reuses the existing payload shape. The only
+persisted-state change is runtime: `useCycleStore.clearLocal()` resets the same user-owned fields the logout registry
+already reset, so a stored payload is read exactly as before.

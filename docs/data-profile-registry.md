@@ -22,6 +22,14 @@ AES-GCM encrypted envelope whose key material lives in SecureStore. APP-029
 adds the same at-rest protection to local document-cache bytes and to the
 mixed expense/trip/warranty Zustand stores that carry attachment metadata.
 
+APP-072 changed no classification. It added a binding rule: every module whose registry sensitivity includes `health`
+(today Cycle; Pregnancy when APP-076 introduces it) must own a Profile B logical domain whose every device surface
+resolves to `encrypted-required`, enforced by `__tests__/healthStorageProfile.test.ts`. `cycle.user-health` stays B,
+`cycle.reference-content` stays D, and the mixed `lifesort-cycle` surface keeps the strongest protection. The module-choice
+boolean and Home layout metadata that name the Cycle module are core Profile A state, not the Cycle health payload.
+`core.local-backup-archive` is unchanged here (APP-097 owns portable export policy); the Cycle payload is simply never
+in it.
+
 APP-031 outbox entries keep `dataDomain: DataDomainId` separate from
 `entityType: string`. The data domain determines sensitivity/storage policy;
 the entity type is a stable, non-empty LifeSort-owned kind retained as the

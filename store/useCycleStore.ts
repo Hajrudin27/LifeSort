@@ -8,9 +8,28 @@ import { supabase } from '@/lib/supabase';
 import { CycleEntry, FlowIntensity, Symptom, SymptomLog } from '@/types/cycle';
 import { HealthConditionRecord, SymptomGlossaryRecord } from '@/types/healthInfo';
 
-async function getUserId(): Promise<string | null> {
-  const { data: userData } = await supabase.auth.getUser();
-  return userData.user?.id ?? null;
+let datasetEpoch = 0;
+
+/** Resolved only when an action or fetch runs, so a read-only import does not start the auth flow. */
+function initiatingAccountId(): string | null {
+  const { useAuthStore } = require('@/store/useAuthStore') as typeof import('@/store/useAuthStore');
+  return useAuthStore.getState().session?.user.id ?? null;
+}
+
+/**
+ * APP-072. The owner is captured when the user acts and travels with the write. After the only
+ * await the live session must still be that account; if it switched, the write is dropped. A
+ * request that still reaches the server under another session carries the initiator's `user_id`,
+ * so the owner RLS refuses it instead of re-owning the health row. This is account isolation
+ * only: the writes stay best-effort (no outbox, retry or revisions - APP-076).
+ */
+async function sessionStillOwnedBy(accountId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    return !error && data.session?.user.id === accountId;
+  } catch {
+    return false;
+  }
 }
 
 function cycleToRow(userId: string, c: CycleEntry) {
@@ -20,37 +39,32 @@ function symptomLogToRow(userId: string, l: SymptomLog) {
   return { id: l.id, user_id: userId, date: l.date, symptoms: l.symptoms, flow: l.flow ?? null, notes: l.notes ?? null };
 }
 
-async function syncUpsertCycle(cycle: CycleEntry) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('cycles').upsert(cycleToRow(userId, cycle));
+async function syncUpsertCycle(accountId: string | null, cycle: CycleEntry) {
+  if (!accountId || !(await sessionStillOwnedBy(accountId))) return;
+  await supabase.from('cycles').upsert(cycleToRow(accountId, cycle));
 }
-async function syncDeleteCycle(id: string) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('cycles').delete().eq('user_id', userId).eq('id', id);
+async function syncDeleteCycle(accountId: string | null, id: string) {
+  if (!accountId || !(await sessionStillOwnedBy(accountId))) return;
+  await supabase.from('cycles').delete().eq('user_id', accountId).eq('id', id);
 }
 
-async function syncUpsertSymptomLog(log: SymptomLog) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('symptom_logs').upsert(symptomLogToRow(userId, log));
+async function syncUpsertSymptomLog(accountId: string | null, log: SymptomLog) {
+  if (!accountId || !(await sessionStillOwnedBy(accountId))) return;
+  await supabase.from('symptom_logs').upsert(symptomLogToRow(accountId, log));
 }
-async function syncDeleteSymptomLog(id: string) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('symptom_logs').delete().eq('user_id', userId).eq('id', id);
+async function syncDeleteSymptomLog(accountId: string | null, id: string) {
+  if (!accountId || !(await sessionStillOwnedBy(accountId))) return;
+  await supabase.from('symptom_logs').delete().eq('user_id', accountId).eq('id', id);
 }
 
-async function syncCycleSettings(updates: Partial<{
+async function syncCycleSettings(accountId: string | null, updates: Partial<{
   avg_cycle_length: number;
   luteal_phase_length: number;
   reminder_enabled: boolean;
   reminder_days_before: number;
 }>) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('cycle_settings').upsert({ user_id: userId, ...updates });
+  if (!accountId || !(await sessionStillOwnedBy(accountId))) return;
+  await supabase.from('cycle_settings').upsert({ user_id: accountId, ...updates });
 }
 
 interface CycleState {
@@ -79,6 +93,11 @@ interface CycleState {
   setReminderDaysBefore: (days: number) => void;
 
   fetchFromSupabase: () => Promise<void>;
+  /**
+   * Logout / account switch: retires any fetch still in flight and resets the user-owned Cycle state.
+   * The reviewed reference content (Profile D) is not the user's and is kept.
+   */
+  clearLocal: () => void;
 }
 
 export const useCycleStore = create<CycleState>()(
@@ -94,30 +113,35 @@ export const useCycleStore = create<CycleState>()(
       symptomGlossary: [],
 
       startPeriod: (startDate) => {
+        const accountId = initiatingAccountId();
         const newCycle: CycleEntry = { id: newEntityId(), startDate, createdAt: new Date().toISOString() };
         set((state) => ({ cycles: [...state.cycles, newCycle] }));
-        syncUpsertCycle(newCycle);
+        void syncUpsertCycle(accountId, newCycle);
       },
       endPeriod: (id, endDate) => {
+        const accountId = initiatingAccountId();
         set((state) => ({
           cycles: state.cycles.map((c) => (c.id === id ? { ...c, endDate } : c)),
         }));
         const target = get().cycles.find((c) => c.id === id);
-        if (target) syncUpsertCycle(target);
+        if (target) void syncUpsertCycle(accountId, target);
       },
       updateCycle: (id, updates) => {
+        const accountId = initiatingAccountId();
         set((state) => ({
           cycles: state.cycles.map((c) => (c.id === id ? { ...c, ...updates } : c)),
         }));
         const target = get().cycles.find((c) => c.id === id);
-        if (target) syncUpsertCycle(target);
+        if (target) void syncUpsertCycle(accountId, target);
       },
       removeCycle: (id) => {
+        const accountId = initiatingAccountId();
         set((state) => ({ cycles: state.cycles.filter((c) => c.id !== id) }));
-        syncDeleteCycle(id);
+        void syncDeleteCycle(accountId, id);
       },
 
       logSymptoms: (date, symptoms, flow, notes) => {
+        const accountId = initiatingAccountId();
         set((state) => {
           const existing = state.symptomLogs.find((l) => l.date === date);
           if (existing) {
@@ -128,42 +152,55 @@ export const useCycleStore = create<CycleState>()(
           return { symptomLogs: [...state.symptomLogs, { id: newEntityId(), date, symptoms, flow, notes }] };
         });
         const target = get().symptomLogs.find((l) => l.date === date);
-        if (target) syncUpsertSymptomLog(target);
+        if (target) void syncUpsertSymptomLog(accountId, target);
       },
       removeSymptomLog: (id) => {
+        const accountId = initiatingAccountId();
         set((state) => ({ symptomLogs: state.symptomLogs.filter((l) => l.id !== id) }));
-        syncDeleteSymptomLog(id);
+        void syncDeleteSymptomLog(accountId, id);
       },
 
       setAvgCycleLength: (days) => {
+        const accountId = initiatingAccountId();
         set({ avgCycleLength: days });
-        syncCycleSettings({ avg_cycle_length: days });
+        void syncCycleSettings(accountId, { avg_cycle_length: days });
       },
       setLutealPhaseLength: (days) => {
+        const accountId = initiatingAccountId();
         set({ lutealPhaseLength: days });
-        syncCycleSettings({ luteal_phase_length: days });
+        void syncCycleSettings(accountId, { luteal_phase_length: days });
       },
       setReminderEnabled: (enabled) => {
+        const accountId = initiatingAccountId();
         set({ reminderEnabled: enabled });
-        syncCycleSettings({ reminder_enabled: enabled });
+        void syncCycleSettings(accountId, { reminder_enabled: enabled });
       },
       setReminderDaysBefore: (days) => {
+        const accountId = initiatingAccountId();
         set({ reminderDaysBefore: days });
-        syncCycleSettings({ reminder_days_before: days });
+        void syncCycleSettings(accountId, { reminder_days_before: days });
       },
 
       fetchFromSupabase: async () => {
-        const userId = await getUserId();
-        if (!userId) return;
+        const accountId = initiatingAccountId();
+        const epoch = datasetEpoch;
+        if (!accountId) return;
+        const stillActive = () => epoch === datasetEpoch && initiatingAccountId() === accountId;
+        if (!(await sessionStillOwnedBy(accountId)) || !stillActive()) return;
 
         const [cyclesResult, logsResult, settingsResult, conditionsResult, symptomsResult] = await Promise.all([
-          supabase.from('cycles').select('id, start_date, end_date, created_at').eq('user_id', userId),
-          supabase.from('symptom_logs').select('id, date, symptoms, flow, notes').eq('user_id', userId),
-          supabase.from('cycle_settings').select('avg_cycle_length, luteal_phase_length, reminder_enabled, reminder_days_before').eq('user_id', userId).single(),
+          supabase.from('cycles').select('id, start_date, end_date, created_at').eq('user_id', accountId),
+          supabase.from('symptom_logs').select('id, date, symptoms, flow, notes').eq('user_id', accountId),
+          supabase.from('cycle_settings').select('avg_cycle_length, luteal_phase_length, reminder_enabled, reminder_days_before').eq('user_id', accountId).single(),
           // Admin-styret, globalt indhold — ingen user_id-filter, alle brugere ser samme data.
           supabase.from('health_conditions').select('*'),
           supabase.from('symptom_glossary').select('*'),
         ]);
+
+        // The response belongs to the account that asked. If it logged out or another account
+        // signed in while the requests were in flight, nothing of it may reach the store - or, through
+        // persist, the encrypted disk store of the next session.
+        if (!stillActive() || !(await sessionStillOwnedBy(accountId)) || !stillActive()) return;
 
         set((state) => {
           const next: Partial<CycleState> = {};
@@ -237,6 +274,18 @@ export const useCycleStore = create<CycleState>()(
           }
 
           return next;
+        });
+      },
+
+      clearLocal: () => {
+        datasetEpoch += 1;
+        set({
+          cycles: [],
+          symptomLogs: [],
+          avgCycleLength: 28,
+          lutealPhaseLength: 14,
+          reminderEnabled: false,
+          reminderDaysBefore: 1,
         });
       },
     }),

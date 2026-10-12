@@ -48,6 +48,8 @@ export interface BackupParticipant {
 
 // Rækkefølgen her definerer, hvad der eksporteres/importeres — tilføj en ny linje,
 // når I bygger et nyt modul med sin egen store.
+// APP-072: helbredsdata (Cyklus) er med vilje IKKE med i dette klartekst-arkiv. Det er special-category
+// data i en krypteret lokal store (ADR-0023); et krypteret, flytbart helbredsbackup ejes af APP-097.
 const STORE_REGISTRY = {
   expenses: useExpensesStore,
   categories: useCategoriesStore,

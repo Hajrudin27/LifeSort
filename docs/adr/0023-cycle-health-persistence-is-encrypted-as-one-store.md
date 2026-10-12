@@ -127,3 +127,43 @@ would also normalize plaintext fallback for Profile B data.
 **Build a generic encrypted persistence platform for all Profile B domains.**
 Rejected as premature. APP-029 and later E3 stories own document caches,
 outboxes, record IDs and generic migrations.
+
+## Amendment — APP-072 (2026-10-13)
+
+APP-072 ("Health storage profile") reviewed this decision and kept it. The APP-028 architecture above stays
+authoritative and is **unchanged**: one `lifesort-cycle` key, envelope v1, AES-256-GCM, 12-byte nonce, 16-byte tag, AAD
+`lifesort-cycle:v1`, SecureStore key `lifesort-cycle-health-key` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, key epochs and
+cleanup windows. No migration, key rotation or generic framework was added. What APP-072 records:
+
+- **"Backup" means exclusion from the plaintext portable archive.** `utils/shared/dataBackup.ts` is an unencrypted JSON file
+  the user shares, so Cycle data (Profile B, special-category) is deliberately not in it, in either direction: export writes
+  no Cycle section, and an imported `cycle` payload is ignored (only the validated whitelist is read). Tests and a structural
+  guard enforce it (`cycleBackupExclusion.test.ts`). An encrypted portable health backup, the passphrase/key-sharing it
+  would need, loss messaging and protected export belong to **APP-097**. This amendment does not choose that design.
+- **iOS device backup.** The encrypted payload relies on the installed `@react-native-async-storage/async-storage` 2.2.0
+  default, which excludes its iOS storage directory from iCloud/iTunes backup unless the Info.plist key
+  `RCTAsyncStorageExcludeFromBackup` says otherwise. LifeSort does not set that key. A regression test fails if any active
+  Expo config sets it to false, and it pins the installed library's default; **reverify the default on every native or
+  AsyncStorage dependency upgrade** before changing the assertion. The Cycle key is `ThisDeviceOnly`, so it does not migrate
+  to another device either. (Apple's exact semantics for such items inside an encrypted same-device backup are platform
+  documentation, not verified here.)
+- **Consequence: local-only data is not device-portable.** On a new iPhone, after a restore or a reinstall, neither
+  ciphertext nor key travels; the Cycle store starts empty and `fetchFromSupabase` refills what had synced. Cycle data that
+  never reached the server (offline, or a failed best-effort upsert) is lost with the device. Privacy and recoverability are
+  separate concerns; this decision chooses privacy and leaves recovery to APP-097/APP-076.
+- **Protected-data failures still fail closed and have no UI.** An unreadable, tampered or key-less payload throws
+  `CycleHealthProtectedDataError`, the store stays at defaults and writes to that key stay blocked. The recovery today is to
+  sign out (the sweep removes the ciphertext and key) and sign in again, which refetches synced rows. A richer recovery or
+  rebaseline experience belongs to APP-076.
+- **Pregnancy.** Pregnancy is not implemented. When APP-076 gives it a `health` `ModuleId`, it must have a Profile B logical
+  domain whose every local surface requires encryption. `__tests__/healthStorageProfile.test.ts` enforces that for every
+  actual health-sensitive module and fails until Pregnancy has such a contract. The Cycle adapter is deliberately **not**
+  generalised for a domain that does not exist; whether APP-076 reuses, extends or specialises it is its own decision.
+- **Account switch.** Cycle now retires stale async work like Habits, Trips and Household: `fetchFromSupabase` captures the
+  account and a dataset epoch, rechecks both after every await, and `clearLocal()` (called by logout) bumps the epoch, so
+  a response for account A can neither reach memory nor, through persist, the encrypted store of the next session. Every
+  best-effort server write is bound to the account that initiated it and re-verified against the live session. This is
+  account isolation only; outbox, revisions and tombstones stay APP-076.
+- **Metadata is not the health payload.** The module-choice boolean (`lifesort-enabled-modules`) and Home layout metadata
+  (pinned, hidden, last opened) name the Cycle module but are core module-choice state (APP-071, ADR-0059, Profile A), not
+  the Cycle data governed by this adapter. They are not encrypted by this story.

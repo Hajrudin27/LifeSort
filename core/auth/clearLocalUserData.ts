@@ -49,10 +49,27 @@ export type LocalStoreReset = {
   reset: () => void;
 };
 
+/**
+ * Both encryption keys are mandatory cleanups and independent of each other and of everything
+ * before them (APP-072, ADR-0017): a SecureStore failure deleting one must never leave the other
+ * behind. Every attempt is made; the first failure is returned so the caller can still report it.
+ */
+async function deleteEncryptionKeys(): Promise<{ failed: boolean; error?: unknown }> {
+  let result: { failed: boolean; error?: unknown } = { failed: false };
+  for (const deleteKey of [clearDocumentCacheEncryptionKey, clearCycleHealthEncryptionKey]) {
+    try {
+      await deleteKey();
+    } catch (error) {
+      if (!result.failed) result = { failed: true, error };
+    }
+  }
+  return result;
+}
+
 export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Promise<void> {
   // Drop sensitive navigation handoffs before waiting on any storage cleanup.
   clearAttachmentViewerSources();
-  let pendingCleanupError: unknown;
+  let pendingFailure: { failed: boolean; error?: unknown } = { failed: false };
 
   await withMigrationStorageCleanup(async () => withCycleHealthEncryptedStorageCleanup(async () => withDocumentCacheCleanup(async () => withOutboxCleanup(async () => {
     try {
@@ -93,12 +110,13 @@ export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Pr
       await clearResendThrottle();
       await clearLocalPin();
     } catch (error) {
-      pendingCleanupError = error;
+      pendingFailure = { failed: true, error };
     } finally {
-      await clearDocumentCacheEncryptionKey();
-      await clearCycleHealthEncryptionKey();
+      // The earliest failure wins; a key failure is reported only when nothing failed before it.
+      const keyFailure = await deleteEncryptionKeys();
+      if (!pendingFailure.failed) pendingFailure = keyFailure;
     }
 
-    if (pendingCleanupError) throw pendingCleanupError;
+    if (pendingFailure.failed) throw pendingFailure.error;
   }))));
 }

@@ -70,3 +70,14 @@ Then files, notifications and keys — the three that were missing entirely.
   part that outlives the session.
 - **Clear the whole of AsyncStorage.** Rejected: it belongs to other libraries
   too, and it would take the device's language with it.
+
+## Amendment — APP-072 (2026-10-13)
+
+The final step of `clearLocalUserData` deletes two encryption keys, the document-cache key and the Cycle health key. They
+used to be two sequential awaits in a `finally` block, so a SecureStore failure deleting the first silently skipped the
+second and left a health key behind. They are now independent mandatory cleanups: **both deletions are always attempted**,
+whatever failed before and whether or not the other fails, inside the same cleanup windows. A failure is never swallowed:
+once every attempt has been made, the earliest failure is rethrown (an earlier cleanup step's error wins over a key error;
+between the two keys the document-cache key is reported first), so the caller still learns that cleanup was incomplete.
+The reset registry entry for Cycle now calls `useCycleStore.getState().clearLocal()` so an in-flight fetch for the previous
+account is retired along with the state (see ADR-0023, amendment).

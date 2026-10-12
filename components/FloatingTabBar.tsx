@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { FLOATING_TAB_BAR_HEIGHT, floatingTabBarBottomOffset } from '@/hooks/useFloatingTabBarClearance';
 import { useTabBarStore } from '@/store/useTabBarStore';
 
 type IconName = { ios: string; android: string; web: string };
@@ -77,7 +78,7 @@ export default function FloatingTabBar({ descriptors, navigation, state }: Float
 
   const normalWidth = Math.min(width - 36, 430);
   const compactWidth = Math.max(Math.min(width - 116, 292), visibleRoutes.length * 48 + 22);
-  const bottomOffset = Math.max(insets.bottom + 8, 18);
+  const bottomOffset = floatingTabBarBottomOffset(insets.bottom);
   const barBackground = colorScheme === 'dark' ? 'rgba(42,34,29,0.92)' : 'rgba(255,250,242,0.92)';
   const barBorder = colorScheme === 'dark' ? 'rgba(253,246,237,0.14)' : 'rgba(255,255,255,0.78)';
   const activeShell = colorScheme === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(22,19,15,0.09)';
@@ -91,7 +92,7 @@ export default function FloatingTabBar({ descriptors, navigation, state }: Float
     }),
     height: compactProgress.interpolate({
       inputRange: [0, 1],
-      outputRange: [72, 56],
+      outputRange: [FLOATING_TAB_BAR_HEIGHT, 56],
     }),
     transform: [
       {

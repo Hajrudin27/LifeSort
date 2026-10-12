@@ -58,6 +58,7 @@ export const LifeModuleTints = {
     habits: '#F5E1E5',
     household: '#F3E9DF',
     career: '#F0DCE2',
+    gifts: '#F5DCE8',
   },
   dark: {
     todos: '#4A3A24',
@@ -65,6 +66,7 @@ export const LifeModuleTints = {
     habits: '#3D2A2E',
     household: '#3A2F27',
     career: '#3A2A30',
+    gifts: '#3D2A36',
   },
 };
 
@@ -109,6 +111,7 @@ export const LifeModuleTintsMasculine = {
     habits: '#DCE8E4',
     household: '#D9E2E6',
     career: '#DCE6EC',
+    gifts: '#E2DCEC',
   },
   dark: {
     todos: '#28322E',
@@ -116,6 +119,7 @@ export const LifeModuleTintsMasculine = {
     habits: '#26332F',
     household: '#28303A',
     career: '#26303A',
+    gifts: '#2E2A3A',
   },
 };
 

@@ -134,8 +134,9 @@ request, no `app.json` plugin or permission. The person is a label the user type
 
 `gifts` is registered with **`availability: 'internal'`**, sensitivity `personal`/`financial`, route root
 `/gifts`. The existing evaluator and `ModuleGate` close it to an ordinary user; no internal-user model is invented
-here. The **module launcher is the only entry point**: no Life-tab card, no Home card or snapshot, no Search entry,
-no notification category, no reminder. Activating it is a separate change after manual QA (a remote flag or the
+here. The entry points are the **module launcher** and, after physical QA, a card on the **Life tab** (shown only when the
+user has the module on and its effective availability allows navigation, so it is as dark as the launcher). No Home
+card or snapshot, no Search entry, no notification category, no reminder. Activating it is a separate change after manual QA (a remote flag or the
 registry default); until then it is invisible. Module choice already handles any module id, so no server schema
 changed (`user_modules` only excludes the platform modules).
 

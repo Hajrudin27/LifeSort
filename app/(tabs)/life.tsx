@@ -10,9 +10,11 @@ import Screen from '@/components/Screen';
 import SectionHeader from '@/components/SectionHeader';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import type { ModuleId } from '@/core/modules/moduleRegistry';
+import { useModuleAccess } from '@/core/feature-flags/useModuleAccess';
 import { useEnabledModuleIds } from '@/core/modules/useModuleEnabled';
 import { scheduledTodaySummary, weekEntryCount } from '@/features/habits/domain/habitStatus';
 import { useBrandTints } from '@/hooks/useBrandTints';
+import { useFloatingTabBarClearance } from '@/hooks/useFloatingTabBarClearance';
 import { useLifeModuleTints } from '@/hooks/useLifeModuleTints';
 import { useToday } from '@/hooks/useToday';
 import { interviewApplicationCount, openApplicationCount } from '@/features/career/domain/application';
@@ -26,7 +28,7 @@ import { daysUntilDue } from '@/utils/household/householdTaskSchedule';
 import { daysUntil } from '@/utils/shared/dateDays';
 
 type IconName = { ios: string; android: string; web: string };
-type LifeModuleKey = 'todos' | 'lifeGoals' | 'habits' | 'household' | 'career';
+type LifeModuleKey = 'todos' | 'lifeGoals' | 'habits' | 'household' | 'career' | 'gifts';
 
 type FocusCard = {
   icon: IconName;
@@ -126,8 +128,9 @@ export default function LifeScreen() {
     icon: IconName;
     title: string;
     subtitle: string;
-    value: string;
-    helper: string;
+    /** Omitted for a module whose card carries no figure (it shows a chevron instead). */
+    value?: string;
+    helper?: string;
     route: Href;
     tone: string;
   }> = [
@@ -181,6 +184,15 @@ export default function LifeScreen() {
       route: '/career',
       tone: '#7C3AED',
     },
+    {
+      // No count: reading the gifts store from here would add a new cross-store coupling.
+      key: 'gifts',
+      icon: { ios: 'gift.fill', android: 'redeem', web: 'redeem' },
+      title: t('modules.names.gifts'),
+      subtitle: t('modules.descriptions.gifts'),
+      route: '/gifts',
+      tone: '#DB2777',
+    },
   ];
 
   // Hub'en viser kun de moduler brugeren har valgt til (APP-010). Fravalg
@@ -192,11 +204,18 @@ export default function LifeScreen() {
     habits: 'habits',
     household: 'home',
     career: 'career',
+    gifts: 'gifts',
   };
-  const modules = allModules.filter((module) => enabled.includes(moduleIdByKey[module.key]));
+  // Gifts ships dark (internal). The user's own choice is not enough: the effective availability —
+  // the compiled default with the server kill switch laid on top — must also allow navigation.
+  const giftsNavigable = useModuleAccess('gifts').showInNavigation;
+  const modules = allModules.filter(
+    (module) => enabled.includes(moduleIdByKey[module.key]) && (module.key !== 'gifts' || giftsNavigable),
+  );
+  const tabBarClearance = useFloatingTabBarClearance();
 
   return (
-    <Screen contentContainerStyle={styles.content}>
+    <Screen contentContainerStyle={{ paddingBottom: tabBarClearance }}>
       <Card style={[styles.hero, { backgroundColor: brand.ink }]}>
         <View style={[styles.heroGlow, styles.heroGlowRose, { backgroundColor: brand.glowPrimary }]} />
         <View style={[styles.heroGlow, styles.heroGlowAmber, { backgroundColor: brand.glowSecondary }]} />
@@ -284,12 +303,20 @@ export default function LifeScreen() {
                   {module.subtitle}
                 </Text>
               </View>
-              <View style={[styles.moduleValue, { backgroundColor: surfaceMuted, borderColor }]}>
-                <Text style={styles.moduleValueText} numberOfLines={1}>{module.value}</Text>
-                <Text style={[styles.moduleValueHelper, { color: textMuted }]} numberOfLines={1}>
-                  {module.helper}
-                </Text>
-              </View>
+              {module.value !== undefined ? (
+                <View style={[styles.moduleValue, { backgroundColor: surfaceMuted, borderColor }]}>
+                  <Text style={styles.moduleValueText} numberOfLines={1}>{module.value}</Text>
+                  <Text style={[styles.moduleValueHelper, { color: textMuted }]} numberOfLines={1}>
+                    {module.helper}
+                  </Text>
+                </View>
+              ) : (
+                <SymbolView
+                  name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                  size={16}
+                  tintColor={textMuted}
+                />
+              )}
             </Card>
           </Pressable>
         ))}
@@ -352,9 +379,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(128,128,128,0.3)',
   },
   launcherText: { fontSize: 15, fontWeight: '600' },
-  content: {
-    paddingBottom: 72,
-  },
   hero: {
     borderColor: 'rgba(255,255,255,0.08)',
     gap: 12,

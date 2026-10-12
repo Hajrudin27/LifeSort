@@ -105,8 +105,11 @@ The audit found a greenfield module and three platform facts that shape the desi
     sensitivity `personal` and `financial`, and route root `/gifts`. It is closed to every ordinary viewer by the
     existing evaluator and `ModuleGate`; it can be opened by the existing remote flag when it is activated, which
     is a separate change after manual QA. No internal-user model is invented here. The module launcher is its
-    only entry point: no Life-tab card, no Home snapshot, no Search entry, no notification category and no
-    reminder.
+    only entry point: no Home snapshot, no Search entry, no notification category and no reminder.
+    *Amended after physical QA: Gifts was too hidden behind Life → Modules, so the Life tab now also lists a
+    Gifts card. It is gated by the same canonical rules as the launcher (the user's choice AND the effective
+    availability, kill switch included), so it is as dark as the launcher until the module is activated. There is
+    still no Home card or snapshot, Search entry, notification category or reminder.*
 15. **No intelligence and no commerce.** No AI, recommendation, product search, image, shop, affiliate link,
     marketplace, price lookup, scraping, advert or web browsing. The planner is deterministic personal CRUD.
     Nothing a gift contains is written to a log, analytics event or generic event, and there is no `console` call.

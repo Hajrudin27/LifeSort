@@ -309,14 +309,14 @@ describe('APP-069 never lets a gift reach a log, an analytics event or a generic
   });
 });
 
-describe('APP-069 adds no Home, Life, Search or reminder surface', () => {
+describe('APP-069 adds no Home, Search or reminder surface', () => {
   it('the Gifts module registers no Home snapshot, Search entries, notification category or data-rights handler', () => {
     const gifts = getModule('gifts') as unknown as Record<string, unknown>;
     expect(Object.keys(gifts).filter((key) => ['homeSnapshot', 'searchEntries', 'notificationCategory', 'exportHandler', 'deleteHandler', 'requiredEntitlements'].includes(key))).toEqual([]);
   });
 
-  it('Home snapshots, the Home tab, the Life tab, Search and the monthly review never mention Gifts', () => {
-    for (const file of ['features/homeSnapshots.ts', 'core/modules/homeSnapshots.ts', 'app/(tabs)/index.tsx', 'app/(tabs)/life.tsx', 'app/search.tsx', 'features/monthlyReview.ts', 'core/modules/monthlyReview.ts', 'core/modules/homeRanking.ts', 'core/modules/moduleSearch.ts']) {
+  it('Home snapshots, the Home tab, Search and the monthly review never mention Gifts', () => {
+    for (const file of ['features/homeSnapshots.ts', 'core/modules/homeSnapshots.ts', 'app/(tabs)/index.tsx', 'app/search.tsx', 'features/monthlyReview.ts', 'core/modules/monthlyReview.ts', 'core/modules/homeRanking.ts', 'core/modules/moduleSearch.ts']) {
       expect({ file, hit: /gift/i.test(code(file)) }).toEqual({ file, hit: false });
     }
     for (const locale of ['en', 'da']) {
@@ -327,12 +327,18 @@ describe('APP-069 adds no Home, Life, Search or reminder surface', () => {
     }
   });
 
-  it('the module launcher is the only entry point: no other screen routes to /gifts', () => {
+  it('the Life tab card is navigation only: it imports no Gift store, domain, core format or type', () => {
+    const specifiers = importsOf('app/(tabs)/life.tsx');
+    expect(specifiers.filter((specifier) => /gift/i.test(specifier))).toEqual([]);
+    expect(code('app/(tabs)/life.tsx')).not.toMatch(/useGiftsStore/);
+  });
+
+  it('the module launcher and the Life tab card are the only entry points: no other screen routes to /gifts', () => {
     const linking = sourceFiles('app', 'components', 'features', 'core', 'hooks')
       .filter((file) => !file.startsWith('app/gifts/') && !file.includes('/gifts/'))
       .filter((file) => /['"`]\/gifts/.test(code(file)));
-    // The launcher navigates there; the module registry only declares which routes the module owns.
-    expect(linking).toEqual(['app/modules.tsx', 'core/modules/moduleRegistry.ts']);
+    // The launcher and the Life tab card navigate there; the module registry only declares which routes the module owns.
+    expect(linking).toEqual(['app/(tabs)/life.tsx', 'app/modules.tsx', 'core/modules/moduleRegistry.ts']);
     expect(code('core/modules/moduleRegistry.ts')).toContain("routeRoots: ['/gifts']");
   });
 });

@@ -14,6 +14,7 @@ import da_datePicker from './locales/da/datePicker.json';
 import da_economy from './locales/da/economy.json';
 import da_expenses from './locales/da/expenses.json';
 import da_food from './locales/da/food.json';
+import da_gifts from './locales/da/gifts.json';
 import da_habits from './locales/da/habits.json';
 import da_healthInfo from './locales/da/healthInfo.json';
 import da_home from './locales/da/home.json';
@@ -47,6 +48,7 @@ import en_datePicker from './locales/en/datePicker.json';
 import en_economy from './locales/en/economy.json';
 import en_expenses from './locales/en/expenses.json';
 import en_food from './locales/en/food.json';
+import en_gifts from './locales/en/gifts.json';
 import en_habits from './locales/en/habits.json';
 import en_healthInfo from './locales/en/healthInfo.json';
 import en_home from './locales/en/home.json';
@@ -80,6 +82,7 @@ const resources = {
       warranties: da_warranties,
       travel: da_travel,
       food: da_food,
+      gifts: da_gifts,
       life: da_life,
       todos: da_todos,
       lifeGoals: da_lifeGoals,
@@ -115,6 +118,7 @@ const resources = {
       warranties: en_warranties,
       travel: en_travel,
       food: en_food,
+      gifts: en_gifts,
       life: en_life,
       todos: en_todos,
       lifeGoals: en_lifeGoals,

@@ -682,6 +682,25 @@ function RootLayoutNav({ language }: { language: string | null }) {
             options={{ title: t("cv.selectionTitle") }}
           />
           <Stack.Screen
+            name="gifts/index"
+            options={{
+              title: t("gifts.title"),
+              // Reached only from the module launcher, so that is what "back" returns to.
+              headerBackTitle: t("modules.launcherTitle"),
+            }}
+          />
+          <Stack.Screen
+            name="gifts/new"
+            options={{
+              presentation: "modal",
+              title: t("gifts.newScreenTitle"),
+            }}
+          />
+          <Stack.Screen
+            name="gifts/[id]"
+            options={{ title: t("gifts.editScreenTitle") }}
+          />
+          <Stack.Screen
             name="savings/icon/[icon]"
             options={{ title: t("savings.screenTitle") }}
           />

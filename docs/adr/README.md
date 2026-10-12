@@ -74,6 +74,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0053](./0053-streaks-are-an-optional-per-habit-device-local-view-of-scheduled-commitments.md) | Streaks are an optional, per-habit, device-local view of scheduled commitments | Accepted | 2026-10-09 | APP-065 |
 | [0054](./0054-habit-period-summaries-are-derived-current-period-counts-of-resolved-commitments.md) | Habit period summaries are derived, current-period counts of resolved commitments | Accepted | 2026-10-09 | APP-066 |
 | [0055](./0055-career-applications-are-private-local-only-and-user-declared.md) | Career applications are private, local-only and user-declared | Accepted | 2026-10-09 | APP-067 |
+| [0056](./0056-gifts-are-a-flat-device-local-list-that-joins-backups-through-an-injected-participant.md) | Gifts are a flat, device-local list that joins backups through an injected participant | Accepted | 2026-10-12 | APP-069 |
 
 ## When an ADR is required
 

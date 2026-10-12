@@ -92,6 +92,7 @@ itself is APP-005 and is **not** implemented here.
 | `warranties` | `warranties` | available | `/warranties/*` | `useWarrantiesStore` | document, financial | Hajrudin Kardasevic |
 | `documents` | `documents` | internal — APP-055 delivers private storage, owner metadata and signed reads; APP-056 adds the per-document delete cascade; Production rollout and activation pending | `/documents` | `useDocumentsStore` | document | Hajrudin Kardasevic |
 | `career` | `career` | available | `/career/*` | `useCareerStore`, `useCVStore`, `useSkillCategoriesStore` | ordinary, personal, document | Hajrudin Kardasevic |
+| `gifts` | `gifts` | internal — APP-069 delivers the local Gift planner; it merges dark and is activated by a separate change after manual QA | `/gifts/*` | `useGiftsStore` | personal, financial | Hajrudin Kardasevic |
 | `cycle` | `cycle` | available — but tab visibility is gated on `profile.gender === 'female'` (see §8-F2) | `/cycle`, `/cycle/*` | `useCycleStore` | health | Hajrudin Kardasevic |
 
 <!-- inventory:modules:end -->
@@ -107,11 +108,10 @@ carries the same classification, and a test keeps the two in step.
 | Spec `ModuleId` | State in repo |
 | --- | --- |
 | `pregnancy` | Not implemented. |
-| `gifts` | Not implemented. |
 
 ## §2 Route inventory
 
-All 97 route files under `app/`. `Route` is the Expo Router URL path; the
+All 101 route files under `app/`. `Route` is the Expo Router URL path; the
 `(tabs)` group segment is not part of the URL. `_layout`, `+html` and
 `+not-found` are framework files rather than navigable screens and are listed so
 the inventory is complete.
@@ -176,6 +176,9 @@ to Supabase tables in §3.
 | `/food/select-stores` | `app/food/select-stores.tsx` | `food` | `useFoodStore` | ordinary | Hajrudin Kardasevic |
 | `/food/shopping-list` | `app/food/shopping-list.tsx` | `food` | `useFoodStore`<br>`useToastStore` | ordinary | Hajrudin Kardasevic |
 | `/food/weekly-plan` | `app/food/weekly-plan.tsx` | `food` | `useFoodStore`<br>`useToastStore` | ordinary | Hajrudin Kardasevic |
+| `/gifts/[id]` | `app/gifts/[id].tsx` | `gifts` | `useGiftsStore` | personal, financial | Hajrudin Kardasevic |
+| `/gifts` | `app/gifts/index.tsx` | `gifts` | `useGiftsStore` | personal, financial | Hajrudin Kardasevic |
+| `/gifts/new` | `app/gifts/new.tsx` | `gifts` | `useGiftsStore` | personal, financial | Hajrudin Kardasevic |
 | `/habits/[id]` | `app/habits/[id].tsx` | `habits` | `useHabitsStore` | personal | Hajrudin Kardasevic |
 | `/habits` | `app/habits/index.tsx` | `habits` | `useHabitsStore` | personal | Hajrudin Kardasevic |
 | `/habits/new` | `app/habits/new.tsx` | `habits` | `useHabitsStore` | personal | Hajrudin Kardasevic |
@@ -265,6 +268,7 @@ keep the key material in SecureStore.
 | `useDocumentsStore` | `store/useDocumentsStore.ts` | `documents` | `lifesort-documents` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `documents` | document | Hajrudin Kardasevic |
 | `useCareerStore` | `store/useCareerStore.ts` | `career` | `lifesort-career` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` (APP-067: application notes are Profile B, so the whole key — applications and skills — is encrypted) | – (local-only since APP-067; legacy `job_applications` and `skills` tables are retained and no longer touched by the app) | personal | Hajrudin Kardasevic |
 | `useCVStore` | `store/useCVStore.ts` | `career` | `lifesort-cv` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` (APP-067 storage hardening only; the CV model, UX and cloud mirror are unchanged) | `cv_personal_info`, `cv_education`, `cv_experience`, `cv_languages`, `cv_versions` | personal, document | Hajrudin Kardasevic |
+| `useGiftsStore` | `store/useGiftsStore.ts` | `gifts` | `lifesort-gifts` | AsyncStorage (plain), migration-gated Z0 (APP-069: Profile A, device-local; rows decoded on hydrate) | – (local-only since it was built; no table, no outbox; included in backup format 14 through the injected participant seam in `features/backupParticipants.ts`) | personal, financial | Hajrudin Kardasevic |
 | `useSkillCategoriesStore` | `store/useSkillCategoriesStore.ts` | `career` | `lifesort-skill-categories` | AsyncStorage (plain) | – | ordinary | Hajrudin Kardasevic |
 | `useCycleStore` | `store/useCycleStore.ts` | `cycle` | `lifesort-cycle` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/cycleHealthEncryptedStorage.ts` | `cycles`, `symptom_logs`, `cycle_settings`, `health_conditions`, `symptom_glossary` | health | Hajrudin Kardasevic |
 
@@ -408,6 +412,7 @@ module that owns it.
 | `TripDocumentsSection` | `components/TripDocumentsSection.tsx` | `travel` | Hajrudin Kardasevic |
 | `ApplicationForm` | `components/ApplicationForm.tsx` | `career` | Hajrudin Kardasevic |
 | `SkillCategoryPicker` | `components/SkillCategoryPicker.tsx` | `career` | Hajrudin Kardasevic |
+| `GiftForm` | `components/GiftForm.tsx` | `gifts` | Hajrudin Kardasevic |
 | `CycleInsightsCard` | `components/CycleInsightsCard.tsx` | `cycle` | Hajrudin Kardasevic |
 | `CycleMonthCalendar` | `components/CycleMonthCalendar.tsx` | `cycle` | Hajrudin Kardasevic |
 | `CycleWheel` | `components/CycleWheel.tsx` | `cycle` | Hajrudin Kardasevic |
@@ -432,6 +437,7 @@ Directory-level map of the remaining shared code. Not enforced by the test.
 | `travel` | `utils/trip/` | `types/trip.ts` | `travel` |
 | `warranties` | `utils/warranty/` | `types/warranty.ts` | `warranties` |
 | `career` | `core/career/` (persisted application format), `features/career/domain/` (application rules; APP-067), `utils/cv/` | `types/career.ts`, `types/cv.ts` | `career`, `cv` |
+| `gifts` | `core/gifts/` (persisted gift format), `features/gifts/domain/` (gift rules; APP-069), `features/backupParticipants.ts` (backup composition) | `types/gift.ts` | `gifts` |
 | `cycle` | `utils/cycle/` | `types/cycle.ts`, `types/healthInfo.ts` | `cycle`, `healthInfo` |
 
 ## §7 Sensitivity legend
@@ -457,7 +463,7 @@ later story.
 | --- | --- | --- | --- |
 | F1 | ~~Health data is persisted in plain AsyncStorage.~~ **Closed by APP-028.** | `store/useCycleStore.ts` now uses `core/storage/cycleHealthEncryptedStorage.ts`, which writes an AES-GCM envelope to `lifesort-cycle` and keeps the key material in SecureStore. | APP-028 |
 | F2 | Reproductive-health visibility is gated on gender. | `app/(tabs)/_layout.tsx`: `showCycleTab = gender === 'female'`. The `/cycle` routes stay reachable directly regardless. | APP-071 |
-| F3 | Module ids in the repo do not match the spec `ModuleId` union. | Repo uses `tasks` (todos) and the platform-level `core-shell` / `account`; the spec union has no `tasks` and omits shell/account. `documents`, `pregnancy` and `gifts` have no implementation. | APP-009 |
+| F3 | Module ids in the repo do not match the spec `ModuleId` union. | Repo uses `tasks` (todos) and the platform-level `core-shell` / `account`; the spec union has no `tasks` and omits shell/account. `documents` and `pregnancy` have no implementation. (`gifts` has one since APP-069, internal.) | APP-009 |
 | F4 | Home imports eleven domain stores directly. | `app/(tabs)/index.tsx` references `useCycleStore`, `useExpensesStore`, `useFoodStore`, `useHabitsStore`, `useHouseholdStore`, `useIncomeStore`, `useProfileStore`, `useSavingsGoalsStore`, `useTodoStore`, `useTripsStore`, `useWarrantiesStore`. | APP-011 |
 | F5 | Cross-module store import outside Home. | `app/todos/new.tsx` reads `useCycleStore` (health data) inside the `tasks` module; `app/(tabs)/economy.tsx` reads `useFoodStore`, `useTripsStore` and `useWarrantiesStore`. | APP-003, APP-039 |
 | F6 | Search reads five domain stores directly. | `app/search.tsx` references `useExpensesStore`, `useHabitsStore`, `useLifeGoalsStore`, `useTodoStore`, `useWarrantiesStore`. | APP-077 |

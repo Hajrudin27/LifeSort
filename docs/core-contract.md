@@ -93,6 +93,23 @@ persists. It never reads the clock. Form validation, creating and editing, order
 and the local-only, no-AI, no-inference scope. See
 [ADR-0055](./adr/0055-career-applications-are-private-local-only-and-user-declared.md).
 
+`core/gifts/persistedGift.ts` (APP-069) is the same kind of exception, again no larger than it needs to be: the
+persisted gift *format* (the exact nine-key shape, the text limits, canonical single-line text, strict calendar
+dates, supported non-negative DKK minor units, the rule that `paid` needs `purchasedOn`, a canonical ISO instant, and
+a stored and a backup decoder that are the same strict rules, because the domain is greenfield), because the backup
+parser, which is core, must validate what the store persists. It never reads the clock. Form validation, creating and
+editing, the purchase rules and ordering stay in `features/gifts/domain`, which imports core, never the reverse;
+`__tests__/giftDomainBoundary.test.ts` holds that line and the local-only, no-Contacts, no-Economy scope. See
+[ADR-0056](./adr/0056-gifts-are-a-flat-device-local-list-that-joins-backups-through-an-injected-participant.md).
+
+**The backup participant seam (APP-069).** `utils/shared/dataBackup.ts` gained a minimal `BackupParticipant` shape
+(a `key`, an `exportSnapshot()` and a `restore(validated)`), taken as an optional argument of `exportBackup` and
+`importBackup`. The list of participants, `BACKUP_PARTICIPANTS`, lives in the composition layer
+(`features/backupParticipants.ts`, the same pattern as `LOCAL_STORE_RESETS`) and is handed in by the backup screen, so
+core gained **no** import of a domain store and nothing from `features/`: `CORE_BASELINE` stays at its 14 edges and
+`FEATURE_IMPORT_BASELINE` at its one. The participant's `key` is typed as a backup-schema key no built-in store owns.
+It is deliberately not a service locator, and the other fourteen backup domains keep the existing path.
+
 ## The rules
 
 | # | Rule | Enforced |

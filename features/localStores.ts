@@ -10,6 +10,7 @@ import { useDocumentsStore } from '@/store/useDocumentsStore';
 import { useEnabledModulesStore } from '@/store/useEnabledModulesStore';
 import { useExpensesStore } from '@/store/useExpensesStore';
 import { useFoodStore } from '@/store/useFoodStore';
+import { useGiftsStore } from '@/store/useGiftsStore';
 import { useHabitPreferencesStore } from '@/store/useHabitPreferencesStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
 import { useHomeLayoutStore } from '@/store/useHomeLayoutStore';
@@ -80,6 +81,7 @@ export const LOCAL_STORE_RESETS: readonly LocalStoreReset[] = [
     reset: () => useHouseholdStore.getState().clearLocal(),
   },
   { key: 'lifesort-career', reset: () => useCareerStore.setState({ applications: [], skills: [] }) },
+  { key: 'lifesort-gifts', reset: () => useGiftsStore.getState().clearLocal() },
   { key: 'lifesort-skill-categories', reset: () => useSkillCategoriesStore.setState({ categories: [] }) },
   {
     key: 'lifesort-cv',

@@ -28,6 +28,7 @@ export const MODULE_IDS = [
   'warranties',
   'documents',
   'career',
+  'gifts',
   'cycle',
 ] as const;
 
@@ -224,6 +225,18 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
     descriptionKey: 'modules.descriptions.career',
     sensitivity: ['ordinary', 'personal', 'document'],
     routeRoots: ['/career'],
+  },
+  gifts: {
+    id: 'gifts',
+    // APP-069 merges the module dark. A greenfield module needs manual QA first, and expansion
+    // modules are opened gradually, so activating it is its own change, not a side effect of the
+    // story that builds it. No home snapshot, search entries or notification category: the Gift
+    // planner is a launcher-only module with no reminders (ADR-0056).
+    availability: 'internal',
+    titleKey: 'modules.names.gifts',
+    descriptionKey: 'modules.descriptions.gifts',
+    sensitivity: ['personal', 'financial'],
+    routeRoots: ['/gifts'],
   },
   cycle: {
     id: 'cycle',

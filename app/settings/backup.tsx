@@ -6,6 +6,7 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import { Text, useThemeColor } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
+import { BACKUP_PARTICIPANTS } from '@/features/backupParticipants';
 import { useToastStore } from '@/store/useToastStore';
 import { useSensitiveAction } from '@/components/useSensitiveAction';
 import { exportBackup, importBackup } from '@/utils/shared/dataBackup';
@@ -27,7 +28,7 @@ export default function BackupScreen() {
     runSensitive(async () => {
       setIsExporting(true);
       try {
-        await exportBackup();
+        await exportBackup(BACKUP_PARTICIPANTS);
         showToast(t('backup.exportSuccess'));
       } finally {
         setIsExporting(false);
@@ -37,7 +38,7 @@ export default function BackupScreen() {
   const runImport = async () => {
     setIsImporting(true);
     try {
-      const result = await importBackup();
+      const result = await importBackup(BACKUP_PARTICIPANTS);
       if (!result) return; // brugeren annullerede filvalget
 
       if (!result.success) {

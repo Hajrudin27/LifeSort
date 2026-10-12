@@ -30,8 +30,8 @@ const food = (ingredients: unknown) => ({ food: { recipes: [recipe(ingredients)]
 const recipesOf = (result: ReturnType<typeof parseBackupFile>) => (result.ok ? result.data.food?.recipes : undefined);
 
 describe('APP-047 backup parsing', () => {
-  it('exports the current format 13 while keeping the format 4 ingredient contract', () => {
-    expect(BACKUP_VERSION).toBe(13);
+  it('exports the current format 14 while keeping the format 4 ingredient contract', () => {
+    expect(BACKUP_VERSION).toBe(14);
   });
 
   it.each([1, 2, 3])('format %i: keeps each { name, amount } verbatim as legacy, inferring no family', (version) => {
@@ -66,7 +66,7 @@ describe('APP-047 backup parsing', () => {
 
   it('rejects a recipe that is not an object, and a future format', () => {
     expect(parseBackupFile(backup(4, { food: { recipes: ['seed-1'] } }))).toEqual({ ok: false, error: 'invalid_format' });
-    expect(parseBackupFile(backup(14, food([])))).toEqual({ ok: false, error: 'unsupported_version' });
+    expect(parseBackupFile(backup(15, food([])))).toEqual({ ok: false, error: 'unsupported_version' });
   });
 
   it('never reports ingredient text', () => {
@@ -89,7 +89,7 @@ describe('APP-047 backup restore and export through the real Food store', () => 
     const restored = JSON.stringify(useFoodStore.getState().recipes);
     await exportBackup();
     const exported = JSON.parse(mockWritten);
-    expect(exported.version).toBe(13);
+    expect(exported.version).toBe(14);
 
     useFoodStore.setState({ recipes: [] });
     mockFileContent = mockWritten;
@@ -109,7 +109,7 @@ describe('APP-050 Pantry backup restore', () => {
       expiryDate: old.expiryDate, addedAt: old.addedAt }];
     expect(useFoodStore.getState().pantryItems).toEqual(expected);
     await exportBackup();
-    expect(JSON.parse(mockWritten).version).toBe(13);
+    expect(JSON.parse(mockWritten).version).toBe(14);
     useFoodStore.setState({ pantryItems: [] });
     mockFileContent = mockWritten;
     expect(await importBackup()).toMatchObject({ success: true });
@@ -153,7 +153,7 @@ describe('APP-052 shopping backup v6', () => {
     await useFoodStore.persist.rehydrate();
     useFoodStore.setState({ shoppingItems: [derived] });
     await exportBackup();
-    expect(JSON.parse(mockWritten).version).toBe(13);
+    expect(JSON.parse(mockWritten).version).toBe(14);
     useFoodStore.setState({ shoppingItems: [] });
     mockFileContent = mockWritten;
     expect(await importBackup()).toMatchObject({ success: true });

@@ -213,13 +213,13 @@ describe('APP-027 logical domain contracts', () => {
       B: domainsByProfile('B').length,
       C: domainsByProfile('C').length,
       D: domainsByProfile('D').length,
-    }).toEqual({ A: 23, B: 9, C: 2, D: 6 });
+    }).toEqual({ A: 24, B: 9, C: 2, D: 6 });
   });
 });
 
 describe('APP-027 physical persistence surfaces', () => {
   it('has no duplicate physical surface ids and no dangling domain references', () => {
-    expect(PERSISTENCE_SURFACES).toHaveLength(99);
+    expect(PERSISTENCE_SURFACES).toHaveLength(100);
     expect(new Set(registeredSurfaceIds).size).toBe(PERSISTENCE_SURFACES.length);
 
     for (const surface of PERSISTENCE_SURFACES) {

@@ -22,6 +22,7 @@ import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { supportedMoney } from '@/core/money/supportedMoney';
 import { decodeBackupApplications } from '@/core/career/persistedApplication';
+import { decodeBackupGifts } from '@/core/gifts/persistedGift';
 import { decodeGoals, decodeLegacyGoals } from '@/core/goals/persistedGoal';
 import { decodeHabits, decodeLegacyHabits } from '@/core/habits/persistedHabit';
 import { decodeMovingItems, decodeMovingTemplateMarker, LEGACY_MOVING_MARKER } from '@/core/home/moving';
@@ -67,12 +68,23 @@ import { isValidIanaTimeZone } from '@/utils/shared/timeZone';
  *      bevares uændret, og et usikkert link forbliver inaktiv tekst. Alt lander i krypteret
  *      lagring. En fil i format 13 eller nyere, der alligevel indeholder ansøgninger eller
  *      CV, afvises.
- * Nye eksporter skriver altid 13.
+ * 14 — APP-069: Gaveplanlæggeren er kun på enheden, så en backup er eneste vej til at få
+ *      gaverne med til en ny telefon. `gifts` er `{ gifts: [...] }`, hver gave med præcis de
+ *      kendte nøgler, og filen gendannes alt-eller-intet: en ukendt nøgle, en forkert tekst,
+ *      en umulig dato, et ugyldigt beløb, en `paid` uden `purchasedOn` eller et gentaget id
+ *      afviser hele filen. Formatet er bumpet, så en ældre læser afviser filen som
+ *      `unsupported_version` frem for i stilhed at ignorere gaverne, og en fil i format 1–13
+ *      der alligevel bærer `gifts` er ikke skrevet af denne app og afvises. Formaterne 1–13
+ *      gendannes uændret.
+ * Nye eksporter skriver altid 14.
  */
-export const BACKUP_VERSION = 13;
+export const BACKUP_VERSION = 14;
 
 /** APP-067: første format, der ikke længere bærer Karrierens ansøgninger eller CV. */
 const FIRST_FORMAT_WITHOUT_CAREER_PAYLOAD = 13;
+
+/** APP-069: første format, der bærer Gaveplanlæggeren. */
+const FIRST_FORMAT_WITH_GIFTS = 14;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString' | 'nullableObject';
 
@@ -126,6 +138,7 @@ export const BACKUP_FIELD_SCHEMA = {
   habits: { habits: 'array' },
   household: { tasks: 'array', shoppingItems: 'array', movingItems: 'array', movingTemplate: 'nullableObject' },
   career: { applications: 'array', skills: 'array' },
+  gifts: { gifts: 'array' },
   skillCategories: { categories: 'array' },
   cv: { personalInfo: 'object', education: 'array', experience: 'array', languages: 'array', versions: 'array' },
   settings: { language: 'nullableString' },
@@ -500,6 +513,11 @@ export function parseBackupFile(content: string): BackupParseResult {
     const rawStore = parsed.data[storeKey];
     if (rawStore === undefined) continue;
     if (!isPlainObject(rawStore)) return { ok: false, error: 'invalid_format' };
+    if (storeKey === 'gifts') {
+      // The key does not exist before format 14, and its container is exactly `{ gifts: [...] }`.
+      if (version < FIRST_FORMAT_WITH_GIFTS) return { ok: false, error: 'invalid_format' };
+      if (Object.keys(rawStore).length !== 1 || !Array.isArray(rawStore.gifts)) return { ok: false, error: 'invalid_format' };
+    }
     if (version >= FIRST_FORMAT_WITHOUT_CAREER_PAYLOAD) {
       // The format itself excludes this payload; its presence means the file was not written by this app.
       if (storeKey === 'cv' || (storeKey === 'career' && rawStore.applications !== undefined)) {
@@ -563,6 +581,13 @@ export function parseBackupFile(content: string): BackupParseResult {
       } else {
         data[storeKey] = canonical.value;
       }
+      continue;
+    }
+    if (storeKey === 'gifts') {
+      // APP-069: strict, exact, all-or-nothing; the decoder owns every row and invariant.
+      const gifts = decodeBackupGifts(canonical.value.gifts);
+      if (!gifts) return { ok: false, error: 'invalid_format' };
+      data[storeKey] = { gifts };
       continue;
     }
     if (storeKey === 'household') {

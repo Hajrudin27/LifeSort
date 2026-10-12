@@ -34,6 +34,7 @@
     "warranties": "Warranties",
     "documents": "Documents",
     "career": "Career",
+    "gifts": "Gifts",
     "cycle": "Cycle"
   },
   "descriptions": {
@@ -49,6 +50,7 @@
     "warranties": "Warranties, receipts and insurance",
     "documents": "Your private documents, stored securely",
     "career": "Job applications and CV",
+    "gifts": "Gift ideas, budgets and what you bought",
     "cycle": "Cycle and symptoms"
   },
   "launcherTitle": "My modules",

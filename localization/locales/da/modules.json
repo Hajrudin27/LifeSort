@@ -34,6 +34,7 @@
     "warranties": "Garantier",
     "documents": "Dokumenter",
     "career": "Karriere",
+    "gifts": "Gaver",
     "cycle": "Cyklus"
   },
   "descriptions": {
@@ -49,6 +50,7 @@
     "warranties": "Garantier, kvitteringer og forsikringer",
     "documents": "Dine private dokumenter, gemt sikkert",
     "career": "Jobansøgninger og CV",
+    "gifts": "Gaveidéer, budgetter og hvad du har købt",
     "cycle": "Cyklus og symptomer"
   },
   "launcherTitle": "Mine moduler",

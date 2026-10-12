@@ -61,9 +61,9 @@ beforeEach(async () => {
 });
 
 describe('format', () => {
-  it('is 13', () => expect(BACKUP_VERSION).toBe(13));
+  it('is 14 (APP-069 added Gifts; APP-067 introduced 13)', () => expect(BACKUP_VERSION).toBe(14));
   it('refuses a newer format', () => {
-    expect(parseBackupFile(career(14, []))).toEqual({ ok: false, error: 'unsupported_version' });
+    expect(parseBackupFile(career(15, []))).toEqual({ ok: false, error: 'unsupported_version' });
   });
 });
 
@@ -76,7 +76,7 @@ describe('a new export', () => {
     await exportBackup();
     const exported = JSON.parse(mockWritten);
 
-    expect(exported.version).toBe(13);
+    expect(exported.version).toBe(14);
     expect(Object.keys(exported.data.career)).toEqual(['skills']);
     expect(exported.data.career.skills).toHaveLength(1);
     expect('cv' in exported.data).toBe(false);
@@ -87,7 +87,7 @@ describe('a new export', () => {
 
   it('is accepted by its own parser', async () => {
     await exportBackup();
-    expect(parseBackupFile(mockWritten)).toMatchObject({ ok: true, version: 13 });
+    expect(parseBackupFile(mockWritten)).toMatchObject({ ok: true, version: 14 });
   });
 
   it('says in both languages that applications and CV are not included, and never promises "all" data', () => {

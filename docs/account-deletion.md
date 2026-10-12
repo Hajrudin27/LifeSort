@@ -78,7 +78,8 @@ asking for trust it has not earned:
   warranties, tasks, habits, goals, career and cycle — plus every uploaded file. Career applications
   and skills live only on the device since APP-067 (they are removed by logout and by deletion),
   and any rows from earlier versions in the legacy `job_applications` and `skills` tables are
-  removed with the account.
+  removed with the account. Gifts (APP-069) have never had a server copy: they live only on the device and are
+  removed by logout and by deletion.
 - **Lingers briefly:** the database provider's backups, which roll over on their
   own schedule and are not used for anything.
 

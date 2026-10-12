@@ -50,7 +50,7 @@ or production CRUD flow changes. Runtime execution remains deferred.
 
 ## Logical Domains
 
-Counts are enforced in tests: **A = 23, B = 9, C = 2, D = 6, total = 40**.
+Counts are enforced in tests: **A = 24, B = 9, C = 2, D = 6, total = 41**.
 
 | Domain | Profile | Module | Current physical surfaces | Notes |
 | --- | --- | --- | --- | --- |
@@ -67,7 +67,7 @@ Counts are enforced in tests: **A = 23, B = 9, C = 2, D = 6, total = 40**.
 | `core.sync-status` | A | core-shell | `async-storage:sync-status` | Ephemeral account-scoped projection; legacy success timestamp key remains registered for cleanup only, with no reads or writes (APP-036). |
 | `core.outbox` | A | core-shell | `async-storage:lifesort-outbox` | Account-bound durable mutation queue. Only syncable Profile A domains without any Profile B surface are accepted; sensitive integration remains deferred. |
 | `core.module-flags` | D | core-shell | `async-storage:lifesort-module-flags`, `supabase-table:module_flags` | Operator kill switches; cached so closed modules stay closed offline. |
-| `core.local-backup-archive` | B | core-shell | `filesystem:document-directory/lifesort-backup-json` | Current backup excludes cycle data but may include attachment metadata. APP-097 owns export policy. |
+| `core.local-backup-archive` | B | core-shell | `filesystem:document-directory/lifesort-backup-json` | Current backup excludes cycle data but may include attachment metadata; since APP-069 (format 14) it also carries Gifts through an injected participant. APP-097 owns export policy. |
 | `economy.expenses` | A | economy | `async-storage:lifesort-expenses`, `supabase-table:expenses`, `supabase-table:expense_category_budgets` | User-created finances are Profile A per APP-027 guidance. |
 | `economy.income` | A | economy | `async-storage:lifesort-income-v2`, `supabase-table:income` | User-created income entries. |
 | `economy.savings` | A | economy | `async-storage:lifesort-savings-goals`, `supabase-table:savings_goals`, `supabase-table:savings_history`, `supabase-table:savings_extra` | User-created savings goals and contributions. |
@@ -92,6 +92,7 @@ Counts are enforced in tests: **A = 23, B = 9, C = 2, D = 6, total = 40**.
 | `career.applications` | B | career | `async-storage:lifesort-career`, `secure-store:lifesort-document-cache-key`, `supabase-table:job_applications` | APP-067: job applications with private notes. Profile B (the `ambiguous` note is resolved). **Local-only**: no server sync is expected or performed; `job_applications` is a retained, hardened legacy table the app neither reads nor writes. See [ADR-0055](./adr/0055-career-applications-are-private-local-only-and-user-declared.md). |
 | `career.skills` | A | career | `async-storage:lifesort-career`, `async-storage:lifesort-skill-categories`, `supabase-table:skills` | Skills and skill-category labels. Remains a Profile A domain, but physically shares the encrypted `lifesort-career` key with applications and, since APP-067, is local-only (the `skills` table is retained legacy). |
 | `career.cv` | B | career | `async-storage:lifesort-cv`, `secure-store:lifesort-document-cache-key`, `supabase-table:cv_personal_info`, `supabase-table:cv_education`, `supabase-table:cv_experience`, `supabase-table:cv_languages`, `supabase-table:cv_versions` | CV contact details (phone, email, address), education, experience, languages and version metadata. APP-067 is storage hardening only: encrypted at rest. Its legacy best-effort cloud mirror is unchanged and is not a reliable Profile-B sync path. |
+| `gifts.gifts` | A | gifts | `async-storage:lifesort-gifts` | APP-069: one flat gift per row — a typed person label, an idea, an optional occasion label and date, an optional planned budget and, once purchased, the purchase date and an optional paid amount (DKK minor units). Module sensitivity: personal, financial. Person labels are third-party personal data and the amounts are personal financial planning values, which does **not** make the domain Profile B under the current data contracts: nothing here is health, a document or a credential. **Local-only**: no server sync is expected or performed, there is no table, and a backup file (format 14, through the injected participant seam) is the only recovery. See [ADR-0056](./adr/0056-gifts-are-a-flat-device-local-list-that-joins-backups-through-an-injected-participant.md). |
 | `cycle.user-health` | B | cycle | `async-storage:lifesort-cycle`, `secure-store:lifesort-cycle-health-key`, `supabase-table:cycles`, `supabase-table:symptom_logs`, `supabase-table:cycle_settings` | Health/cycle data encrypted at rest by APP-028. |
 | `cycle.reference-content` | D | cycle | `async-storage:lifesort-cycle`, `supabase-table:health_conditions`, `supabase-table:symptom_glossary` | Reviewed global health reference content. |
 
@@ -172,7 +173,8 @@ connectivity-aware sync and APP-038 migration harness are implemented. APP-038 m
   only its legacy best-effort mirror; see ADR-0055.
 - `core.local-backup-archive` is Profile B because backup exports can include
   attachment metadata even though cycle data is currently excluded. Since APP-067 (format 13) it
-  also excludes Career applications and the CV. APP-029 did
+  also excludes Career applications and the CV, and since APP-069 (format 14) it includes Gifts (person labels and
+  amounts, plaintext, in a file the user owns). APP-029 did
   not redesign backup/export encryption.
 
 ## Local migration ownership (APP-038)

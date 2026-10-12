@@ -17,8 +17,34 @@ import { useSkillCategoriesStore } from '@/store/useSkillCategoriesStore';
 import { useTodoStore } from '@/store/useTodoStore';
 import { useTripsStore } from '@/store/useTripsStore';
 import { useWarrantiesStore } from '@/store/useWarrantiesStore';
-import { BACKUP_VERSION, type BackupParseError, parseBackupFile } from '@/utils/shared/backupValidation';
+import {
+  BACKUP_VERSION,
+  type BackupParseError,
+  type BackupStoreKey,
+  parseBackupFile,
+} from '@/utils/shared/backupValidation';
 import { todayIso } from '@/utils/shared/localDate';
+
+/**
+ * APP-069 — a domain that takes part in a backup without core knowing its store.
+ *
+ * This is the smallest seam that lets a domain join the export and the restore without a new
+ * core -> domain-store import (R6; ADR-0056). The composition layer (features/backupParticipants.ts)
+ * owns the list and hands it to `exportBackup` / `importBackup`; core sees only this shape.
+ *
+ * It is deliberately not a service locator: no registration, no lookup, no ambient state. A caller
+ * that passes no participants gets exactly the pre-existing backup. The `key` is a key of the
+ * validated backup schema that no built-in store owns, so a participant can neither carry data
+ * `parseBackupFile` has not validated nor overwrite an existing domain, and `restore` receives
+ * that validated value.
+ */
+export interface BackupParticipant {
+  readonly key: Exclude<BackupStoreKey, StoreKey>;
+  /** The portable payload for this domain: an explicit whitelist, never a whole store state. */
+  exportSnapshot: () => Record<string, unknown>;
+  /** Called only with what `parseBackupFile` validated, after the whole file has passed. */
+  restore: (validated: Record<string, unknown>) => void;
+}
 
 // Rækkefølgen her definerer, hvad der eksporteres/importeres — tilføj en ny linje,
 // når I bygger et nyt modul med sin egen store.
@@ -42,7 +68,7 @@ const STORE_REGISTRY = {
 
 type StoreKey = keyof typeof STORE_REGISTRY;
 
-function buildBackupObject() {
+function buildBackupObject(participants: readonly BackupParticipant[]) {
   const data: Record<string, unknown> = {};
   for (const key of Object.keys(STORE_REGISTRY) as StoreKey[]) {
     // APP-059's participant projection is an account-scoped encrypted cache, not
@@ -83,6 +109,7 @@ function buildBackupObject() {
       data[key] = STORE_REGISTRY[key].getState();
     }
   }
+  for (const participant of participants) data[participant.key] = participant.exportSnapshot();
   return {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
@@ -90,8 +117,8 @@ function buildBackupObject() {
   };
 }
 
-export async function exportBackup(): Promise<{ fileName: string }> {
-  const backup = buildBackupObject();
+export async function exportBackup(participants: readonly BackupParticipant[] = []): Promise<{ fileName: string }> {
+  const backup = buildBackupObject(participants);
   const fileName = `lifesort-backup-${todayIso()}.json`;
   const fileUri = `${FileSystem.documentDirectory}${fileName}`;
 
@@ -112,7 +139,7 @@ export interface ImportResult {
   error?: BackupParseError;
 }
 
-export async function importBackup(): Promise<ImportResult | null> {
+export async function importBackup(participants: readonly BackupParticipant[] = []): Promise<ImportResult | null> {
   const picked = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true });
   if (picked.canceled) return null;
 
@@ -160,6 +187,17 @@ export async function importBackup(): Promise<ImportResult | null> {
       (STORE_REGISTRY[key] as any).setState(partial);
     }
     restoredKeys.push(key);
+  }
+
+  // Participants are restored last, and only from the value the parser validated for their key.
+  for (const participant of participants) {
+    const validated = parsed.data[participant.key];
+    if (validated === undefined) {
+      skippedKeys.push(participant.key);
+      continue;
+    }
+    participant.restore(validated);
+    restoredKeys.push(participant.key);
   }
 
   return { success: true, restoredKeys, skippedKeys };

@@ -39,6 +39,7 @@ const MODULE_ICONS: Record<string, { ios: string; android: string; web: string }
   warranties: { ios: 'shield.lefthalf.filled', android: 'shield', web: 'shield' },
   documents: { ios: 'doc.fill', android: 'description', web: 'description' },
   career: { ios: 'briefcase.fill', android: 'work', web: 'work' },
+  gifts: { ios: 'gift.fill', android: 'redeem', web: 'redeem' },
   cycle: { ios: 'drop.fill', android: 'water_drop', web: 'water_drop' },
   default: { ios: 'square.grid.2x2', android: 'grid_view', web: 'grid_view' },
 };
@@ -54,6 +55,7 @@ const MODULE_ROUTES: Record<string, string> = {
   warranties: '/warranties',
   documents: '/documents',
   career: '/career',
+  gifts: '/gifts',
   cycle: '/cycle',
 };
 

@@ -79,6 +79,7 @@ export type DomainModule =
   | 'warranties'
   | 'documents'
   | 'career'
+  | 'gifts'
   | 'cycle'
   | 'shared';
 
@@ -286,8 +287,8 @@ export const DATA_DOMAINS = [
     module: 'core-shell',
     description: 'JSON backup written to the document directory and handed to the OS share sheet.',
     storageSurfaces: ['filesystem:document-directory/lifesort-backup-json'],
-    evidence: ['utils/shared/dataBackup.ts', 'utils/shared/backupValidation.ts'],
-    ambiguous: 'The current backup excludes cycle data and, since APP-067, Career applications and CV, but still includes stores that may contain attachment metadata; APP-097 owns the export policy.',
+    evidence: ['utils/shared/dataBackup.ts', 'utils/shared/backupValidation.ts', 'features/backupParticipants.ts'],
+    ambiguous: 'The current backup excludes cycle data and, since APP-067, Career applications and CV, but still includes stores that may contain attachment metadata, and since APP-069 (format 14) it carries Gifts (person labels and planning amounts, plaintext, in the user\'s own file); APP-097 owns the export policy.',
     ...profileB({ expectsServerSync: false }),
   },
   {
@@ -595,6 +596,15 @@ export const DATA_DOMAINS = [
     ...profileB({ expectsServerSync: true }),
   },
   {
+    id: 'gifts.gifts',
+    title: 'Gift ideas and purchase history',
+    module: 'gifts',
+    description: 'APP-069: one flat gift per row: a typed person label, an idea, an optional occasion label and date, an optional planned budget and, once purchased, the purchase date and an optional paid amount (DKK minor units). Person labels are third-party personal data and the amounts are personal financial planning values (module sensitivity: personal, financial); neither makes the domain Profile B under the current data contracts. Device-local: no server sync is expected or performed and there is no table.',
+    storageSurfaces: ['async-storage:lifesort-gifts'],
+    evidence: ['store/useGiftsStore.ts', 'core/gifts/persistedGift.ts', 'features/gifts/domain/gift.ts'],
+    ...profileA({ expectsServerSync: false }),
+  },
+  {
     id: 'cycle.user-health',
     title: 'Cycle health data',
     module: 'cycle',
@@ -693,6 +703,7 @@ export const PERSISTENCE_SURFACES = [
   surface('async-storage:lifesort-documents', 'async-storage', 'Encrypted Zustand key lifesort-documents', 'device', ['documents.files'], ['store/useDocumentsStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'APP-055 surface is born encrypted; the AES-GCM v1 adapter owns key access and protected failure handling, and no historical plaintext payload exists to migrate.' }),
   surface('async-storage:lifesort-career', 'async-storage', 'Encrypted Zustand key lifesort-career', 'device', ['career.applications', 'career.skills'], ['store/useCareerStore.ts', 'core/storage/documentCacheStorage.ts', 'core/career/persistedApplication.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'APP-067: the whole key holds Profile-B application notes, so the specialized AES-GCM v1 adapter owns the plaintext legacy upgrade, key access and protected failure handling; the persisted shape is unchanged, so there is no Zustand schema migration, and the store decodes applications on hydrate.' }),
   surface('async-storage:lifesort-cv', 'async-storage', 'Encrypted Zustand key lifesort-cv', 'device', ['career.cv'], ['store/useCVStore.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/documentCacheStorage.ts', reason: 'APP-067 storage hardening: the specialized AES-GCM v1 adapter owns the plaintext legacy upgrade, key access and protected failure handling; the persisted shape is unchanged, so there is no Zustand schema migration.' }),
+  surface('async-storage:lifesort-gifts', 'async-storage', 'Zustand key lifesort-gifts', 'device', ['gifts.gifts'], ['store/useGiftsStore.ts', 'core/gifts/persistedGift.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useGiftsStore.ts', reason: 'APP-069: greenfield and born at Zustand 0, so there is no historical shape and no transform. The store decodes every row on hydrate (core/gifts/persistedGift.ts) and a row that is not a recognisable gift is not rendered and is dropped on the next write; unreadable bytes or a newer payload fail closed at the migration gate.' }),
   surface('async-storage:lifesort-skill-categories', 'async-storage', 'Zustand key lifesort-skill-categories', 'device', ['career.skills'], ['store/useSkillCategoriesStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useSkillCategoriesStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-cycle', 'async-storage', 'Encrypted Zustand key lifesort-cycle', 'device', ['cycle.user-health', 'cycle.reference-content'], ['store/useCycleStore.ts', 'core/storage/cycleHealthEncryptedStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/cycleHealthEncryptedStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
   surface('async-storage:supabase-session-web-or-legacy', 'async-storage', 'Supabase session web fallback and legacy migration source', 'device', ['account.auth-session'], ['utils/auth/secureSessionStorage.ts'], { kind: 'external', owner: 'utils/auth/secureSessionStorage.ts', reason: 'Supabase-owned session JSON and specialized secure chunking/legacy move; no generic auth transforms.' }),

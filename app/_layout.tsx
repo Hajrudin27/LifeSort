@@ -42,7 +42,6 @@ import "@/localization/i18n";
 import i18n from "@/localization/i18n";
 import { useAppLockStore } from "@/store/useAppLockStore";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useCareerStore } from "@/store/useCareerStore";
 import { useCategoriesStore } from "@/store/useCategoriesStore";
 import { useCVStore } from "@/store/useCVStore";
 import { useCycleStore } from "@/store/useCycleStore";
@@ -144,7 +143,6 @@ function ReadyRootLayout() {
   const fetchLifeGoals = useLifeGoalsStore((s) => s.fetchFromSupabase);
   const fetchHabits = useHabitsStore((s) => s.fetchFromSupabase);
   const fetchHousehold = useHouseholdStore((s) => s.fetchFromSupabase);
-  const fetchCareer = useCareerStore((s) => s.fetchFromSupabase);
   const fetchCV = useCVStore((s) => s.fetchFromSupabase);
   const fetchFood = useFoodStore((s) => s.fetchFromSupabase);
   const fetchCycle = useCycleStore((s) => s.fetchFromSupabase);
@@ -210,7 +208,7 @@ function ReadyRootLayout() {
       fetchLifeGoals();
       fetchHabits();
       fetchHousehold();
-      fetchCareer();
+      // APP-067: Career is local-only; there is deliberately no Career fetch here (ADR-0055).
       fetchCV();
       fetchFood();
       fetchCycle();

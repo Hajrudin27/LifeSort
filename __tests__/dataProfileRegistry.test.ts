@@ -35,9 +35,11 @@ const BACKEND_ONLY_TABLES = [
 // Registered in the mobile registry although no client code calls .from() on them.
 // APP-056's document_deletion_tombstones holds documents.files data but is
 // reachable only through the two deletion functions the client calls.
+// APP-067's job_applications and skills are retained legacy tables: Career is local-only, so no client code
+// calls .from() on them any more, yet rows from earlier releases may remain and the registry must still name them.
 // APP-058's trip_packing_compat_queue is likewise registered (it holds packing labels) although no client
 // can call it: it is server-only, temporary compatibility for pre-APP-058 clients.
-const MOBILE_ADJACENT_MIGRATION_TABLES = ['document_deletion_tombstones', 'global_recipes', 'products', 'trip_expense_links', 'trip_packing_compat_queue', 'trip_packing_template_applications'];
+const MOBILE_ADJACENT_MIGRATION_TABLES = ['document_deletion_tombstones', 'global_recipes', 'job_applications', 'products', 'skills', 'trip_expense_links', 'trip_packing_compat_queue', 'trip_packing_template_applications'];
 
 // These are compile-time checks. If the discriminated profile contracts ever
 // accept these shapes, tsc will fail because the @ts-expect-error is unused.
@@ -211,7 +213,7 @@ describe('APP-027 logical domain contracts', () => {
       B: domainsByProfile('B').length,
       C: domainsByProfile('C').length,
       D: domainsByProfile('D').length,
-    }).toEqual({ A: 25, B: 7, C: 2, D: 6 });
+    }).toEqual({ A: 23, B: 9, C: 2, D: 6 });
   });
 });
 
@@ -324,6 +326,7 @@ describe('APP-027 physical persistence surfaces', () => {
 describe('APP-027 mixed-profile detection', () => {
   it('makes every known mixed physical surface explicit', () => {
     expect(mixedProfilePersistenceSurfaces().map((surface) => surface.id).sort()).toEqual([
+      'async-storage:lifesort-career',
       'async-storage:lifesort-cycle',
       'async-storage:lifesort-expenses',
       'async-storage:lifesort-food-v2',

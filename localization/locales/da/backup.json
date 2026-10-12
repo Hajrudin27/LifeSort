@@ -1,7 +1,7 @@
 {
   "title": "Backup",
   "exportLabel": "Eksportér data",
-  "exportDescription": "Gem alle dine data i én fil, du kan dele eller gemme et sikkert sted.",
+  "exportDescription": "Gem dine data i én fil, du kan dele eller gemme et sikkert sted. Jobansøgninger og CV-oplysninger er private og er ikke med.",
   "exportSuccess": "Backup oprettet",
   "importLabel": "Gendan fra backup",
   "importDescription": "Vælg en tidligere gemt backup-fil for at gendanne dine data.",

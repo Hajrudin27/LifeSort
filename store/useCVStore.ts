@@ -1,6 +1,6 @@
+import { documentMetadataEncryptedStorage } from '@/core/storage/documentCacheStorage';
 import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -323,7 +323,7 @@ export const useCVStore = create<CVState>()(
     }),
     {
       name: 'lifesort-cv',
-      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
+      storage: createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage)),
     }
   )
 );

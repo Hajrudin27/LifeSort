@@ -1,94 +1,45 @@
-import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import { newEntityId } from '@/core/ids';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
-
-import { supabase } from "@/lib/supabase";
+import { decodeStoredApplications } from '@/core/career/persistedApplication';
+import { documentMetadataEncryptedStorage } from '@/core/storage/documentCacheStorage';
+import { migrationGatedStorage } from '@/core/storage/migrations/runtime';
 import {
-  ApplicationStatus,
-  JobApplication,
-  Skill,
-  SkillCategory,
-  SkillLevel,
-} from "@/types/career";
+  applyApplicationEdit,
+  createApplication,
+  validateApplicationInput,
+  type ApplicationErrors,
+  type ApplicationInput,
+} from '@/features/career/domain/application';
+import { JobApplication, Skill, SkillCategory, SkillLevel } from '@/types/career';
+import { todayIso } from '@/utils/shared/localDate';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
-type ApplicationEditableFields = Pick<JobApplication, "company" | "position" | "status" | "appliedDate" | "link" | "notes">;
-type SkillEditableFields = Pick<Skill, "name" | "category" | "level">;
+type SkillEditableFields = Pick<Skill, 'name' | 'category' | 'level'>;
 
+export type ApplicationWriteResult = { ok: true; id: string } | { ok: false; errors: ApplicationErrors };
+
+/**
+ * APP-067 — Career is LOCAL-ONLY.
+ *
+ * `lifesort-career` holds application notes, so the whole key — applications and skills — is
+ * written through the AES-GCM Profile-B adapter (ADR-0055). This store has no network code at
+ * all: the legacy best-effort Supabase mirror and its automatic fetch are gone, because Profile B
+ * needs a reliable sync path (stable mutation ids, revisions, tombstones, conflict policy,
+ * account isolation) that does not exist yet and a second, weaker one must not be invented here.
+ * The server table `job_applications` is retained, security-hardened and unused by the app.
+ *
+ * Application writes go through the Career domain: nothing reaches state without validation, the
+ * id comes from `newEntityId()`, and `id` / `createdAt` never change after creation.
+ */
 interface CareerState {
   applications: JobApplication[];
-  addApplication: (input: {
-    company: string;
-    position: string;
-    status: ApplicationStatus;
-    appliedDate: string;
-    link?: string;
-    notes?: string;
-  }) => void;
-  updateApplication: (id: string, updates: Partial<ApplicationEditableFields>) => void;
+  addApplication: (input: ApplicationInput) => ApplicationWriteResult;
+  updateApplication: (id: string, input: ApplicationInput) => ApplicationWriteResult;
   removeApplication: (id: string) => void;
   skills: Skill[];
-  addSkill: (input: {
-    name: string;
-    category: SkillCategory;
-    level: SkillLevel;
-  }) => void;
+  addSkill: (input: { name: string; category: SkillCategory; level: SkillLevel }) => void;
   updateSkill: (id: string, updates: Partial<SkillEditableFields>) => void;
   removeSkill: (id: string) => void;
-  fetchFromSupabase: () => Promise<void>;
-}
-
-async function getUserId(): Promise<string | null> {
-  const { data: userData } = await supabase.auth.getUser();
-  return userData.user?.id ?? null;
-}
-
-function applicationToRow(userId: string, a: JobApplication) {
-  return {
-    id: a.id,
-    user_id: userId,
-    company: a.company,
-    position: a.position,
-    status: a.status,
-    applied_date: a.appliedDate,
-    link: a.link ?? null,
-    notes: a.notes ?? null,
-    created_at: a.createdAt,
-  };
-}
-
-function skillToRow(userId: string, sk: Skill) {
-  return {
-    id: sk.id,
-    user_id: userId,
-    name: sk.name,
-    category: sk.category,
-    level: sk.level,
-    created_at: sk.createdAt,
-  };
-}
-
-async function syncUpsertApplication(app: JobApplication) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('job_applications').upsert(applicationToRow(userId, app));
-}
-async function syncDeleteApplication(id: string) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('job_applications').delete().eq('user_id', userId).eq('id', id);
-}
-
-async function syncUpsertSkill(skill: Skill) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('skills').upsert(skillToRow(userId, skill));
-}
-async function syncDeleteSkill(id: string) {
-  const userId = await getUserId();
-  if (!userId) return;
-  await supabase.from('skills').delete().eq('user_id', userId).eq('id', id);
 }
 
 export const useCareerStore = create<CareerState>()(
@@ -96,89 +47,56 @@ export const useCareerStore = create<CareerState>()(
     (set, get) => ({
       applications: [],
       addApplication: (input) => {
-        const newApp: JobApplication = { id: newEntityId(), createdAt: new Date().toISOString(), ...input };
-        set((state) => ({ applications: [...state.applications, newApp] }));
-        syncUpsertApplication(newApp);
+        const result = validateApplicationInput(input, { today: todayIso() });
+        if (!result.ok) return result;
+        const application = createApplication(result.value, { id: newEntityId(), createdAt: new Date().toISOString() });
+        set((state) => ({ applications: [...state.applications, application] }));
+        return { ok: true, id: application.id };
       },
-      updateApplication: (id, updates) => {
-        set((state) => ({
-          applications: state.applications.map((a) => (a.id === id ? { ...a, ...updates } : a)),
-        }));
-        const target = get().applications.find((a) => a.id === id);
-        if (target) syncUpsertApplication(target);
+      updateApplication: (id, input) => {
+        const original = get().applications.find((a) => a.id === id);
+        if (!original) return { ok: false, errors: {} };
+        const result = validateApplicationInput(input, { today: todayIso(), existing: original });
+        if (!result.ok) return result;
+        const edited = applyApplicationEdit(original, result.value);
+        set((state) => ({ applications: state.applications.map((a) => (a.id === id ? edited : a)) }));
+        return { ok: true, id };
       },
       removeApplication: (id) => {
-        set((state) => ({
-          applications: state.applications.filter((a) => a.id !== id),
-        }));
-        syncDeleteApplication(id);
+        set((state) => ({ applications: state.applications.filter((a) => a.id !== id) }));
       },
 
       skills: [],
       addSkill: (input) => {
         const newSkill: Skill = { id: newEntityId(), createdAt: new Date().toISOString(), ...input };
         set((state) => ({ skills: [...state.skills, newSkill] }));
-        syncUpsertSkill(newSkill);
       },
       updateSkill: (id, updates) => {
         set((state) => ({
           skills: state.skills.map((sk) => (sk.id === id ? { ...sk, ...updates } : sk)),
         }));
-        const target = get().skills.find((sk) => sk.id === id);
-        if (target) syncUpsertSkill(target);
       },
       removeSkill: (id) => {
         set((state) => ({ skills: state.skills.filter((sk) => sk.id !== id) }));
-        syncDeleteSkill(id);
-      },
-
-      fetchFromSupabase: async () => {
-        const userId = await getUserId();
-        if (!userId) return;
-
-        const [appsResult, skillsResult] = await Promise.all([
-          supabase.from('job_applications').select('id, company, position, status, applied_date, link, notes, created_at').eq('user_id', userId),
-          supabase.from('skills').select('id, name, category, level, created_at').eq('user_id', userId),
-        ]);
-
-        if (appsResult.error || skillsResult.error) return;
-
-        set((state) => {
-          const existingAppIds = new Set(state.applications.map((a) => a.id));
-          const fetchedApps: JobApplication[] = (appsResult.data ?? [])
-            .filter((row) => !existingAppIds.has(row.id))
-            .map((row) => ({
-              id: row.id,
-              company: row.company,
-              position: row.position,
-              status: row.status as ApplicationStatus,
-              appliedDate: row.applied_date,
-              link: row.link ?? undefined,
-              notes: row.notes ?? undefined,
-              createdAt: row.created_at,
-            }));
-
-          const existingSkillIds = new Set(state.skills.map((sk) => sk.id));
-          const fetchedSkills: Skill[] = (skillsResult.data ?? [])
-            .filter((row) => !existingSkillIds.has(row.id))
-            .map((row) => ({
-              id: row.id,
-              name: row.name,
-              category: row.category as SkillCategory,
-              level: row.level as SkillLevel,
-              createdAt: row.created_at,
-            }));
-
-          return {
-            applications: [...state.applications, ...fetchedApps],
-            skills: [...state.skills, ...fetchedSkills],
-          };
-        });
       },
     }),
     {
-      name: "lifesort-career",
-      storage: createJSONStorage(() => migrationGatedStorage(AsyncStorage)),
+      name: 'lifesort-career',
+      storage: createJSONStorage(() => migrationGatedStorage(documentMetadataEncryptedStorage)),
+      // Only data is persisted; and what comes back is decoded, never trusted: an unrecognisable
+      // application (for example a legacy row with a status the app never offered) is not rendered.
+      partialize: (state) => ({ applications: state.applications, skills: state.skills }),
+      merge: (persisted, current) => {
+        const stored = (typeof persisted === 'object' && persisted !== null ? persisted : {}) as {
+          applications?: unknown;
+          skills?: unknown;
+        };
+        return {
+          ...current,
+          applications: decodeStoredApplications(stored.applications),
+          skills: Array.isArray(stored.skills) ? (stored.skills as Skill[]) : current.skills,
+        };
+      },
     },
   ),
 );

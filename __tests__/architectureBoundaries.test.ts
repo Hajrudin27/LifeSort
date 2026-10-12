@@ -90,7 +90,6 @@ const BASELINE = [
 
   // Rod-layoutet henter alle domæner efter login. Erstattes af module registry i APP-009.
   'app/_layout.tsx -> useCVStore',
-  'app/_layout.tsx -> useCareerStore',
   'app/_layout.tsx -> useCategoriesStore',
   'app/_layout.tsx -> useCycleStore',
   'app/_layout.tsx -> useExpensesStore',

@@ -21,7 +21,7 @@
     "delete": "Slet",
     "edit": "Rediger",
     "deleteConfirmTitle": "Slet ansøgning?",
-    "deleteConfirmMessage": "Denne handling kan ikke fortrydes.",
+    "deleteConfirmMessage": "Ansøgningen slettes kun på denne enhed. Det kan ikke fortrydes.",
     "skillsLabel": "Kompetencer",
     "skillsScreenTitle": "Kompetencer",
     "skillNamePlaceholder": "Kompetence (fx Excel, Engelsk, Ledelse)",
@@ -44,5 +44,25 @@
     "addCategory": "Tilføj kategori",
     "addCategoryConfirm": "Tilføj",
     "cvLabel": "CV",
-    "selectCategory": "Vælg kategori"
+    "selectCategory": "Vælg kategori",
+    "companyLabel": "Firma",
+    "positionLabel": "Stilling",
+    "linkLabel": "Link til opslag (valgfrit)",
+    "notesLabel": "Noter (valgfrit, private)",
+    "notesCounter": "{{count}} / {{max}}",
+    "searchLabel": "Søg i ansøgninger",
+    "cancel": "Annullér",
+    "openLink": "Åbn link",
+    "invalidLinkNotOpened": "Linket kan ikke åbnes, fordi det ikke er en webadresse (http eller https).",
+    "saveFailed": "Kunne ikke gemme. Tjek de markerede felter.",
+    "noMatches": "Ingen ansøgninger matcher din søgning.",
+    "notFound": "Ansøgningen findes ikke længere.",
+    "errors": {
+      "required": "Feltet skal udfyldes.",
+      "tooLong": "Teksten er for lang.",
+      "invalidCharacters": "Teksten indeholder tegn, der ikke kan gemmes.",
+      "invalid": "Værdien er ikke gyldig.",
+      "future": "Datoen må ikke ligge i fremtiden.",
+      "invalidLink": "Angiv en webadresse, der starter med http:// eller https://."
+    }
   }

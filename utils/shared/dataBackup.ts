@@ -57,6 +57,13 @@ function buildBackupObject() {
         appliedPackingTemplates: state.appliedPackingTemplates,
         participants: state.participants,
       };
+    } else if (key === 'career') {
+      // APP-067: application notes are Profile B and never enter a plaintext archive. Skills
+      // are not part of that payload and keep travelling.
+      data[key] = { skills: useCareerStore.getState().skills };
+    } else if (key === 'cv') {
+      // APP-067: CV contact details are Profile B; the archive carries no CV payload.
+      continue;
     } else if (key === 'lifeGoals') {
       // APP-063: the goals themselves; no runtime or sync state, no functions, no validators.
       data[key] = { goals: useLifeGoalsStore.getState().goals };

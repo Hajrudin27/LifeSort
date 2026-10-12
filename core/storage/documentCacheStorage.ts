@@ -742,6 +742,10 @@ const LEGACY_PLAINTEXT_MIGRATABLE_STORES: ReadonlySet<string> = new Set([
   'lifesort-expenses',
   'lifesort-warranties',
   'lifesort-trips',
+  // APP-067: Career notes and CV contact details were written as plaintext by every earlier
+  // release; the first valid hydrate encrypts them in place.
+  'lifesort-career',
+  'lifesort-cv',
 ]);
 
 /**
@@ -782,6 +786,15 @@ function looksLikeKnownDocumentMetadataPayload(
   // recognised as a legacy plaintext payload, because none has ever existed.
   if (storageName === 'lifesort-documents') {
     return Array.isArray(state.documents);
+  }
+  // APP-067. Both keys held plaintext before encryption, so both are also legacy-migratable.
+  if (storageName === 'lifesort-career') {
+    return Array.isArray(state.applications) && Array.isArray(state.skills);
+  }
+  if (storageName === 'lifesort-cv') {
+    return isRecord(state.personalInfo) && !Array.isArray(state.personalInfo)
+      && Array.isArray(state.education) && Array.isArray(state.experience)
+      && Array.isArray(state.languages) && Array.isArray(state.versions);
   }
   return false;
 }

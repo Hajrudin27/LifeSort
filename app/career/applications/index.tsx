@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, TextInput } from 'react-native';
+import { Alert, FlatList, Pressable, TextInput } from 'react-native';
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
@@ -9,8 +9,9 @@ import SwipeableRow from '@/components/SwipeableRow';
 import { Text, useThemeColor, View } from '@/components/Themed';
 import { sharedStyles } from '@/constants/sharedStyles';
 import { useAccentTints } from '@/hooks/useAccentTints';
+import { sortApplications } from '@/features/career/domain/application';
 import { useCareerStore } from '@/store/useCareerStore';
-import { ApplicationStatus } from '@/types/career';
+import { ApplicationStatus, JobApplication } from '@/types/career';
 
 const STATUS_COLORS: Record<ApplicationStatus, 'tint' | 'warning' | 'success' | 'danger'> = {
   applied: 'tint',
@@ -23,6 +24,7 @@ export default function ApplicationsScreen() {
   const { t } = useTranslation();
   const borderColor = useThemeColor({}, 'border');
   const surface = useThemeColor({}, 'surface');
+  const textColor = useThemeColor({}, 'text');
   const textMuted = useThemeColor({}, 'textMuted');
   const accentTints = useAccentTints();
   const tint = accentTints.accent;
@@ -36,34 +38,52 @@ export default function ApplicationsScreen() {
   const removeApplication = useCareerStore((s) => s.removeApplication);
   const [search, setSearch] = useState('');
 
-  const filtered = applications.filter((a) => {
+  // A text filter over the user's own list. It ranks nothing; the order is the domain's one order.
+  const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return a.position.toLowerCase().includes(q) || a.company.toLowerCase().includes(q);
-  });
-  const sorted = [...filtered].sort((a, b) => b.appliedDate.localeCompare(a.appliedDate));
+    return sortApplications(
+      applications.filter((a) => a.position.toLowerCase().includes(q) || a.company.toLowerCase().includes(q)),
+    );
+  }, [applications, search]);
+
+  // Deletion is local and permanent: always ask first.
+  const confirmDelete = (application: JobApplication) => {
+    Alert.alert(t('career.deleteConfirmTitle'), t('career.deleteConfirmMessage'), [
+      { text: t('career.cancel'), style: 'cancel' },
+      { text: t('career.delete'), style: 'destructive', onPress: () => removeApplication(application.id) },
+    ]);
+  };
 
   return (
     <View style={sharedStyles.formContainer}>
       <TextInput
-        style={[sharedStyles.input, { borderColor, backgroundColor: surface }]}
+        style={[sharedStyles.input, { borderColor, backgroundColor: surface, color: textColor }]}
+        accessibilityLabel={t('career.searchLabel')}
         placeholder={t('career.searchPlaceholder')}
-        placeholderTextColor={borderColor}
+        placeholderTextColor={textMuted}
         value={search}
         onChangeText={setSearch}
+        autoCapitalize="none"
+        returnKeyType="search"
       />
 
       <FlatList
-        data={sorted}
+        data={visible}
         keyExtractor={(item) => item.id}
         contentContainerStyle={sharedStyles.list}
         ListEmptyComponent={
           <Card style={sharedStyles.emptyCard}>
-            <Text style={{ color: textMuted }}>{t('career.emptyState')}</Text>
+            <Text style={{ color: textMuted }}>
+              {applications.length === 0 ? t('career.emptyState') : t('career.noMatches')}
+            </Text>
           </Card>
         }
         renderItem={({ item }) => (
-          <SwipeableRow onDelete={() => removeApplication(item.id)}>
-            <Pressable accessibilityRole="button" onPress={() => router.push(`/career/applications/${item.id}`)}>
+          <SwipeableRow onDelete={() => confirmDelete(item)}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${item.position}, ${item.company}, ${item.appliedDate}, ${t(`career.status.${item.status}`)}`}
+              onPress={() => router.push(`/career/applications/${item.id}`)}>
               <Card style={sharedStyles.rowBetween}>
                 <View style={styles.textWrap}>
                   <Text style={styles.title}>{item.position}</Text>

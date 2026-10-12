@@ -11,11 +11,12 @@ type Props = {
   onChange: (isoDate: string) => void;
   yearsBack?: number; // hvor mange år bagud i tid, der skal kunne vælges
   yearsForward?: number; // hvor mange år frem i tid, der skal kunne vælges
+  accessibilityLabel?: string; // hvad feltet er for en skærmlæser; værdien læses stadig op
 };
 
 const pad = (n: number) => n.toString().padStart(2, '0');
 
-export default function DatePickerField({ value, onChange, yearsBack = 80, yearsForward = 10 }: Props) {
+export default function DatePickerField({ value, onChange, yearsBack = 80, yearsForward = 10, accessibilityLabel }: Props) {
   const { t, i18n } = useTranslation();
   const borderColor = useThemeColor({}, 'border');
   const surface = useThemeColor({}, 'surface');
@@ -54,7 +55,11 @@ export default function DatePickerField({ value, onChange, yearsBack = 80, years
 
   return (
     <>
-      <Pressable accessibilityRole="button" style={[styles.field, { borderColor, backgroundColor: surface }]} onPress={() => setIsOpen(true)}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ? `${accessibilityLabel}: ${displayLabel}` : undefined}
+        style={[styles.field, { borderColor, backgroundColor: surface }]}
+        onPress={() => setIsOpen(true)}>
         <Text style={styles.fieldText}>{displayLabel}</Text>
       </Pressable>
 

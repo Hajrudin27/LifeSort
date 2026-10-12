@@ -84,6 +84,15 @@ week facts, how a schedule may change, input parsing and server-row mapping stay
 imports core, never the reverse; `__tests__/habitDomainBoundary.test.ts` holds that line. See
 [ADR-0052](./adr/0052-habits-are-recurring-commitments-with-derived-status-and-effective-dated-schedules.md).
 
+`core/career/persistedApplication.ts` (APP-067) is the same kind of exception, again no larger than it needs to be: the
+persisted job-application *format* (the unchanged eight-key shape, the closed four-value status set, the length and
+character limits, a strict calendar date, an http(s)-only link, a compatibility-aware `stored` decoder for what the device already holds
+and an all-or-nothing `backup` decoder for pre-APP-067 files that adds no unknown keys and no repeated ids; neither applies the new input limits to history), because the backup parser, which is core, must validate what the store
+persists. It never reads the clock. Form validation, creating and editing, ordering, link opening and counts stay in
+`features/career/domain`, which imports core, never the reverse; `__tests__/careerDomainBoundary.test.ts` holds that line
+and the local-only, no-AI, no-inference scope. See
+[ADR-0055](./adr/0055-career-applications-are-private-local-only-and-user-declared.md).
+
 ## The rules
 
 | # | Rule | Enforced |

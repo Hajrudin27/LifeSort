@@ -1,7 +1,7 @@
 {
   "title": "Backup",
   "exportLabel": "Export data",
-  "exportDescription": "Save all your data into one file you can share or keep somewhere safe.",
+  "exportDescription": "Save your data into one file you can share or keep somewhere safe. Job applications and CV details are private and are not included.",
   "exportSuccess": "Backup created",
   "importLabel": "Restore from backup",
   "importDescription": "Choose a previously saved backup file to restore your data.",

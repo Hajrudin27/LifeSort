@@ -75,7 +75,10 @@ The screen tells the user both, because a deletion screen that does not say is
 asking for trust it has not earned:
 
 - **Deleted:** the account and everything in it — expenses, savings, trips,
-  warranties, tasks, habits, goals, career and cycle — plus every uploaded file.
+  warranties, tasks, habits, goals, career and cycle — plus every uploaded file. Career applications
+  and skills live only on the device since APP-067 (they are removed by logout and by deletion),
+  and any rows from earlier versions in the legacy `job_applications` and `skills` tables are
+  removed with the account.
 - **Lingers briefly:** the database provider's backups, which roll over on their
   own schedule and are not used for anything.
 

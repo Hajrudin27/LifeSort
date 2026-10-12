@@ -15,6 +15,7 @@ import { scheduledTodaySummary, weekEntryCount } from '@/features/habits/domain/
 import { useBrandTints } from '@/hooks/useBrandTints';
 import { useLifeModuleTints } from '@/hooks/useLifeModuleTints';
 import { useToday } from '@/hooks/useToday';
+import { interviewApplicationCount, openApplicationCount } from '@/features/career/domain/application';
 import { useCareerStore } from '@/store/useCareerStore';
 import { useHabitsStore } from '@/store/useHabitsStore';
 import { useHouseholdStore } from '@/store/useHouseholdStore';
@@ -67,8 +68,9 @@ export default function LifeScreen() {
   const dueHouseholdCount = householdTasks.filter((task) => daysUntilDue(task) <= 0).length;
 
   const applications = useCareerStore((s) => s.applications);
-  const interviewCount = applications.filter((application) => application.status === 'interview').length;
-  const openApplications = applications.filter((application) => application.status !== 'rejected').length;
+  // APP-067: counts of the user's own declared statuses. No rate, score or verdict.
+  const interviewCount = interviewApplicationCount(applications);
+  const openApplications = openApplicationCount(applications);
 
   const focusCard: FocusCard =
     overdueTodos.length > 0
@@ -254,7 +256,7 @@ export default function LifeScreen() {
         <MetricCard
           icon={{ ios: 'briefcase.fill', android: 'work', web: 'work' }}
           label={t('life.careerMetricLabel')}
-          value={String(interviewCount)}
+          value={String(openApplications)}
           helper={t('life.careerMetricHelper')}
           tone="#7C3AED"
           onPress={() => router.push('/career/applications')}

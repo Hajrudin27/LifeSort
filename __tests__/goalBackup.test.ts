@@ -38,7 +38,7 @@ const parsed = (raw: string) => {
 };
 
 describe('APP-063 backup v11', () => {
-  it('is at least format 11, where goal types were introduced (now 12)', () => expect(BACKUP_VERSION).toBe(12));
+  it('is at least format 11, where goal types were introduced (now 13)', () => expect(BACKUP_VERSION).toBe(13));
 
   it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])('format %i: old goals become binary goals with their sub-goals as milestones', (version) => {
     const result = parsed(file(version, { goals: [
@@ -112,7 +112,7 @@ describe('APP-063 backup through the real store', () => {
     useLifeGoalsStore.setState({ goals: canonical });
     await exportBackup();
     const exported = JSON.parse(mockWritten);
-    expect(exported.version).toBe(12);
+    expect(exported.version).toBe(13);
     expect(exported.data.lifeGoals).toEqual({ goals: canonical });
     expect(Object.keys(exported.data.lifeGoals)).toEqual(['goals']);
   });

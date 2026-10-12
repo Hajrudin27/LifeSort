@@ -21,6 +21,7 @@ import { decodeShoppingItems } from '@/core/food/shopping';
 import { legacyMajorUnitsToMinorUnits } from '@/core/money/legacyMajorUnits';
 import type { MinorUnits } from '@/core/money/minorUnits';
 import { supportedMoney } from '@/core/money/supportedMoney';
+import { decodeBackupApplications } from '@/core/career/persistedApplication';
 import { decodeGoals, decodeLegacyGoals } from '@/core/goals/persistedGoal';
 import { decodeHabits, decodeLegacyHabits } from '@/core/habits/persistedHabit';
 import { decodeMovingItems, decodeMovingTemplateMarker, LEGACY_MOVING_MARKER } from '@/core/home/moving';
@@ -57,9 +58,21 @@ import { isValidIanaTimeZone } from '@/utils/shared/timeZone';
  *      lokal dato; en registrering betyder altid "forpligtelsen blev holdt". Ældre
  *      formater mappes uden at opfinde ugedage, og dubletdatoer afvises. Afledte
  *      status, ugetal og serier eksporteres aldrig.
- * Nye eksporter skriver altid 12.
+ * 13 — APP-067: Karrierens ansøgninger (med noter) og CV'et er Profile B og eksporteres ikke
+ *      længere i en klartekstfil; `career` bærer kun `skills`, og `cv` udelades. Filer fra
+ *      format 1–12 kan stadig gendannes: ansøgningerne læses af den kanoniske dekoder, som
+ *      kræver en genkendelig ansøgning (struktur, felttyper, status, gyldig dato, ingen
+ *      ukendte nøgler, ingen dublet-id) men ikke de grænser, APP-067 først indførte for NYE
+ *      indtastninger (længder, tegn, http(s)-link). Det gamle skema kunne have dem, så de
+ *      bevares uændret, og et usikkert link forbliver inaktiv tekst. Alt lander i krypteret
+ *      lagring. En fil i format 13 eller nyere, der alligevel indeholder ansøgninger eller
+ *      CV, afvises.
+ * Nye eksporter skriver altid 13.
  */
-export const BACKUP_VERSION = 12;
+export const BACKUP_VERSION = 13;
+
+/** APP-067: første format, der ikke længere bærer Karrierens ansøgninger eller CV. */
+const FIRST_FORMAT_WITHOUT_CAREER_PAYLOAD = 13;
 
 type FieldType = 'array' | 'record' | 'object' | 'number' | 'string' | 'boolean' | 'nullableString' | 'nullableObject';
 
@@ -487,6 +500,12 @@ export function parseBackupFile(content: string): BackupParseResult {
     const rawStore = parsed.data[storeKey];
     if (rawStore === undefined) continue;
     if (!isPlainObject(rawStore)) return { ok: false, error: 'invalid_format' };
+    if (version >= FIRST_FORMAT_WITHOUT_CAREER_PAYLOAD) {
+      // The format itself excludes this payload; its presence means the file was not written by this app.
+      if (storeKey === 'cv' || (storeKey === 'career' && rawStore.applications !== undefined)) {
+        return { ok: false, error: 'invalid_format' };
+      }
+    }
 
     const fields: Record<string, FieldType> = BACKUP_FIELD_SCHEMA[storeKey];
     const partial: Record<string, unknown> = {};
@@ -533,6 +552,17 @@ export function parseBackupFile(content: string): BackupParseResult {
       const habits = canonicalHabits(canonical.value, version);
       if (!habits.ok) return habits;
       data[storeKey] = habits.value;
+      continue;
+    }
+    if (storeKey === 'career') {
+      // APP-067: only formats 1-12 can reach here with applications; the decoder is compatibility-aware and all-or-nothing.
+      if (canonical.value.applications !== undefined) {
+        const applications = decodeBackupApplications(canonical.value.applications);
+        if (!applications) return { ok: false, error: 'invalid_format' };
+        data[storeKey] = { ...canonical.value, applications };
+      } else {
+        data[storeKey] = canonical.value;
+      }
       continue;
     }
     if (storeKey === 'household') {

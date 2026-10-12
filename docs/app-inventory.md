@@ -131,7 +131,7 @@ to Supabase tables in §3.
 | `/settings` | `app/(tabs)/settings.tsx` | `account` | `useAppLockStore`<br>`useAuthStore`<br>`useProfileStore`<br>`useSettingsStore`<br>`useThemeStore` | personal | Hajrudin Kardasevic |
 | `/+html` | `app/+html.tsx` | `core-shell` | – | ordinary | Hajrudin Kardasevic |
 | `/+not-found` | `app/+not-found.tsx` | `core-shell` | – | ordinary | Hajrudin Kardasevic |
-| `/_layout` | `app/_layout.tsx` | `core-shell` | `useAppLockStore`<br>`useAuthStore`<br>`useCVStore`<br>`useCareerStore`<br>`useCategoriesStore`<br>`useCycleStore`<br>`useExpensesStore`<br>`useFoodStore`<br>`useHabitsStore`<br>`useHouseholdStore`<br>`useIncomeStore`<br>`useLifeGoalsStore`<br>`useProfileStore`<br>`useSavingsGoalsStore`<br>`useSettingsStore`<br>`useThemeStore`<br>`useTodoStore`<br>`useTripsStore`<br>`useWarrantiesStore` | personal, financial, health | Hajrudin Kardasevic |
+| `/_layout` | `app/_layout.tsx` | `core-shell` | `useAppLockStore`<br>`useAuthStore`<br>`useCVStore`<br>`useCategoriesStore`<br>`useCycleStore`<br>`useExpensesStore`<br>`useFoodStore`<br>`useHabitsStore`<br>`useHouseholdStore`<br>`useIncomeStore`<br>`useLifeGoalsStore`<br>`useProfileStore`<br>`useSavingsGoalsStore`<br>`useSettingsStore`<br>`useThemeStore`<br>`useTodoStore`<br>`useTripsStore`<br>`useWarrantiesStore` | personal, financial, health | Hajrudin Kardasevic |
 | `/auth` | `app/auth.tsx` | `account` | `useAuthStore` | personal | Hajrudin Kardasevic |
 | `/career/applications/[id]` | `app/career/applications/[id].tsx` | `career` | `useCareerStore` | personal | Hajrudin Kardasevic |
 | `/career/applications` | `app/career/applications/index.tsx` | `career` | `useCareerStore` | personal | Hajrudin Kardasevic |
@@ -229,9 +229,10 @@ to Supabase tables in §3.
 Every file in `store/`. "Local storage" is where the Zustand state is persisted
 today; "Supabase tables" are the tables the store itself reads or writes.
 
-Most persisted stores currently use plain AsyncStorage. `useCycleStore` is the
-exception: APP-028 stores an AES-GCM encrypted envelope in AsyncStorage and keeps
-the key material in SecureStore.
+Most persisted stores currently use plain AsyncStorage. The Profile-B stores
+(`useCycleStore`, and through the shared adapter the expenses, trips, warranties,
+documents, career and CV stores) store an AES-GCM encrypted envelope in AsyncStorage and
+keep the key material in SecureStore.
 
 <!-- inventory:stores:start -->
 
@@ -262,8 +263,8 @@ the key material in SecureStore.
 | `useTripsStore` | `store/useTripsStore.ts` | `travel` | `lifesort-trips` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts`; includes independent APP-060 template copies plus Trip-scoped applied id/version markers, stale-labelled minimal trip financial projections, unresolved legacy Travel rows, and narrow account-bound pending new-expense drafts for restart-safe identity | `trips`, legacy `trip_expenses`, `trip_packing_items`, private `trip_packing_template_applications`, `trip_participants`; canonical spend is created in `expenses` and linked by server-only `trip_expense_links` through APP-059 RPCs | personal, financial, document | Hajrudin Kardasevic |
 | `useWarrantiesStore` | `store/useWarrantiesStore.ts` | `warranties` | `lifesort-warranties` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `warranties` | document, financial | Hajrudin Kardasevic |
 | `useDocumentsStore` | `store/useDocumentsStore.ts` | `documents` | `lifesort-documents` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` | `documents` | document | Hajrudin Kardasevic |
-| `useCareerStore` | `store/useCareerStore.ts` | `career` | `lifesort-career` | AsyncStorage (plain) | `job_applications`, `skills` | personal | Hajrudin Kardasevic |
-| `useCVStore` | `store/useCVStore.ts` | `career` | `lifesort-cv` | AsyncStorage (plain) | `cv_personal_info`, `cv_education`, `cv_experience`, `cv_languages`, `cv_versions` | personal, document | Hajrudin Kardasevic |
+| `useCareerStore` | `store/useCareerStore.ts` | `career` | `lifesort-career` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` (APP-067: application notes are Profile B, so the whole key — applications and skills — is encrypted) | – (local-only since APP-067; legacy `job_applications` and `skills` tables are retained and no longer touched by the app) | personal | Hajrudin Kardasevic |
+| `useCVStore` | `store/useCVStore.ts` | `career` | `lifesort-cv` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` (APP-067 storage hardening only; the CV model, UX and cloud mirror are unchanged) | `cv_personal_info`, `cv_education`, `cv_experience`, `cv_languages`, `cv_versions` | personal, document | Hajrudin Kardasevic |
 | `useSkillCategoriesStore` | `store/useSkillCategoriesStore.ts` | `career` | `lifesort-skill-categories` | AsyncStorage (plain) | – | ordinary | Hajrudin Kardasevic |
 | `useCycleStore` | `store/useCycleStore.ts` | `cycle` | `lifesort-cycle` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/cycleHealthEncryptedStorage.ts` | `cycles`, `symptom_logs`, `cycle_settings`, `health_conditions`, `symptom_glossary` | health | Hajrudin Kardasevic |
 
@@ -321,8 +322,8 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `documents` | `documents` | `core/documents/documentSync.ts`, `core/documents/documentReferences.ts` (APP-057 id/name/date reference read; no path), `core/auth/deleteAccount.ts` | document | Hajrudin Kardasevic |
 | `document_deletion_tombstones` | `documents` (server-only; no client grant) | written only by `finalize_my_document_deletion()`, called from `core/documents/documentSync.ts` | document | Hajrudin Kardasevic |
 | `trip_document_references` | `travel` | `utils/trip/tripRemote.ts` (owner-only ids linking a trip to a standalone document; APP-058) | document | Hajrudin Kardasevic |
-| `job_applications` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
-| `skills` | `career` | `store/useCareerStore.ts` | personal | Hajrudin Kardasevic |
+| `job_applications` | `career` | no client table access since APP-067 (legacy rows retained; owner-only RLS, authenticated row CRUD only) | personal | Hajrudin Kardasevic |
+| `skills` | `career` | no client table access since APP-067 (legacy rows retained) | personal | Hajrudin Kardasevic |
 | `cv_personal_info` | `career` | `store/useCVStore.ts` | personal | Hajrudin Kardasevic |
 | `cv_education` | `career` | `store/useCVStore.ts` | personal | Hajrudin Kardasevic |
 | `cv_experience` | `career` | `store/useCVStore.ts` | personal | Hajrudin Kardasevic |
@@ -405,6 +406,7 @@ module that owns it.
 | `TripAttachmentGrid` | `components/TripAttachmentGrid.tsx` | `travel` | Hajrudin Kardasevic |
 | `TripDeleteFlow` | `components/TripDeleteFlow.tsx` | `travel` | Hajrudin Kardasevic |
 | `TripDocumentsSection` | `components/TripDocumentsSection.tsx` | `travel` | Hajrudin Kardasevic |
+| `ApplicationForm` | `components/ApplicationForm.tsx` | `career` | Hajrudin Kardasevic |
 | `SkillCategoryPicker` | `components/SkillCategoryPicker.tsx` | `career` | Hajrudin Kardasevic |
 | `CycleInsightsCard` | `components/CycleInsightsCard.tsx` | `cycle` | Hajrudin Kardasevic |
 | `CycleMonthCalendar` | `components/CycleMonthCalendar.tsx` | `cycle` | Hajrudin Kardasevic |
@@ -429,7 +431,7 @@ Directory-level map of the remaining shared code. Not enforced by the test.
 | `tasks` | `utils/todo/` (`calendarSync`) | `types/life.ts` | `todos` |
 | `travel` | `utils/trip/` | `types/trip.ts` | `travel` |
 | `warranties` | `utils/warranty/` | `types/warranty.ts` | `warranties` |
-| `career` | `utils/cv/` | `types/career.ts`, `types/cv.ts` | `career`, `cv` |
+| `career` | `core/career/` (persisted application format), `features/career/domain/` (application rules; APP-067), `utils/cv/` | `types/career.ts`, `types/cv.ts` | `career`, `cv` |
 | `cycle` | `utils/cycle/` | `types/cycle.ts`, `types/healthInfo.ts` | `cycle`, `healthInfo` |
 
 ## §7 Sensitivity legend

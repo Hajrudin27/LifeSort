@@ -57,7 +57,7 @@ const canonical: Habit[] = [
 ];
 
 describe('APP-064 backup v12', () => {
-  it('is format 12', () => expect(BACKUP_VERSION).toBe(12));
+  it('was introduced in format 12 (now 13)', () => expect(BACKUP_VERSION).toBe(13));
 
   it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])('format %i: old habits are mapped, never guessed', (version) => {
     const result = parsed(file(version, { habits: [
@@ -135,7 +135,7 @@ describe('APP-064 backup v12', () => {
   });
 
   it('a file from a newer app version is refused', () => {
-    expect(parseBackupFile(file(13, { habits: [] }))).toEqual({ ok: false, error: 'unsupported_version' });
+    expect(parseBackupFile(file(14, { habits: [] }))).toEqual({ ok: false, error: 'unsupported_version' });
   });
 });
 
@@ -146,7 +146,7 @@ describe('APP-064 backup through the real store', () => {
     useHabitsStore.setState({ habits: canonical });
     await exportBackup();
     const exported = JSON.parse(mockWritten);
-    expect(exported.version).toBe(12);
+    expect(exported.version).toBe(13);
     expect(exported.data.habits).toEqual({ habits: canonical });
     expect(Object.keys(exported.data.habits)).toEqual(['habits']);
     const text = JSON.stringify(exported.data.habits);

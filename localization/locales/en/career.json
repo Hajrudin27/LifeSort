@@ -21,7 +21,7 @@
     "delete": "Delete",
     "edit": "Edit",
     "deleteConfirmTitle": "Delete application?",
-    "deleteConfirmMessage": "This action cannot be undone.",
+    "deleteConfirmMessage": "This deletes the application from this device only. It cannot be undone.",
     "skillsLabel": "Skills",
     "skillsScreenTitle": "Skills",
     "skillNamePlaceholder": "Skill (e.g. Excel, English, Leadership)",
@@ -44,5 +44,25 @@
     "addCategory": "Add category",
     "addCategoryConfirm": "Add",
     "cvLabel": "CV",
-    "selectCategory": "Select category"
+    "selectCategory": "Select category",
+    "companyLabel": "Company",
+    "positionLabel": "Role",
+    "linkLabel": "Link to listing (optional)",
+    "notesLabel": "Notes (optional, private)",
+    "notesCounter": "{{count}} / {{max}}",
+    "searchLabel": "Search applications",
+    "cancel": "Cancel",
+    "openLink": "Open link",
+    "invalidLinkNotOpened": "This link can't be opened because it isn't a web address (http or https).",
+    "saveFailed": "Couldn't save. Check the highlighted fields.",
+    "noMatches": "No applications match your search.",
+    "notFound": "This application no longer exists.",
+    "errors": {
+      "required": "This field is required.",
+      "tooLong": "This is too long.",
+      "invalidCharacters": "This contains characters that can't be saved.",
+      "invalid": "This value isn't valid.",
+      "future": "The date can't be in the future.",
+      "invalidLink": "Enter a web address starting with http:// or https://."
+    }
   }

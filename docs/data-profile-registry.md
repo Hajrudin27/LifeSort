@@ -50,7 +50,7 @@ or production CRUD flow changes. Runtime execution remains deferred.
 
 ## Logical Domains
 
-Counts are enforced in tests: **A = 25, B = 7, C = 2, D = 6, total = 40**.
+Counts are enforced in tests: **A = 23, B = 9, C = 2, D = 6, total = 40**.
 
 | Domain | Profile | Module | Current physical surfaces | Notes |
 | --- | --- | --- | --- | --- |
@@ -89,9 +89,9 @@ Counts are enforced in tests: **A = 25, B = 7, C = 2, D = 6, total = 40**.
 | `warranties.records` | A | warranties | `async-storage:lifesort-warranties`, `supabase-table:warranties` | Warranty/insurance records excluding attached files. APP-057 adds seller, purchase date and an opaque `receipt_document_id` — an id only, owner-bound by a composite foreign key to `documents`; no filename, path or URL of the document enters this domain, so the profile is unchanged. |
 | `warranties.attachments` | B | warranties | `async-storage:lifesort-warranties`, `supabase-table:attachments`, `supabase-storage-bucket:attachments`, `filesystem:document-directory/attachments`, `filesystem:cache-directory/lifesort-decrypted-attachments`, `secure-store:lifesort-document-cache-key` | Receipt, warranty and insurance files plus metadata. Local bytes and metadata are encrypted; temporary decrypted copies are cache-only interoperability files. |
 | `documents.files` | B | documents | `async-storage:lifesort-documents`, `supabase-table:documents`, `supabase-table:document_deletion_tombstones`, `supabase-storage-bucket:documents`, `secure-store:lifesort-document-cache-key` | APP-055 standalone private documents. Metadata only on the device and encrypted at rest; bytes stay in the private `documents` bucket and are reached through short-lived signed URLs that are never persisted. APP-056 adds server-only deletion tombstones (user id, document id, time — no name, path or content), with no client grant and no local copy. |
-| `career.applications` | A | career | `async-storage:lifesort-career`, `supabase-table:job_applications` | Ambiguous: application notes may later need Profile B review. |
-| `career.skills` | A | career | `async-storage:lifesort-career`, `async-storage:lifesort-skill-categories`, `supabase-table:skills` | Skills and skill-category labels. |
-| `career.cv` | A | career | `async-storage:lifesort-cv`, `supabase-table:cv_personal_info`, `supabase-table:cv_education`, `supabase-table:cv_experience`, `supabase-table:cv_languages`, `supabase-table:cv_versions` | Ambiguous: document-like career data; review before APP-029. |
+| `career.applications` | B | career | `async-storage:lifesort-career`, `secure-store:lifesort-document-cache-key`, `supabase-table:job_applications` | APP-067: job applications with private notes. Profile B (the `ambiguous` note is resolved). **Local-only**: no server sync is expected or performed; `job_applications` is a retained, hardened legacy table the app neither reads nor writes. See [ADR-0055](./adr/0055-career-applications-are-private-local-only-and-user-declared.md). |
+| `career.skills` | A | career | `async-storage:lifesort-career`, `async-storage:lifesort-skill-categories`, `supabase-table:skills` | Skills and skill-category labels. Remains a Profile A domain, but physically shares the encrypted `lifesort-career` key with applications and, since APP-067, is local-only (the `skills` table is retained legacy). |
+| `career.cv` | B | career | `async-storage:lifesort-cv`, `secure-store:lifesort-document-cache-key`, `supabase-table:cv_personal_info`, `supabase-table:cv_education`, `supabase-table:cv_experience`, `supabase-table:cv_languages`, `supabase-table:cv_versions` | CV contact details (phone, email, address), education, experience, languages and version metadata. APP-067 is storage hardening only: encrypted at rest. Its legacy best-effort cloud mirror is unchanged and is not a reliable Profile-B sync path. |
 | `cycle.user-health` | B | cycle | `async-storage:lifesort-cycle`, `secure-store:lifesort-cycle-health-key`, `supabase-table:cycles`, `supabase-table:symptom_logs`, `supabase-table:cycle_settings` | Health/cycle data encrypted at rest by APP-028. |
 | `cycle.reference-content` | D | cycle | `async-storage:lifesort-cycle`, `supabase-table:health_conditions`, `supabase-table:symptom_glossary` | Reviewed global health reference content. |
 
@@ -110,6 +110,7 @@ several logical domains:
 
 | Surface | Profiles | Strongest local-storage protection | Why it matters |
 | --- | --- | --- | --- |
+| `async-storage:lifesort-career` | A, B | encrypted-required | APP-067: application notes are Profile B, and a physical key has one protection level, so skills in the same key are encrypted with them. The Career store decodes applications on hydrate. |
 | `async-storage:lifesort-expenses` | A, B | encrypted-required | Expense rows are Profile A, but receipt metadata/local URIs are Profile B. |
 | `async-storage:lifesort-food-v2` | A, D | plaintext-allowed | User food data and cached/reference catalogue data share one store. |
 | `async-storage:lifesort-trips` | A, B | encrypted-required | Trip rows are Profile A, but trip documents and expense attachments are Profile B. |
@@ -122,6 +123,7 @@ Document-cache physical surfaces added by APP-029:
 | --- | --- | --- | --- |
 | `filesystem:document-directory/attachments` | B | encrypted-required | Persistent cached attachment bytes are AES-GCM encrypted `*.lsenc` files. Legacy plaintext files referenced by attachment metadata are encrypted during metadata migration, then removed after the encrypted metadata write succeeds. |
 | `filesystem:cache-directory/lifesort-decrypted-attachments` | B | encrypted-required | Temporary plaintext copies exist only for native image/share/upload interoperability and are deleted on explicit cleanup/logout. This is not the canonical persistent cache. |
+| `async-storage:lifesort-cv` | B | encrypted-required | APP-067: CV contact details; storage hardening only. |
 | `async-storage:lifesort-documents` | B | encrypted-required | APP-055 standalone document metadata. Born encrypted: there is no historical plaintext payload, so no local migration exists. |
 | `secure-store:lifesort-document-cache-key` | B | encrypted-required | Device-local AES-256-GCM key material for document-cache files, attachment metadata and APP-055 document metadata; separate from the cycle-health key. |
 
@@ -164,12 +166,13 @@ connectivity-aware sync and APP-038 migration harness are implemented. APP-038 m
 
 ## Human Review Notes
 
-- `career.applications` remains Profile A, but free-text notes may become private
-  notes in practice.
-- `career.cv` remains Profile A, but CV content is document-like personal data
-  and should be reviewed before APP-029.
+- `career.applications` and `career.cv` were reviewed in APP-067 and are now Profile B
+  (`career.skills` stays Profile A but shares the encrypted `lifesort-career` key). Neither
+  has a reliable Profile-B sync path, so Career applications are local-only and the CV keeps
+  only its legacy best-effort mirror; see ADR-0055.
 - `core.local-backup-archive` is Profile B because backup exports can include
-  attachment metadata even though cycle data is currently excluded. APP-029 did
+  attachment metadata even though cycle data is currently excluded. Since APP-067 (format 13) it
+  also excludes Career applications and the CV. APP-029 did
   not redesign backup/export encryption.
 
 ## Local migration ownership (APP-038)

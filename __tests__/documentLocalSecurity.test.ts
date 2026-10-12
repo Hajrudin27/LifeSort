@@ -168,13 +168,16 @@ describe('der findes ingen historisk plaintext lifesort-documents', () => {
     expect(await AsyncStorage.getItem(KEY)).toContain('__lifesort_encrypted_document_metadata__');
   });
 
-  it.each(['lifesort-expenses', 'lifesort-warranties', 'lifesort-trips'])(
+  it.each(['lifesort-expenses', 'lifesort-warranties', 'lifesort-trips', 'lifesort-career', 'lifesort-cv'])(
     'rører ikke %s, som har en ægte historisk plaintext at opgradere',
     async (legacyKey) => {
       const legacy: Record<string, unknown> = {
         'lifesort-expenses': { expenses: [], seriesStoppedAt: {}, categoryBudgets: {} },
         'lifesort-warranties': { warranties: [] },
         'lifesort-trips': { trips: [], expenses: [], packingItems: [] },
+        // APP-067: both held plaintext before they were encrypted.
+        'lifesort-career': { applications: [], skills: [] },
+        'lifesort-cv': { personalInfo: {}, education: [], experience: [], languages: [], versions: [] },
       }[legacyKey]!;
       const legacyPayload = JSON.stringify({ state: legacy, version: 0 });
 
@@ -202,6 +205,109 @@ describe('der findes ingen historisk plaintext lifesort-documents', () => {
       await documentMetadataEncryptedStorage.removeItem(legacyKey);
     },
   );
+});
+
+describe('listen over historisk plaintext er lukket og præcis (APP-067)', () => {
+  // These stores are encrypted-required or born-encrypted; none had plaintext history. Only the five
+  // keys named above may be upgraded in place, however recognisable the shape of another payload is.
+  it.each([
+    ['lifesort-todos', { todos: [] }],
+    ['lifesort-habits', { habits: [] }],
+    ['lifesort-household', { tasks: [] }],
+    ['lifesort-cycle', { cycles: [], symptomLogs: [] }],
+    ['lifesort-skill-categories', { categories: [] }],
+    ['lifesort-career-applications', { applications: [], skills: [] }],
+  ])('opgraderer ikke en rå plaintext under %s', async (key, state) => {
+    const plaintext = JSON.stringify({ state, version: 0 });
+    await AsyncStorage.setItem(key, plaintext);
+    await expect(documentMetadataEncryptedStorage.getItem(key)).rejects.toMatchObject({ name: 'DocumentCacheProtectedDataError' });
+    expect(await AsyncStorage.getItem(key)).toBe(plaintext);
+    await documentMetadataEncryptedStorage.removeItem(key);
+  });
+
+  it.each([
+    ['lifesort-career', { applications: 'x', skills: [] }],
+    ['lifesort-career', { applications: [] }],
+    ['lifesort-cv', { personalInfo: [], education: [], experience: [], languages: [], versions: [] }],
+    ['lifesort-cv', { personalInfo: {}, education: [], experience: [], languages: [] }],
+  ])('afviser en forkert formet %s uden at gætte', async (key, state) => {
+    const plaintext = JSON.stringify({ state, version: 0 });
+    await AsyncStorage.setItem(key, plaintext);
+    await expect(documentMetadataEncryptedStorage.getItem(key)).rejects.toMatchObject({ name: 'DocumentCacheProtectedDataError' });
+    expect(await AsyncStorage.getItem(key)).toBe(plaintext);
+    await documentMetadataEncryptedStorage.removeItem(key);
+  });
+});
+
+describe('Career og CV ligger krypteret (APP-067)', () => {
+  const NOTE = 'private interview note sentinel';
+  const COMPANY = 'Sentinel Employer ApS';
+  const PHONE = '+45 11 22 33 44';
+  const career = JSON.stringify({ state: { applications: [{ id: 'a', company: COMPANY, position: 'Role', status: 'offer', appliedDate: '2026-10-01', notes: NOTE, createdAt: '2026-10-01T08:00:00.000Z' }], skills: [] }, version: 0 });
+  const cv = JSON.stringify({ state: { personalInfo: { fullName: 'Sentinel', phone: PHONE, email: 'sentinel@example.org', location: 'Sentinelvej 1' }, education: [], experience: [], languages: [], versions: [] }, version: 0 });
+
+  it.each([['lifesort-career', career, [NOTE, COMPANY, '2026-10-01']], ['lifesort-cv', cv, [PHONE, 'sentinel@example.org', 'Sentinelvej 1']]])(
+    'efterlader intet i klartekst under %s, og kan læses tilbage',
+    async (key, payloadValue, secrets) => {
+      await documentMetadataEncryptedStorage.setItem(key, payloadValue);
+      const stored = await AsyncStorage.getItem(key);
+      expect(stored).toContain('__lifesort_encrypted_document_metadata__');
+      for (const secret of secrets) expect(stored).not.toContain(secret);
+      expect(await documentMetadataEncryptedStorage.getItem(key)).toBe(payloadValue);
+      await documentMetadataEncryptedStorage.removeItem(key);
+    },
+  );
+
+  it.each([['lifesort-career', career, NOTE], ['lifesort-cv', cv, PHONE]])(
+    'opgraderer plaintext under %s på stedet, og efterlader ingen klartekst',
+    async (key, payloadValue, secret) => {
+      await AsyncStorage.setItem(key, payloadValue);
+      expect(await documentMetadataEncryptedStorage.getItem(key)).toBe(payloadValue);
+      const stored = await AsyncStorage.getItem(key);
+      expect(stored).toContain('__lifesort_encrypted_document_metadata__');
+      expect(stored).not.toContain(secret);
+      await documentMetadataEncryptedStorage.removeItem(key);
+    },
+  );
+
+  it.each([['lifesort-career', career], ['lifesort-cv', cv]])('fejler lukket på en beskadiget konvolut under %s og blokerer skrivning', async (key, payloadValue) => {
+    await documentMetadataEncryptedStorage.setItem(key, payloadValue);
+    const envelope = JSON.parse((await AsyncStorage.getItem(key))!);
+    envelope.ciphertext = `${envelope.ciphertext.slice(0, -4)}AAAA`;
+    const corrupt = JSON.stringify(envelope);
+    await AsyncStorage.setItem(key, corrupt);
+
+    await expect(documentMetadataEncryptedStorage.getItem(key)).rejects.toMatchObject({ code: 'ciphertext-authentication-failed' });
+    await expect(documentMetadataEncryptedStorage.setItem(key, payloadValue)).rejects.toMatchObject({ code: 'write-blocked-after-protected-failure' });
+    expect(await AsyncStorage.getItem(key)).toBe(corrupt);
+    await documentMetadataEncryptedStorage.removeItem(key);
+  });
+
+  it.each([['lifesort-career', career], ['lifesort-cv', cv]])('fejler lukket når nøglen mangler under %s', async (key, payloadValue) => {
+    await documentMetadataEncryptedStorage.setItem(key, payloadValue);
+    const encrypted = await AsyncStorage.getItem(key);
+    mockSecureStore.clear();
+
+    await expect(documentMetadataEncryptedStorage.getItem(key)).rejects.toMatchObject({ code: 'key-missing' });
+    await expect(documentMetadataEncryptedStorage.setItem(key, payloadValue)).rejects.toMatchObject({ code: 'write-blocked-after-protected-failure' });
+    expect(await AsyncStorage.getItem(key)).toBe(encrypted);
+    await documentMetadataEncryptedStorage.removeItem(key);
+  });
+
+  it('kontoskifte fjerner begge og ødelægger nøglen, så en gammel konvolut ikke kan læses igen', async () => {
+    await documentMetadataEncryptedStorage.setItem('lifesort-career', career);
+    await documentMetadataEncryptedStorage.setItem('lifesort-cv', cv);
+    const oldCareer = await AsyncStorage.getItem('lifesort-career');
+
+    await clearLocalUserData([]);
+
+    expect(await AsyncStorage.getItem('lifesort-career')).toBeNull();
+    expect(await AsyncStorage.getItem('lifesort-cv')).toBeNull();
+    expect(mockSecureStore.has('lifesort-document-cache-key')).toBe(false);
+    await AsyncStorage.setItem('lifesort-career', oldCareer!);
+    await expect(documentMetadataEncryptedStorage.getItem('lifesort-career')).rejects.toMatchObject({ name: 'DocumentCacheProtectedDataError' });
+    await documentMetadataEncryptedStorage.removeItem('lifesort-career');
+  });
 });
 
 describe('kontoskifte', () => {
@@ -233,6 +339,28 @@ describe('kontoskifte', () => {
     await expect(documentMetadataEncryptedStorage.getItem(KEY)).rejects.toMatchObject({
       name: 'DocumentCacheProtectedDataError',
     });
+  });
+});
+
+describe('klassificeringen af Career og CV (APP-067)', () => {
+  it('career.applications og career.cv er Profile B med krypteringskrav; career.skills deler den krypterede nøgle', () => {
+    for (const id of ['career.applications', 'career.cv']) {
+      expect(DATA_DOMAINS.find((d) => d.id === id)).toMatchObject({
+        profile: 'B', encryptedLocalPersistenceRequired: true, plaintextLocalPersistenceAllowed: false,
+      });
+    }
+    expect(DATA_DOMAINS.find((d) => d.id === 'career.skills')).toMatchObject({ profile: 'A', expectsServerSync: false });
+    for (const surface of ['async-storage:lifesort-career', 'async-storage:lifesort-cv']) {
+      expect(persistenceSurfaceContainsProfileB(surface)).toBe(true);
+      expect(localStorageProtectionForSurface(surface)).toBe('encrypted-required');
+    }
+  });
+
+  it('ansøgninger er lokale: ingen serversynkronisering forventes, og ingen tvetydig note er tilbage', () => {
+    const applications = DATA_DOMAINS.find((d) => d.id === 'career.applications')!;
+    expect(applications.expectsServerSync).toBe(false);
+    expect('ambiguous' in applications).toBe(false);
+    expect('ambiguous' in DATA_DOMAINS.find((d) => d.id === 'career.cv')!).toBe(false);
   });
 });
 

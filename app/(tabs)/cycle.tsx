@@ -89,20 +89,27 @@ export default function CycleScreen() {
 
   const cycleDay = getCurrentCycleDay(cycles, today);
   const onPeriod = isCurrentlyOnPeriod(cycles);
-  const phase = getCurrentPhase(
-    cycles,
-    avgCycleLength,
-    lutealPhaseLength,
-    today,
-  );
-  const daysUntilNext = getDaysUntilNextPeriod(cycles, avgCycleLength, today);
+  // APP-075: getCurrentPhase falls back to "follicular" for an empty history; with no
+  // logged start there is nothing to infer a phase from, so none is shown.
+  const inferredPhase =
+    cycleDay === null
+      ? null
+      : getCurrentPhase(cycles, avgCycleLength, lutealPhaseLength, today);
+  const calculatedDaysUntilNext = getDaysUntilNextPeriod(cycles, avgCycleLength, today);
   const fertileWindow = getFertileWindow(
     cycles,
     avgCycleLength,
     lutealPhaseLength,
   );
   const predictedNext = getPredictedNextPeriod(cycles, avgCycleLength);
-  const predictedNextLabel = predictedNext
+  // This is a presentation guard, not a prediction change: a passed estimate cannot
+  // describe today's phase, future fertile guidance, or a "next" date.
+  const predictionIsStale = predictedNext !== null && predictedNext < todayKey;
+  const phase = predictionIsStale && !onPeriod ? null : inferredPhase;
+  const daysUntilNext = predictionIsStale ? null : calculatedDaysUntilNext;
+  const predictedNextLabel = predictionIsStale
+    ? t("cycle.predictionNeedsUpdating")
+    : predictedNext
     ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(predictedNext))
     : t("cycle.noPredictionShort");
 
@@ -211,7 +218,7 @@ export default function CycleScreen() {
     {
       key: "next",
       icon: { ios: "calendar.badge.clock", android: "event", web: "event" },
-      label: t("cycle.nextPeriodShort"),
+      label: predictionIsStale ? t("cycle.predictionStatusLabel") : t("cycle.nextPeriodLabel"),
       value: predictedNextLabel,
       tone: cycleTints.period,
     },
@@ -258,21 +265,21 @@ export default function CycleScreen() {
         {cycleDay !== null ? (
           <>
             <Text style={styles.heroDay}>{t("cycle.heroDayLabel", { day: cycleDay })}</Text>
-            <Text style={styles.heroPhase}>{phase ? t(`cycle.phase.${phase}`) : t("cycle.todayOverviewFallback")}</Text>
+            <Text style={styles.heroPhase}>{predictionIsStale && !onPeriod ? t("cycle.predictionNeedsUpdating") : phase ? t(`cycle.phase.${phase}`) : t("cycle.todayOverviewFallback")}</Text>
           </>
         ) : (
           <Text style={styles.heroDay}>{t("cycle.heroNoData")}</Text>
         )}
         <View style={styles.heroStats}>
           <View style={styles.heroStat}>
-            <Text style={styles.heroStatLabel}>{t("cycle.nextPeriodShort")}</Text>
+            <Text style={styles.heroStatLabel}>{predictionIsStale ? t("cycle.predictionStatusLabel") : t("cycle.nextPeriodLabel")}</Text>
             <Text style={styles.heroStatValue}>{predictedNextLabel}</Text>
           </View>
           <View style={styles.heroDivider} />
           <View style={styles.heroStat}>
             <Text style={styles.heroStatLabel}>{t("cycle.statusShort")}</Text>
             <Text style={styles.heroStatValue}>
-              {onPeriod ? t("cycle.onPeriodShort") : phase ? t(`cycle.phase.${phase}`) : t("cycle.noDataShort")}
+              {onPeriod ? t("cycle.onPeriodShort") : predictionIsStale ? t("cycle.predictionNeedsUpdating") : phase ? t(`cycle.phase.${phase}`) : t("cycle.noDataShort")}
             </Text>
           </View>
         </View>
@@ -410,10 +417,20 @@ export default function CycleScreen() {
       <Card style={styles.visualCard}>
         <CycleMonthCalendar
           cycles={cycles}
-          fertileWindow={fertileWindow}
-          predictedNext={predictedNext}
+          fertileWindow={predictionIsStale ? null : fertileWindow}
+          predictedNext={predictionIsStale ? null : predictedNext}
+          predictionIsStale={predictionIsStale}
         />
       </Card>
+
+      <View style={[styles.disclaimerBox, { backgroundColor: cycleTints.accentSoft }]}>
+        <Text style={[styles.disclaimerTitle, { color: cycleTints.accent }]}>
+          {t("cycle.predictionSafetyTitle")}
+        </Text>
+        <Text style={[styles.disclaimer, { color: textMuted }]}>
+          {t("cycle.trackingDisclaimer")}
+        </Text>
+      </View>
 
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionEyebrow, { color: cycleTints.accent }]}>{t("cycle.exploreEyebrow")}</Text>
@@ -425,18 +442,19 @@ export default function CycleScreen() {
           cycleDay={cycleDay}
           avgCycleLength={avgCycleLength}
           periodLength={periodLength}
-          fertileStartDay={fertileStartDay}
-          fertileEndDay={fertileEndDay}
+          fertileStartDay={predictionIsStale ? null : fertileStartDay}
+          fertileEndDay={predictionIsStale ? null : fertileEndDay}
           daysUntilNext={daysUntilNext}
+          predictionIsStale={predictionIsStale}
           getPhaseLabelForOffset={(offset) => {
-            if (cycleDay === null) return "";
+            if (cycleDay === null || predictionIsStale) return "";
             const phaseForOffset = getPhaseForCycleDay(
               cycleDay + offset,
               avgCycleLength,
               periodLength,
               lutealPhaseLength,
             );
-            return t(`cycle.phase.${phaseForOffset}`);
+            return t(`cycle.phaseEstimated.${phaseForOffset}`);
           }}
           locale={locale}
         />
@@ -480,11 +498,6 @@ export default function CycleScreen() {
         ))}
       </View>
 
-      <View style={[styles.disclaimerBox, { backgroundColor: cycleTints.accentSoft }]}>
-        <Text style={[styles.disclaimer, { color: textMuted }]}>
-          {t("cycle.trackingDisclaimer")}
-        </Text>
-      </View>
     </ScrollView>
   );
 }
@@ -703,5 +716,6 @@ const styles = StyleSheet.create({
   },
   countBadgeText: { fontSize: 12, fontWeight: "900" },
   disclaimerBox: { borderRadius: 14, padding: 12, marginTop: 2 },
+  disclaimerTitle: { fontSize: 12, fontWeight: "800", marginBottom: 3 },
   disclaimer: { fontSize: 11, textAlign: "center", lineHeight: 15 },
 });

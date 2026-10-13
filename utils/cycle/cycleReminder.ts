@@ -46,9 +46,9 @@ function canPresent(permission: Notifications.NotificationPermissionsStatus): bo
     || permission.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
 }
 
-function content(rich: boolean) {
+function content(rich: boolean, daysBefore: number) {
   return rich
-    ? { title: i18n.t('cycle.reminderRichNotifTitle'), body: i18n.t('cycle.reminderRichNotifBody') }
+    ? { title: i18n.t('cycle.reminderRichNotifTitle'), body: i18n.t('cycle.reminderRichNotifBody', { count: daysBefore }) }
     : { title: i18n.t('cycle.reminderGenericNotifTitle'), body: i18n.t('cycle.reminderGenericNotifBody') };
 }
 
@@ -92,7 +92,7 @@ export function refreshCycleReminder(input: CycleReminderInput): Promise<CycleRe
       await Notifications.scheduleNotificationAsync({
         identifier: CYCLE_REMINDER_ID,
         // Strict: a persisted or fetched non-boolean must never select rich copy.
-        content: content(input.richNotificationCopyEnabled === true),
+        content: content(input.richNotificationCopyEnabled === true, input.daysBefore),
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date },
       });
       // Logout or an account switch during this await must not leave account A's request behind.

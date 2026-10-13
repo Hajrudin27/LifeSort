@@ -49,9 +49,35 @@ describe('APP-073 Cycle lock-screen privacy', () => {
     });
   });
 
-  it('uses rich copy only after the explicit true preference', async () => {
+  it.each([
+    [1, 'Based on your logged cycles and cycle settings, it is estimated to start in 1 day.'],
+    [2, 'Based on your logged cycles and cycle settings, it is estimated to start in 2 days.'],
+    [3, 'Based on your logged cycles and cycle settings, it is estimated to start in 3 days.'],
+  ])('uses rich copy only after explicit true consent and interpolates %i day(s)', async (daysBefore, expectedBody) => {
+    await refreshCycleReminder(input({ richNotificationCopyEnabled: true, daysBefore }));
+    expect(os.get(CYCLE_REMINDER_ID)?.content).toEqual({
+      title: 'Your period is estimated to start soon',
+      body: expectedBody,
+    });
+  });
+
+  it.each([
+    [1, 'Baseret på dine registrerede cyklusser og cyklusindstillinger estimeres den at starte om 1 dag.'],
+    [3, 'Baseret på dine registrerede cyklusser og cyklusindstillinger estimeres den at starte om 3 dage.'],
+  ])('uses Danish rich copy with the configured %i day(s) after explicit true consent', async (daysBefore, expectedBody) => {
+    await i18n.changeLanguage('da');
+    await refreshCycleReminder(input({ richNotificationCopyEnabled: true, daysBefore }));
+    expect(os.get(CYCLE_REMINDER_ID)?.content).toEqual({
+      title: 'Din menstruation estimeres at starte snart',
+      body: expectedBody,
+    });
+  });
+
+  it('keeps rich copy estimate-framed and free of fertility or ovulation guidance', async () => {
     await refreshCycleReminder(input({ richNotificationCopyEnabled: true }));
-    expect(os.get(CYCLE_REMINDER_ID)?.content.title).toBe('Your period is expected soon');
+    const rich = os.get(CYCLE_REMINDER_ID)!.content;
+    expect(`${rich.title} ${rich.body}`).toMatch(/estimated/i);
+    expect(`${rich.title} ${rich.body}`).not.toMatch(/fertil|ovulation/i);
   });
 
   it('replaces an already scheduled rich request immediately when the user opts out', async () => {
@@ -77,7 +103,7 @@ describe('APP-073 Cycle lock-screen privacy', () => {
     expect(os.has(CYCLE_REMINDER_ID)).toBe(false);
 
     await refreshCycleReminder(input({ moduleEnabled: true, richNotificationCopyEnabled: true }));
-    expect(os.get(CYCLE_REMINDER_ID)?.content.title).toBe('Your period is expected soon');
+    expect(os.get(CYCLE_REMINDER_ID)?.content.title).toBe('Your period is estimated to start soon');
   });
 
   it('cannot recreate account A content after account A became stale during a native schedule', async () => {

@@ -58,7 +58,7 @@
   "markComplete": "Mark as complete",
   "markActive": "Mark as active",
   "createdToast": "Task saved",
-  "dueDatePhaseHint": "This date falls within your expected period.",
+  "dueDatePhaseHint": "Based on your cycle estimate, this date may fall within your predicted period.",
   "a11y": {
     "toggleTodo": "Mark {{title}} as done",
     "addTodo": "Add task"

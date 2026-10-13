@@ -58,7 +58,7 @@
   "markComplete": "Marker som fuldført",
   "markActive": "Marker som aktiv",
   "createdToast": "Opgaven er gemt",
-  "dueDatePhaseHint": "Denne dato falder i din forventede menstruationsperiode.",
+  "dueDatePhaseHint": "Ud fra dit cyklusestimat kan denne dato falde i din estimerede menstruationsperiode.",
   "a11y": {
     "toggleTodo": "Marker {{title}} som fuldført",
     "addTodo": "Tilføj opgave"

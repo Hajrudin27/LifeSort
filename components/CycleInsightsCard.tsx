@@ -96,7 +96,7 @@ export default function CycleInsightsCard() {
             <Text style={styles.insightText}>
               {t(`cycle.insights.${insight.key}`, {
                 percent: insight.percent,
-                phase: t(`cycle.phase.${insight.phase}`).toLowerCase(),
+                phase: t(`cycle.phaseEstimated.${insight.phase}`).toLowerCase(),
               })}
             </Text>
           </View>

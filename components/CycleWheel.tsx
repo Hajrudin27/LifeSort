@@ -15,6 +15,7 @@ type Props = {
   fertileStartDay: number | null;
   fertileEndDay: number | null;
   daysUntilNext: number | null;
+  predictionIsStale?: boolean;
   getPhaseLabelForOffset: (offsetDays: number) => string;
   locale: string;
   size?: number;
@@ -51,6 +52,7 @@ export default function CycleWheel({
   fertileStartDay,
   fertileEndDay,
   daysUntilNext,
+  predictionIsStale = false,
   getPhaseLabelForOffset,
   locale,
   size = 240,
@@ -104,7 +106,12 @@ export default function CycleWheel({
   return (
     <View style={{ alignItems: 'center' }}>
       <View style={{ width: size, height: size }} {...panResponder.panHandlers}>
-        <Svg width={size} height={size}>
+        <Svg
+          accessible
+          accessibilityLabel={t(predictionIsStale ? 'cycle.wheelStaleA11ySummary' : 'cycle.wheelA11ySummary')}
+          width={size}
+          height={size}
+        >
           <Defs>
             <LinearGradient id="periodGradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <Stop offset="0%" stopColor={danger} stopOpacity={1} />
@@ -121,15 +128,15 @@ export default function CycleWheel({
 
           <Circle cx={cx} cy={cy} r={r} stroke={surfaceMuted} strokeWidth={strokeWidth} fill="none" />
 
-          <Path
-            d={describeArc(cx, cy, r, 0, periodEndDeg)}
-            stroke="url(#periodGradient)"
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            fill="none"
-          />
+          {!predictionIsStale && <Path
+              d={describeArc(cx, cy, r, 0, periodEndDeg)}
+              stroke="url(#periodGradient)"
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              fill="none"
+            />}
 
-          {fertileStartDeg !== null && fertileEndDeg !== null && (
+          {!predictionIsStale && fertileStartDeg !== null && fertileEndDeg !== null && (
             <Path
               d={describeArc(cx, cy, r, fertileStartDeg, fertileEndDeg)}
               stroke="url(#fertileGradient)"

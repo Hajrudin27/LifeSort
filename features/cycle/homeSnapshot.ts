@@ -1,7 +1,8 @@
 import type { HomeSnapshot } from '@/core/modules/moduleRegistry';
 import { whenStoresHydrated } from '@/core/storage/storeHydration';
 import { useCycleStore } from '@/store/useCycleStore';
-import { getCurrentCycleDay, getDaysUntilNextPeriod } from '@/utils/cycle/cyclePredictions';
+import { getCurrentCycleDay, getDaysUntilNextPeriod, getPredictedNextPeriod } from '@/utils/cycle/cyclePredictions';
+import { toLocalIsoDate } from '@/utils/shared/localDate';
 
 /**
  * Cyklus-modulets kort til Home (APP-011).
@@ -29,13 +30,15 @@ export async function cycleHomeSnapshot(): Promise<HomeSnapshot | null> {
   }
 
   const daysUntilNext = getDaysUntilNextPeriod(state.cycles, state.avgCycleLength, now);
+  const predictedNext = getPredictedNextPeriod(state.cycles, state.avgCycleLength);
+  const predictionIsStale = predictedNext !== null && predictedNext < toLocalIsoDate(now);
 
   return {
     moduleId: 'cycle',
     titleKey: 'home.cycleSnapshotLabel',
     value: `${cycleDay}`,
-    helperKey: daysUntilNext !== null ? 'home.cycleSnapshotHelper' : 'home.cycleSnapshotMissing',
-    helperParams: daysUntilNext !== null ? { days: daysUntilNext } : undefined,
+    helperKey: predictionIsStale ? 'home.cycleSnapshotStale' : daysUntilNext !== null ? 'home.cycleSnapshotHelper' : 'home.cycleSnapshotMissing',
+    helperParams: !predictionIsStale && daysUntilNext !== null ? { days: daysUntilNext } : undefined,
     priority: 'normal',
     sensitivity: 'health',
     route: '/cycle',

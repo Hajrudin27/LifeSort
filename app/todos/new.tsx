@@ -18,6 +18,7 @@ import { useTodoStore } from "@/store/useTodoStore";
 import { useToastStore } from "@/store/useToastStore";
 import { TodoImportance } from "@/types/life";
 import { getPhaseForDate } from "@/utils/cycle/cycleInsights";
+import { getPredictedNextPeriod } from "@/utils/cycle/cyclePredictions";
 
 const IMPORTANCE_LEVELS: TodoImportance[] = ["low", "medium", "high"];
 
@@ -56,11 +57,13 @@ export default function NewTodoScreen() {
   const cycles = useCycleStore((s) => s.cycles);
   const avgCycleLength = useCycleStore((s) => s.avgCycleLength);
   const lutealPhaseLength = useCycleStore((s) => s.lutealPhaseLength);
+  const predictedNext = getPredictedNextPeriod(cycles, avgCycleLength);
+  const cyclePredictionIsStale = predictedNext !== null && predictedNext < toISODate(new Date());
 
   // Faseoplysningen vises, hvis brugeren har cyklus-modulet slået til — ikke
   // ud fra et køn (APP-020).
   const dueDatePhase =
-    cycleEnabled && dueDate
+    cycleEnabled && dueDate && !cyclePredictionIsStale
       ? getPhaseForDate(dueDate, cycles, avgCycleLength, 5, lutealPhaseLength)
       : null;
 

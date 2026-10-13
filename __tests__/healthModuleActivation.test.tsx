@@ -97,6 +97,19 @@ describe('the choice list (onboarding and Settings share it)', () => {
     expect(switchFor(t('modules.names.economy')).props.value).toBe(true);
   });
 
+  it('never lists an internal module, not even when a remote flag tries to promote it (real renderer: onboarding and Settings share this list)', async () => {
+    const shown = () => tree!.root.findAllByType(Switch).map((node) => node.props.accessibilityLabel as string);
+    for (const overrides of [{}, { pregnancy: 'available', gifts: 'available' }] as const) {
+      useModuleFlagsStore.setState({ overrides: { ...overrides } });
+      await render(<ModuleChoiceList />);
+      expect(shown()).toContain(t('modules.names.travel'));
+      expect(shown()).not.toContain(t('modules.names.pregnancy'));
+      expect(shown()).not.toContain(t('modules.names.gifts'));
+      expect(texts()).not.toContain(t('modules.descriptions.pregnancy'));
+      act(() => tree!.unmount()); tree = undefined;
+    }
+  });
+
   it('does not call a missing choice a stored one: nothing is written until the user acts', async () => {
     await render(<ModuleChoiceList />);
     expect(useEnabledModulesStore.getState().enablement).toEqual({});

@@ -35,7 +35,8 @@
     "documents": "Documents",
     "career": "Career",
     "gifts": "Gifts",
-    "cycle": "Cycle"
+    "cycle": "Cycle",
+    "pregnancy": "Pregnancy"
   },
   "descriptions": {
     "core-shell": "The app's core screens",
@@ -51,7 +52,8 @@
     "documents": "Your private documents, stored securely",
     "career": "Job applications and CV",
     "gifts": "Gift ideas, budgets and what you bought",
-    "cycle": "Cycle and symptoms"
+    "cycle": "Cycle and symptoms",
+    "pregnancy": "Pregnancy health tracking (internal rollout)"
   },
   "launcherTitle": "My modules",
   "launcherSubtitle": "Everything LifeSort helps you with",

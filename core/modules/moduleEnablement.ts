@@ -12,6 +12,8 @@
  */
 
 import { getModule, MODULE_IDS, type ModuleId, PLATFORM_MODULE_IDS } from './moduleRegistry';
+import { resolveModuleAvailability, type ModuleFlagOverrides } from '@/core/feature-flags/moduleFlags';
+import { evaluateModuleAccess, type ModuleViewer, PUBLIC_VIEWER } from './moduleAvailability';
 
 /** Brugerens valg pr. modul. Et modul der ikke står her, har standardværdien. */
 export type ModuleEnablement = Partial<Record<ModuleId, boolean>>;
@@ -29,6 +31,17 @@ export function canToggleModule(moduleId: ModuleId): boolean {
 
 /** Moduler brugeren kan vælge mellem. */
 export const TOGGLEABLE_MODULE_IDS = MODULE_IDS.filter(canToggleModule);
+
+/** Modules a normal module picker/launcher may reveal. Existing-data rights are
+ * evaluated separately; discovery never promotes an internal module. */
+export function discoverableToggleableModuleIds(
+  overrides: ModuleFlagOverrides = {},
+  viewer: ModuleViewer = PUBLIC_VIEWER,
+): ModuleId[] {
+  return TOGGLEABLE_MODULE_IDS.filter((id) =>
+    evaluateModuleAccess(resolveModuleAvailability(id, overrides), viewer).showInNavigation,
+  );
+}
 
 /**
  * Hvad et modul er, når brugeren aldrig har svaret (APP-071, ADR-0059).

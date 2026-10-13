@@ -80,6 +80,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0059](./0059-health-sensitive-modules-require-explicit-activation.md) | Health-sensitive modules require explicit activation | Accepted | 2026-10-13 | APP-071 |
 | [0060](./0060-health-notifications-are-generic-unless-rich-copy-is-explicitly-enabled.md) | Health notifications are generic unless rich copy is explicitly enabled | Accepted | 2026-10-13 | APP-073 |
 | [0061](./0061-clinical-reference-content-is-versioned-and-fails-closed.md) | Clinical reference content is versioned and fails closed | Accepted | 2026-10-13 | APP-074 |
+| [0062](./0062-pregnancy-is-an-isolated-encrypted-health-domain.md) | Pregnancy is an isolated encrypted health domain | Accepted | 2026-10-13 | APP-076 Phase A |
 
 ## When an ADR is required
 

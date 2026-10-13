@@ -76,5 +76,17 @@ export function resolveModuleAvailability(
   moduleId: ModuleId,
   overrides: ModuleFlagOverrides,
 ): ModuleAvailability {
-  return overrides[moduleId] ?? getModule(moduleId).availability;
+  const declared = getModule(moduleId).availability;
+  const requested = overrides[moduleId];
+  if (!requested) return declared;
+  // Registry maturity is a ceiling, not a remote promotion mechanism. A flag
+  // may close an internal/beta module further, but no malformed or premature
+  // remote row may make it public.
+  if (declared === 'internal' && !['internal', 'hidden', 'retired'].includes(requested)) return declared;
+  if (declared === 'beta' && !['beta', 'internal', 'hidden', 'retired'].includes(requested)) return declared;
+  if (declared === 'hidden' && !['hidden', 'retired'].includes(requested)) return declared;
+  // Maintenance never regains create/edit and a retired module never reopens through a flag: both are compiled decisions to narrow the module.
+  if (declared === 'maintenance' && !['maintenance', 'hidden', 'retired'].includes(requested)) return declared;
+  if (declared === 'retired' && requested !== 'retired') return declared;
+  return requested;
 }

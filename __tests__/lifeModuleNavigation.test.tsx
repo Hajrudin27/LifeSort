@@ -117,17 +117,14 @@ describe('Gifts on the Life module list', () => {
     expect(cardFor(t('modules.names.gifts'))).toBeUndefined();
   });
 
-  it('appears and routes to /gifts when effectively available and enabled', async () => {
+  it('does not appear when a remote flag attempts to promote an internal module', async () => {
     useModuleFlagsStore.setState({ overrides: { gifts: 'available' } });
     await render();
-    const card = cardFor(t('modules.names.gifts'));
-    expect(card).toBeDefined();
-    expect(texts()).toContain(t('modules.descriptions.gifts'));
-    act(() => card!.props.onPress());
-    expect(mockRouter.push).toHaveBeenCalledWith('/gifts');
+    expect(cardFor(t('modules.names.gifts'))).toBeUndefined();
+    expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
-  it('does not appear when the user has switched it off', async () => {
+  it('remains hidden when the user has switched it off', async () => {
     useModuleFlagsStore.setState({ overrides: { gifts: 'available' } });
     useEnabledModulesStore.setState({ enablement: { gifts: false } });
     await render();

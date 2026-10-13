@@ -30,6 +30,7 @@ export const MODULE_IDS = [
   'career',
   'gifts',
   'cycle',
+  'pregnancy',
 ] as const;
 
 export type ModuleId = (typeof MODULE_IDS)[number];
@@ -248,6 +249,16 @@ export const MODULE_REGISTRY: Record<ModuleId, ModuleDefinition> = {
     // Generisk som standard — en påmindelse må ikke afsløre en cyklus på
     // låseskærmen. Se specifikationen §9.2 og APP-073.
     notificationCategory: 'health',
+  },
+  pregnancy: {
+    // APP-076 registers the health boundary before any product route or store
+    // exists. Internal availability prevents public navigation.
+    id: 'pregnancy',
+    availability: 'internal',
+    titleKey: 'modules.names.pregnancy',
+    descriptionKey: 'modules.descriptions.pregnancy',
+    sensitivity: ['health'],
+    routeRoots: [],
   },
 };
 

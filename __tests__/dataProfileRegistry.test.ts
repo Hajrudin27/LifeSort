@@ -39,7 +39,7 @@ const BACKEND_ONLY_TABLES = [
 // calls .from() on them any more, yet rows from earlier releases may remain and the registry must still name them.
 // APP-058's trip_packing_compat_queue is likewise registered (it holds packing labels) although no client
 // can call it: it is server-only, temporary compatibility for pre-APP-058 clients.
-const MOBILE_ADJACENT_MIGRATION_TABLES = ['document_deletion_tombstones', 'global_recipes', 'job_applications', 'products', 'skills', 'trip_expense_links', 'trip_packing_compat_queue', 'trip_packing_template_applications'];
+const MOBILE_ADJACENT_MIGRATION_TABLES = ['document_deletion_tombstones', 'global_recipes', 'health_consents', 'job_applications', 'pregnancies', 'pregnancy_appointments', 'pregnancy_changes', 'pregnancy_consent_policies', 'pregnancy_mutation_receipts', 'pregnancy_settings', 'pregnancy_symptom_logs', 'pregnancy_sync_state', 'products', 'skills', 'trip_expense_links', 'trip_packing_compat_queue', 'trip_packing_template_applications'];
 
 // These are compile-time checks. If the discriminated profile contracts ever
 // accept these shapes, tsc will fail because the @ts-expect-error is unused.
@@ -213,13 +213,13 @@ describe('APP-027 logical domain contracts', () => {
       B: domainsByProfile('B').length,
       C: domainsByProfile('C').length,
       D: domainsByProfile('D').length,
-    }).toEqual({ A: 24, B: 9, C: 2, D: 6 });
+    }).toEqual({ A: 24, B: 10, C: 3, D: 6 });
   });
 });
 
 describe('APP-027 physical persistence surfaces', () => {
   it('has no duplicate physical surface ids and no dangling domain references', () => {
-    expect(PERSISTENCE_SURFACES).toHaveLength(100);
+    expect(PERSISTENCE_SURFACES).toHaveLength(111);
     expect(new Set(registeredSurfaceIds).size).toBe(PERSISTENCE_SURFACES.length);
 
     for (const surface of PERSISTENCE_SURFACES) {
@@ -240,7 +240,7 @@ describe('APP-027 physical persistence surfaces', () => {
 
   it('accounts for every current Zustand persist key', () => {
     const registeredZustandKeys = PERSISTENCE_SURFACES
-      .filter((surface) => surface.kind === 'async-storage')
+      .filter((surface) => surface.kind === 'async-storage' && surface.lifecycle !== 'planned')
       .map((surface) => surface.id.replace(/^async-storage:/, ''))
       .filter((key) => !['lifesort-verification-last-sent', 'supabase-session-web-or-legacy', 'lifesort-outbox', 'sync-status'].includes(key))
       .sort();

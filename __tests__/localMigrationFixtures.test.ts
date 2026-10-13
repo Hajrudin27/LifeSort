@@ -50,7 +50,8 @@ describe('APP-038 migration governance', () => {
   it('requires an explicit migration owner and policy for every device surface', () => {
     for (const surface of PERSISTENCE_SURFACES.filter((s) => s.location === 'device')) {
       expect(surface.migration).toBeDefined();
-      expect(fs.existsSync(path.join(__dirname, '..', surface.migration!.owner))).toBe(true);
+      // A planned surface (APP-076 Phase A) has no bytes and so no owner file yet; its owner must exist before its lifecycle can become 'implemented'.
+      if (surface.lifecycle !== 'planned') expect(fs.existsSync(path.join(__dirname, '..', surface.migration!.owner))).toBe(true);
       expect(surface.migration!.reason.length).toBeGreaterThan(20);
     }
   });

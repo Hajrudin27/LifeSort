@@ -81,6 +81,7 @@ export type DomainModule =
   | 'career'
   | 'gifts'
   | 'cycle'
+  | 'pregnancy'
   | 'shared';
 
 export type DomainRecord = {
@@ -632,6 +633,35 @@ export const DATA_DOMAINS = [
     evidence: ['store/useCycleStore.ts', 'supabase/migrations/20260904091630_add_health_info_content.sql'],
     ...profileD({ expectsLocalCopy: 'versioned-cache' }),
   },
+  {
+    id: 'pregnancy.user-health',
+    title: 'Pregnancy health data and encrypted mutation intent',
+    module: 'pregnancy',
+    description: 'APP-076 Phase A contract for Pregnancy records, logs, appointments, settings, consent state and later encrypted sync intent. No local payload is implemented or written until Phase B.',
+    storageSurfaces: [
+      'async-storage:lifesort-pregnancy',
+      'secure-store:lifesort-pregnancy-health-key',
+      'supabase-table:pregnancies',
+      'supabase-table:pregnancy_symptom_logs',
+      'supabase-table:pregnancy_appointments',
+      'supabase-table:pregnancy_settings',
+      'supabase-table:health_consents',
+      'supabase-table:pregnancy_mutation_receipts',
+      'supabase-table:pregnancy_sync_state',
+      'supabase-table:pregnancy_changes',
+    ],
+    evidence: ['types/pregnancy.ts', 'core/storage/pregnancyHealthStorageContract.ts'],
+    ...profileB({ expectsServerSync: true }),
+  },
+  {
+    id: 'pregnancy.consent-policy',
+    title: 'Pregnancy consent-policy configuration',
+    module: 'pregnancy',
+    description: 'Server-controlled supported policy identifiers and current-version status. This is not a user health-payload store and normal clients cannot write it.',
+    storageSurfaces: ['supabase-table:pregnancy_consent_policies'],
+    evidence: ['supabase/migrations/20261013140000_app076_pregnancy_foundation.sql'],
+    ...profileC(),
+  },
 ] as const satisfies readonly DomainRecord[];
 
 export type DataDomain = (typeof DATA_DOMAINS)[number];
@@ -661,6 +691,8 @@ export interface PersistenceSurface {
   location: 'device' | 'supabase' | 'bundle';
   containsDomains: readonly DataDomainId[];
   evidence: readonly string[];
+  /** A declared target contract is never evidence that bytes already exist. */
+  lifecycle?: 'implemented' | 'planned';
   migration?: LocalMigrationPolicy;
 }
 
@@ -672,8 +704,9 @@ function surface(
   containsDomains: readonly DataDomainId[],
   evidence: readonly string[],
   migration?: LocalMigrationPolicy,
+  lifecycle: PersistenceSurface['lifecycle'] = 'implemented',
 ): PersistenceSurface {
-  return { id, kind, label, location, containsDomains, evidence, migration };
+  return { id, kind, label, location, containsDomains, evidence, migration, lifecycle };
 }
 
 export const PERSISTENCE_SURFACES = [
@@ -706,11 +739,13 @@ export const PERSISTENCE_SURFACES = [
   surface('async-storage:lifesort-gifts', 'async-storage', 'Zustand key lifesort-gifts', 'device', ['gifts.gifts'], ['store/useGiftsStore.ts', 'core/gifts/persistedGift.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useGiftsStore.ts', reason: 'APP-069: greenfield and born at Zustand 0, so there is no historical shape and no transform. The store decodes every row on hydrate (core/gifts/persistedGift.ts) and a row that is not a recognisable gift is not rendered and is dropped on the next write; unreadable bytes or a newer payload fail closed at the migration gate.' }),
   surface('async-storage:lifesort-skill-categories', 'async-storage', 'Zustand key lifesort-skill-categories', 'device', ['career.skills'], ['store/useSkillCategoriesStore.ts'], { kind: 'external', currentVersion: 0, owner: 'store/useSkillCategoriesStore.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('async-storage:lifesort-cycle', 'async-storage', 'Encrypted Zustand key lifesort-cycle', 'device', ['cycle.user-health', 'cycle.reference-content'], ['store/useCycleStore.ts', 'core/storage/cycleHealthEncryptedStorage.ts'], { kind: 'external', currentVersion: 0, owner: 'core/storage/cycleHealthEncryptedStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
+  surface('async-storage:lifesort-pregnancy', 'async-storage', 'Planned encrypted Pregnancy ciphertext blob (Phase B)', 'device', ['pregnancy.user-health'], ['core/storage/pregnancyHealthStorageContract.ts'], { kind: 'external', currentVersion: 1, owner: 'Phase B Pregnancy encrypted adapter', reason: 'APP-076 Phase A reserves a separate v1 envelope/AAD/key boundary. No plaintext v0 exists and no bytes are read or written yet.' }, 'planned'),
   surface('async-storage:supabase-session-web-or-legacy', 'async-storage', 'Supabase session web fallback and legacy migration source', 'device', ['account.auth-session'], ['utils/auth/secureSessionStorage.ts'], { kind: 'external', owner: 'utils/auth/secureSessionStorage.ts', reason: 'Supabase-owned session JSON and specialized secure chunking/legacy move; no generic auth transforms.' }),
   surface('secure-store:supabase-session', 'secure-store', 'Supabase auth session in SecureStore', 'device', ['account.auth-session'], ['utils/auth/secureSessionStorage.ts'], { kind: 'external', owner: 'utils/auth/secureSessionStorage.ts', reason: 'Supabase-owned session JSON and specialized secure chunking/legacy move; no generic auth transforms.' }),
   surface('secure-store:lifesort-app-pin-hash', 'secure-store', 'App-lock PIN hash', 'device', ['account.app-lock'], ['utils/auth/pinAuth.ts'], { kind: 'external', owner: 'utils/auth/pinAuth.ts', reason: 'PIN verification upgrades legacy SHA-256 to PBKDF2 v2 using the supplied PIN; cannot run deterministically at startup.' }),
   surface('secure-store:lifesort-pin-lockout', 'secure-store', 'App-lock failed-attempt lockout counter', 'device', ['account.app-lock'], ['utils/auth/pinLockout.ts'], { kind: 'external', owner: 'utils/auth/pinLockout.ts', reason: 'Schema and hydration remain with the existing adapter; no feature schema migration in APP-038.' }),
   surface('secure-store:lifesort-cycle-health-key', 'secure-store', 'AES-GCM key for encrypted cycle health persistence', 'device', ['cycle.user-health'], ['core/storage/cycleHealthEncryptedStorage.ts'], { kind: 'immutable/no-schema', owner: 'core/storage/cycleHealthEncryptedStorage.ts', reason: 'Opaque crypto material; adapter owns creation and deletion, never generic transforms.' }),
+  surface('secure-store:lifesort-pregnancy-health-key', 'secure-store', 'Planned Pregnancy AES-GCM key (Phase B)', 'device', ['pregnancy.user-health'], ['core/storage/pregnancyHealthStorageContract.ts'], { kind: 'immutable/no-schema', owner: 'Phase B Pregnancy encrypted adapter', reason: 'Reserved separately from Cycle; no key is created in Phase A.' }, 'planned'),
   surface('secure-store:lifesort-document-cache-key', 'secure-store', 'AES-GCM key for encrypted document cache files and metadata', 'device', ['documents.files', 'economy.attachments', 'travel.attachments', 'warranties.attachments', 'career.applications', 'career.cv'], ['core/storage/documentCacheStorage.ts'], { kind: 'immutable/no-schema', owner: 'core/storage/documentCacheStorage.ts', reason: 'Opaque crypto material; adapter owns creation and deletion, never generic transforms.' }),
   surface('filesystem:document-directory/attachments', 'filesystem', 'Encrypted local attachment directory', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['utils/shared/attachmentStorage.ts', 'core/storage/documentCacheStorage.ts'], { kind: 'external', owner: 'core/storage/documentCacheStorage.ts', reason: 'Specialized AES-GCM v1 adapter owns plaintext legacy upgrade, key access and protected failure handling.' }),
   surface('filesystem:cache-directory/lifesort-decrypted-attachments', 'filesystem', 'Temporary decrypted attachment interoperability cache', 'device', ['economy.attachments', 'travel.attachments', 'warranties.attachments'], ['core/storage/documentCacheStorage.ts'], { kind: 'cleanup-only', owner: 'core/storage/documentCacheStorage.ts', reason: 'Ephemeral viewer/share files; adapter cleanup, never a migration backup.' }),
@@ -769,6 +804,15 @@ export const PERSISTENCE_SURFACES = [
   surface('supabase-table:cycles', 'supabase-table', 'public.cycles', 'supabase', ['cycle.user-health'], ['store/useCycleStore.ts']),
   surface('supabase-table:symptom_logs', 'supabase-table', 'public.symptom_logs', 'supabase', ['cycle.user-health'], ['store/useCycleStore.ts']),
   surface('supabase-table:cycle_settings', 'supabase-table', 'public.cycle_settings', 'supabase', ['cycle.user-health'], ['store/useCycleStore.ts']),
+  surface('supabase-table:pregnancies', 'supabase-table', 'public.pregnancies', 'supabase', ['pregnancy.user-health'], ['supabase/migrations/20261013140000_app076_pregnancy_foundation.sql']),
+  surface('supabase-table:pregnancy_symptom_logs', 'supabase-table', 'public.pregnancy_symptom_logs', 'supabase', ['pregnancy.user-health'], ['supabase/migrations/20261013140000_app076_pregnancy_foundation.sql']),
+  surface('supabase-table:pregnancy_appointments', 'supabase-table', 'public.pregnancy_appointments', 'supabase', ['pregnancy.user-health'], ['supabase/migrations/20261013140000_app076_pregnancy_foundation.sql']),
+  surface('supabase-table:pregnancy_settings', 'supabase-table', 'public.pregnancy_settings', 'supabase', ['pregnancy.user-health'], ['supabase/migrations/20261013140000_app076_pregnancy_foundation.sql']),
+  surface('supabase-table:health_consents', 'supabase-table', 'public.health_consents', 'supabase', ['pregnancy.user-health'], ['supabase/migrations/20261013140000_app076_pregnancy_foundation.sql']),
+  surface('supabase-table:pregnancy_mutation_receipts', 'supabase-table', 'Safe APP-076 mutation idempotency metadata; no payload', 'supabase', ['pregnancy.user-health'], ['supabase/migrations/20261013140000_app076_pregnancy_foundation.sql']),
+  surface('supabase-table:pregnancy_sync_state', 'supabase-table', 'Per-account APP-076 change-sequence allocator', 'supabase', ['pregnancy.user-health'], ['supabase/migrations/20261013140000_app076_pregnancy_foundation.sql']),
+  surface('supabase-table:pregnancy_changes', 'supabase-table', 'Payload-free APP-076 reconciliation change metadata', 'supabase', ['pregnancy.user-health'], ['supabase/migrations/20261013140000_app076_pregnancy_foundation.sql']),
+  surface('supabase-table:pregnancy_consent_policies', 'supabase-table', 'Server-controlled supported Pregnancy consent-policy configuration', 'supabase', ['pregnancy.consent-policy'], ['supabase/migrations/20261013140000_app076_pregnancy_foundation.sql']),
   surface('supabase-table:health_conditions', 'supabase-table', 'public.health_conditions', 'supabase', ['cycle.reference-content'], ['store/useCycleStore.ts']),
   surface('supabase-table:symptom_glossary', 'supabase-table', 'public.symptom_glossary', 'supabase', ['cycle.reference-content'], ['store/useCycleStore.ts']),
   surface('supabase-storage-bucket:attachments', 'supabase-storage-bucket', 'Storage bucket attachments', 'supabase', ['economy.attachments', 'warranties.attachments'], ['utils/shared/attachmentSync.ts', 'supabase/migrations/20260903075914_add_attachments_storage.sql']),

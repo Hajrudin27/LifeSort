@@ -4,10 +4,11 @@ import { StyleSheet, Switch, View } from 'react-native';
 import Card from '@/components/Card';
 import { Text, useThemeColor } from '@/components/Themed';
 import { useModuleAccess } from '@/core/feature-flags/useModuleAccess';
-import { TOGGLEABLE_MODULE_IDS } from '@/core/modules/moduleEnablement';
+import { discoverableToggleableModuleIds } from '@/core/modules/moduleEnablement';
 import { getModule, type ModuleId } from '@/core/modules/moduleRegistry';
 import { useModuleEnabled } from '@/core/modules/useModuleEnabled';
 import { useEnabledModulesStore } from '@/store/useEnabledModulesStore';
+import { useModuleFlagsStore } from '@/store/useModuleFlagsStore';
 
 /**
  * Listen over moduler, brugeren kan slå til og fra.
@@ -50,9 +51,11 @@ function ModuleRow({ moduleId }: { moduleId: ModuleId }) {
 }
 
 export default function ModuleChoiceList() {
+  const overrides = useModuleFlagsStore((s) => s.overrides);
+  const modules = discoverableToggleableModuleIds(overrides);
   return (
     <Card>
-      {TOGGLEABLE_MODULE_IDS.map((moduleId) => (
+      {modules.map((moduleId) => (
         <ModuleRow key={moduleId} moduleId={moduleId} />
       ))}
     </Card>

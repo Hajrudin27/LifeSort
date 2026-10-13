@@ -94,6 +94,7 @@ itself is APP-005 and is **not** implemented here.
 | `career` | `career` | available | `/career/*` | `useCareerStore`, `useCVStore`, `useSkillCategoriesStore` | ordinary, personal, document | Hajrudin Kardasevic |
 | `gifts` | `gifts` | internal — APP-069 delivers the local Gift planner; it merges dark and is activated by a separate change after manual QA | `/gifts/*` | `useGiftsStore` | personal, financial | Hajrudin Kardasevic |
 | `cycle` | `cycle` | available — a user chooses it: with no stored choice it is off, because its data is health data (APP-071, ADR-0059); gender does not decide it (see §8-F2) | `/cycle`, `/cycle/*` | `useCycleStore` | health | Hajrudin Kardasevic |
+| `pregnancy` | `pregnancy` | internal — APP-076 Phase A registers only contracts; no route, store, public tab, content, notification or data entry is implemented | – | – | health | Hajrudin Kardasevic |
 
 <!-- inventory:modules:end -->
 
@@ -107,7 +108,7 @@ carries the same classification, and a test keeps the two in step.
 
 | Spec `ModuleId` | State in repo |
 | --- | --- |
-| `pregnancy` | Not implemented. |
+| `pregnancy` | Internal Phase A foundation only; no user-facing implementation. |
 
 ## §2 Route inventory
 
@@ -463,7 +464,7 @@ later story.
 | --- | --- | --- | --- |
 | F1 | ~~Health data is persisted in plain AsyncStorage.~~ **Closed by APP-028.** | `store/useCycleStore.ts` now uses `core/storage/cycleHealthEncryptedStorage.ts`, which writes an AES-GCM envelope to `lifesort-cycle` and keeps the key material in SecureStore. | APP-028 |
 | F2 | ~~Reproductive-health visibility is gated on gender.~~ **Closed by APP-020 (the gate) and APP-071 (the default).** | `app/(tabs)/_layout.tsx` uses `useModuleEnabled('cycle')`; `core/modules/moduleEnablement.ts` `defaultModuleEnabled` makes a module classified `health` off until chosen; `__tests__/noGenderInference.test.ts` forbids any other reader of the gender field. The `/cycle` routes stay reachable directly, because a user's choice is a filter (ADR-0010). **APP-073** also cancels the stable Cycle reminder when Cycle is disabled, without deleting data or reminder preferences. Cycle reminders are generic by default; rich lock-screen copy is an explicit, device-local, encrypted opt-in that is never synced. | APP-071, APP-073 |
-| F3 | Module ids in the repo do not match the spec `ModuleId` union. | Repo uses `tasks` (todos) and the platform-level `core-shell` / `account`; the spec union has no `tasks` and omits shell/account. `documents` and `pregnancy` have no implementation. (`gifts` has one since APP-069, internal.) | APP-009 |
+| F3 | Module ids in the repo do not match the spec `ModuleId` union. | Repo uses `tasks` (todos) and the platform-level `core-shell` / `account`; the spec union has no `tasks` and omits shell/account. `documents` has no implementation. `pregnancy` has only the internal APP-076 Phase A contracts: no route, store, screen or data entry. (`gifts` has one since APP-069, internal.) | APP-009 |
 | F4 | Home imports eleven domain stores directly. | `app/(tabs)/index.tsx` references `useCycleStore`, `useExpensesStore`, `useFoodStore`, `useHabitsStore`, `useHouseholdStore`, `useIncomeStore`, `useProfileStore`, `useSavingsGoalsStore`, `useTodoStore`, `useTripsStore`, `useWarrantiesStore`. | APP-011 |
 | F5 | Cross-module store import outside Home. | `app/todos/new.tsx` reads `useCycleStore` (health data) inside the `tasks` module; `app/(tabs)/economy.tsx` reads `useFoodStore`, `useTripsStore` and `useWarrantiesStore`. | APP-003, APP-039 |
 | F6 | Search reads five domain stores directly. | `app/search.tsx` references `useExpensesStore`, `useHabitsStore`, `useLifeGoalsStore`, `useTodoStore`, `useWarrantiesStore`. | APP-077 |

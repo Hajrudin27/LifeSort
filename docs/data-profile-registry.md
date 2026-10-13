@@ -58,7 +58,7 @@ or production CRUD flow changes. Runtime execution remains deferred.
 
 ## Logical Domains
 
-Counts are enforced in tests: **A = 24, B = 9, C = 2, D = 6, total = 41**.
+Counts are enforced in tests: **A = 24, B = 10, C = 3, D = 6, total = 43**.
 
 | Domain | Profile | Module | Current physical surfaces | Notes |
 | --- | --- | --- | --- | --- |
@@ -103,16 +103,19 @@ Counts are enforced in tests: **A = 24, B = 9, C = 2, D = 6, total = 41**.
 | `gifts.gifts` | A | gifts | `async-storage:lifesort-gifts` | APP-069: one flat gift per row — a person label (typed, or copied one way from a single iOS contact the user picked; APP-070: no contact id or record is kept), an idea, an optional occasion label and date, an optional planned budget and, once purchased, the purchase date and an optional paid amount (DKK minor units). Module sensitivity: personal, financial. Person labels are third-party personal data and the amounts are personal financial planning values, which does **not** make the domain Profile B under the current data contracts: nothing here is health, a document or a credential. **Local-only**: no server sync is expected or performed, there is no table, and a backup file (format 14, through the injected participant seam) is the only recovery. See [ADR-0056](./adr/0056-gifts-are-a-flat-device-local-list-that-joins-backups-through-an-injected-participant.md). |
 | `cycle.user-health` | B | cycle | `async-storage:lifesort-cycle`, `secure-store:lifesort-cycle-health-key`, `supabase-table:cycles`, `supabase-table:symptom_logs`, `supabase-table:cycle_settings` | Health/cycle data encrypted at rest by APP-028. |
 | `cycle.reference-content` | D | cycle | `async-storage:lifesort-cycle`, `supabase-table:health_conditions`, `supabase-table:symptom_glossary` | APP-074 governed global health reference content. Physical encrypted cache may remain in the mixed Cycle key, but a non-persisted session gate makes it non-renderable until a complete published/unexpired refresh succeeds. |
+| `pregnancy.user-health` | B | pregnancy | `async-storage:lifesort-pregnancy` (planned), `secure-store:lifesort-pregnancy-health-key` (planned), `supabase-table:pregnancies`, `supabase-table:pregnancy_symptom_logs`, `supabase-table:pregnancy_appointments`, `supabase-table:pregnancy_settings`, `supabase-table:health_consents`, `supabase-table:pregnancy_mutation_receipts`, `supabase-table:pregnancy_sync_state`, `supabase-table:pregnancy_changes` | APP-076 Phase A contract. Local Pregnancy bytes, key and encrypted queue are not implemented or written yet; Phase B must provide the isolated encrypted adapter before a client write path exists. Receipts and change records are server-only, payload-free reconciliation metadata. |
+| `pregnancy.consent-policy` | C | pregnancy | `supabase-table:pregnancy_consent_policies` | Server-controlled supported/current policy identifiers. No active production policy is seeded by APP-076; normal clients cannot write this configuration. |
 
 ## Physical Surfaces
 
-The code-level registry is the exhaustive machine-readable mobile list: **99
+The code-level registry is the exhaustive machine-readable mobile list: **111
 physical persistence surfaces**. Its tests prove
 that it covers every current Zustand persist key, every direct AsyncStorage key
 outside Zustand that belongs to this app, every client-referenced Supabase table,
 the explicitly mobile-adjacent global catalogue tables, every known mobile
 Supabase Storage bucket, and the filesystem/SecureStore surfaces that exist in
-source.
+source. Two Phase A Pregnancy device entries are explicitly marked **planned**,
+not implemented, so the inventory cannot be mistaken for evidence of local data.
 
 The important physical distinction for APP-027 is that surfaces can contain
 several logical domains:

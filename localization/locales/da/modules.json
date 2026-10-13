@@ -35,7 +35,8 @@
     "documents": "Dokumenter",
     "career": "Karriere",
     "gifts": "Gaver",
-    "cycle": "Cyklus"
+    "cycle": "Cyklus",
+    "pregnancy": "Graviditet"
   },
   "descriptions": {
     "core-shell": "Appens grundlæggende skærme",
@@ -51,7 +52,8 @@
     "documents": "Dine private dokumenter, gemt sikkert",
     "career": "Jobansøgninger og CV",
     "gifts": "Gaveidéer, budgetter og hvad du har købt",
-    "cycle": "Cyklus og symptomer"
+    "cycle": "Cyklus og symptomer",
+    "pregnancy": "Graviditetssporing (intern udrulning)"
   },
   "launcherTitle": "Mine moduler",
   "launcherSubtitle": "Alt det, LifeSort hjælper dig med",

@@ -16,22 +16,22 @@ import {
 /**
  * APP-072 - health storage profile.
  *
- * 1. The binding rule for every health-sensitive module, today Cycle and, when APP-076 introduces it,
- *    Pregnancy: it must own at least one Profile B domain and every device surface carrying that
- *    domain must require encryption. Pregnancy is not implemented and nothing here creates it; the day
- *    it gets a `health` ModuleId this test fails until it has a proper Profile B contract.
+ * 1. The binding rule for every health-sensitive module, today Cycle and Pregnancy (APP-076 Phase A): it must own at
+ *    least one Profile B domain and every device surface carrying that domain must require encryption. Pregnancy's
+ *    device surfaces are only PLANNED (no store, key or bytes exist), so they satisfy the rule only while the module is
+ *    `internal`; promoting it beyond internal fails here until a surface is implemented.
  * 2. iOS device-backup posture: the encrypted Cycle store is relied on to stay out of iOS backup.
  */
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 
 type Domain = { id: string; module: string; profile: string };
-type Surface = { id: string; location: string; containsDomains: readonly string[] };
+type Surface = { id: string; location: string; containsDomains: readonly string[]; lifecycle?: 'implemented' | 'planned' };
 type ProtectionOf = (surface: Surface) => { protection: string; plaintextAllowed: boolean };
 
 /** Returns one message per violation; the real registry must return none. */
 function healthStorageViolations(
-  modules: Record<string, Pick<ModuleDefinition, 'sensitivity'>>,
+  modules: Record<string, Pick<ModuleDefinition, 'sensitivity'> & Partial<Pick<ModuleDefinition, 'availability'>>>,
   domains: readonly Domain[],
   surfaces: readonly Surface[],
   protectionOf: ProtectionOf,
@@ -47,6 +47,8 @@ function healthStorageViolations(
     for (const domain of profileB) {
       const local = surfaces.filter((surface) => surface.location === 'device' && surface.containsDomains.includes(domain.id));
       if (local.length === 0) violations.push(`${domain.id}: no local persistence surface registered`);
+      // A planned surface is a contract, not bytes: it may stand in for a real store only while the module is internal.
+      else if (local.every((surface) => surface.lifecycle === 'planned') && definition.availability !== 'internal') violations.push(`${domain.id}: only planned local surfaces, but ${moduleId} is not internal`);
       for (const surface of local) {
         const { protection, plaintextAllowed } = protectionOf(surface);
         if (protection !== 'encrypted-required' || plaintextAllowed) violations.push(`${surface.id}: carries ${domain.id} without requiring encryption`);
@@ -102,6 +104,24 @@ describe('APP-072 every health-sensitive module has a Profile B encrypted local 
         .toEqual(['async-storage:p: carries pregnancy.log without requiring encryption']);
     });
 
+    it('lets a planned surface stand in only while the module is internal', () => {
+      const planned = (id: string, domain: string): Surface => ({ ...device(id, domain), lifecycle: 'planned' });
+      const domains = [{ id: 'pregnancy.log', module: 'pregnancy', profile: 'B' }];
+      const internal = { pregnancy: { sensitivity: ['health'] as ModuleDefinition['sensitivity'], availability: 'internal' as const } };
+      expect(healthStorageViolations(internal, domains, [planned('async-storage:p', 'pregnancy.log')], encrypted)).toEqual([]);
+      for (const availability of ['hidden', 'beta', 'available', 'maintenance', 'retired'] as const) {
+        expect(healthStorageViolations({ pregnancy: { ...internal.pregnancy, availability } }, domains, [planned('async-storage:p', 'pregnancy.log')], encrypted))
+          .toEqual(['pregnancy.log: only planned local surfaces, but pregnancy is not internal']);
+      }
+      // A missing availability is treated strictly, and a planned surface still has to demand encryption.
+      expect(healthStorageViolations(health, domains, [planned('async-storage:p', 'pregnancy.log')], encrypted)).toHaveLength(1);
+      const plaintext: ProtectionOf = () => ({ protection: 'plaintext-allowed', plaintextAllowed: true });
+      expect(healthStorageViolations(internal, domains, [planned('async-storage:p', 'pregnancy.log')], plaintext))
+        .toEqual(['async-storage:p: carries pregnancy.log without requiring encryption']);
+      // One implemented surface alongside a planned one is a real store.
+      expect(healthStorageViolations({ pregnancy: { ...internal.pregnancy, availability: 'available' } }, domains, [planned('async-storage:p', 'pregnancy.log'), device('async-storage:q', 'pregnancy.log')], encrypted)).toEqual([]);
+    });
+
     it('passes a complete contract', () => {
       expect(healthStorageViolations(health, [{ id: 'pregnancy.log', module: 'pregnancy', profile: 'B' }], [device('async-storage:p', 'pregnancy.log')], encrypted)).toEqual([]);
     });
@@ -111,10 +131,14 @@ describe('APP-072 every health-sensitive module has a Profile B encrypted local 
     });
   });
 
-  it('introduces no Pregnancy product: no module, domain or surface exists yet (APP-076)', () => {
-    expect(Object.keys(MODULE_REGISTRY).filter((id) => /pregnan/i.test(id))).toEqual([]);
-    expect(DATA_DOMAINS.filter((domain) => /pregnan/i.test(domain.id) || /pregnan/i.test(domain.module))).toEqual([]);
-    expect(PERSISTENCE_SURFACES.filter((surface) => /pregnan/i.test(surface.id))).toEqual([]);
+  it('registers only the Phase A Pregnancy boundary, not a product store or route', () => {
+    expect(MODULE_REGISTRY.pregnancy).toMatchObject({ availability: 'internal', sensitivity: ['health'], routeRoots: [] });
+    expect(getDataDomain('pregnancy.user-health')).toMatchObject({ profile: 'B', plaintextLocalPersistenceAllowed: false });
+    for (const id of ['async-storage:lifesort-pregnancy', 'secure-store:lifesort-pregnancy-health-key']) {
+      expect(localStorageProtectionForSurface(id)).toBe('encrypted-required');
+      expect(localPlaintextPersistenceAllowedForSurface(id)).toBe(false);
+      expect(PERSISTENCE_SURFACES.find((surface) => surface.id === id)?.lifecycle).toBe('planned');
+    }
     expect(fs.existsSync(path.join(REPO_ROOT, 'store', 'usePregnancyStore.ts'))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, 'app', 'pregnancy'))).toBe(false);
   });

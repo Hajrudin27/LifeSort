@@ -1,5 +1,6 @@
 import {
   canToggleModule,
+  discoverableToggleableModuleIds,
   defaultModuleEnabled,
   enabledModuleIds,
   isModuleEnabled,
@@ -7,7 +8,8 @@ import {
   parseModuleEnablementRows,
   TOGGLEABLE_MODULE_IDS,
 } from '@/core/modules/moduleEnablement';
-import { evaluateModuleAccess } from '@/core/modules/moduleAvailability';
+import { resolveModuleAvailability } from '@/core/feature-flags/moduleFlags';
+import { evaluateModuleAccess, MODULE_AVAILABILITY_STATES, type ModuleAvailability, PUBLIC_VIEWER } from '@/core/modules/moduleAvailability';
 import {
   getModule,
   type ModuleDefinition,
@@ -47,9 +49,10 @@ describe('standardværdien', () => {
 });
 
 describe('APP-071 — et helbredsmodul kræver et eksplicit valg', () => {
-  it('Cyklus er et helbredsmodul, og det er den eneste i dag', () => {
+  it('Cyklus og Graviditet er helbredsmoduler, og de er de eneste i dag', () => {
     // Ændres det, skal det være bevidst: det flytter, hvem der har et helbredsmodul slået til.
-    expect(HEALTH_MODULE_IDS).toEqual(['cycle']);
+    // Graviditet (APP-076 fase A) er intern og arver reglen af sin klassificering; den har ingen skærm endnu.
+    expect(HEALTH_MODULE_IDS).toEqual(['cycle', 'pregnancy']);
   });
 
   it('standarden følger registrets klassificering for hvert eneste modul', () => {
@@ -211,5 +214,75 @@ describe('valget og modenhed er to forskellige spørgsmål', () => {
     const access = evaluateModuleAccess(getModule('food').availability);
     expect(access.canOpenModule).toBe(true);
     expect(isModuleEnabled('food', { food: false })).toBe(false);
+  });
+});
+
+describe('public module discovery respects the registry maturity ceiling', () => {
+  it('hides every internal module while retaining ordinary released choices', () => {
+    const visible = discoverableToggleableModuleIds();
+    expect(visible).not.toContain('pregnancy');
+    expect(visible).not.toContain('gifts');
+    expect(visible).toContain('travel');
+  });
+
+  it('cannot promote an internal module through a remote flag, but can restrict a released one', () => {
+    expect(discoverableToggleableModuleIds({ pregnancy: 'available', gifts: 'beta' })).not.toEqual(expect.arrayContaining(['pregnancy', 'gifts']));
+    expect(discoverableToggleableModuleIds({ travel: 'hidden' })).not.toContain('travel');
+  });
+});
+
+describe('the shared evaluator treats registry maturity as a ceiling for EVERY declared state', () => {
+  const CAPABILITIES = ['showInNavigation', 'canOpenModule', 'canViewExistingData', 'canCreate', 'canEdit'] as const;
+  const VIEWERS = [PUBLIC_VIEWER, { isInternalUser: false, isBetaTester: true }, { isInternalUser: true, isBetaTester: false }];
+
+  /** Economy is only the carrier: its declared state is set for one assertion and restored. */
+  const withDeclared = (declared: ModuleAvailability, run: () => void) => {
+    const definition = MODULE_REGISTRY.economy as { availability: ModuleAvailability };
+    const original = definition.availability;
+    definition.availability = declared;
+    try { run(); } finally { definition.availability = original; }
+  };
+
+  it('never grants a viewer any capability the declared state withholds, whatever the remote flag says', () => {
+    const violations: string[] = [];
+    for (const declared of MODULE_AVAILABILITY_STATES) {
+      withDeclared(declared, () => {
+        for (const requested of MODULE_AVAILABILITY_STATES) {
+          const effective = resolveModuleAvailability('economy', { economy: requested });
+          VIEWERS.forEach((viewer, index) => {
+            const ceiling = evaluateModuleAccess(declared, viewer);
+            const actual = evaluateModuleAccess(effective, viewer);
+            for (const capability of CAPABILITIES) {
+              if (actual[capability] && !ceiling[capability]) violations.push(`${declared} + remote ${requested} => ${effective}: viewer#${index} gains ${capability}`);
+            }
+          });
+        }
+      });
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it('keeps a retired module retired and a maintenance module without create/edit', () => {
+    withDeclared('retired', () => {
+      for (const requested of MODULE_AVAILABILITY_STATES) expect(resolveModuleAvailability('economy', { economy: requested })).toBe('retired');
+    });
+    withDeclared('maintenance', () => {
+      expect(resolveModuleAvailability('economy', { economy: 'available' })).toBe('maintenance');
+      expect(resolveModuleAvailability('economy', { economy: 'beta' })).toBe('maintenance');
+      expect(resolveModuleAvailability('economy', { economy: 'retired' })).toBe('retired');
+    });
+    // The flag still restricts a released module, so the kill switch keeps working.
+    withDeclared('available', () => {
+      for (const requested of MODULE_AVAILABILITY_STATES) expect(resolveModuleAvailability('economy', { economy: requested })).toBe(requested);
+    });
+  });
+
+  it('no flag promotes any currently internal module (Pregnancy, Gifts) beyond internal', () => {
+    for (const moduleId of ['pregnancy', 'gifts'] as const) {
+      expect(MODULE_REGISTRY[moduleId].availability).toBe('internal');
+      for (const requested of ['beta', 'available', 'maintenance'] as const) {
+        expect(resolveModuleAvailability(moduleId, { [moduleId]: requested })).toBe('internal');
+      }
+    }
   });
 });

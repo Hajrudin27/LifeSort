@@ -6,6 +6,7 @@ import { parseModuleFlags, resolveModuleAvailability } from '@/core/feature-flag
 import { evaluateModuleAccess } from '@/core/modules/moduleAvailability';
 import {
   canToggleModule,
+  discoverableToggleableModuleIds,
   enabledModuleIds,
   isModuleEnabled,
   parseModuleEnablementRows,
@@ -87,11 +88,11 @@ describe('internal availability behaves as the existing module architecture says
     expect(read('core/modules/moduleAvailability.ts')).toContain('isInternalUser: false');
   });
 
-  it('can be activated or killed by the existing remote flag, with no new code', () => {
+  it('can be restricted by the existing remote flag but can never be publicly promoted', () => {
     expect(resolveModuleAvailability('gifts', {})).toBe('internal');
     expect(parseModuleFlags([{ module_id: 'gifts', availability: 'available' }])).toEqual({ gifts: 'available' });
-    expect(resolveModuleAvailability('gifts', { gifts: 'available' })).toBe('available');
-    expect(evaluateModuleAccess(resolveModuleAvailability('gifts', { gifts: 'maintenance' }))).toMatchObject({ canViewExistingData: true, canCreate: false, canExportData: true });
+    expect(resolveModuleAvailability('gifts', { gifts: 'available' })).toBe('internal');
+    expect(evaluateModuleAccess(resolveModuleAvailability('gifts', { gifts: 'maintenance' }))).toMatchObject({ canViewExistingData: false, canCreate: false, canExportData: true });
   });
 
   it('does not depend on Economy: switching Economy off, or killing it, changes nothing for Gifts', () => {
@@ -100,8 +101,8 @@ describe('internal availability behaves as the existing module architecture says
       { module_id: 'gifts', availability: 'available' },
     ]);
     expect(resolveModuleAvailability('economy', overrides)).toBe('retired');
-    expect(resolveModuleAvailability('gifts', overrides)).toBe('available');
-    expect(evaluateModuleAccess(resolveModuleAvailability('gifts', overrides))).toMatchObject({ canOpenModule: true, canCreate: true });
+    expect(resolveModuleAvailability('gifts', overrides)).toBe('internal');
+    expect(evaluateModuleAccess(resolveModuleAvailability('gifts', overrides))).toMatchObject({ canOpenModule: false, canCreate: false });
     expect(isModuleEnabled('gifts', { economy: false })).toBe(true);
     expect(moduleForPath('/gifts/new')).toBe('gifts');
     expect(moduleForPath('/economy')).toBe('economy');
@@ -142,8 +143,8 @@ describe('the module launcher', () => {
     expect(launcher).toContain("gifts: '/gifts',");
   });
 
-  it('has an icon and a route for EVERY toggleable module, so no module is a launcher dead end', () => {
-    for (const id of TOGGLEABLE_MODULE_IDS) {
+  it('has an icon and a route for every publicly discoverable module, so no public launcher item is a dead end', () => {
+    for (const id of discoverableToggleableModuleIds()) {
       expect({ id, icon: iconKeys.includes(id), route: routeKeys.includes(id) }).toEqual({ id, icon: true, route: true });
     }
   });

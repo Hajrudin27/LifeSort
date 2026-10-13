@@ -608,7 +608,7 @@ export const DATA_DOMAINS = [
     id: 'cycle.user-health',
     title: 'Cycle health data',
     module: 'cycle',
-    description: 'Cycle dates, symptom logs, free-text notes, prediction settings and reminder preferences.',
+    description: 'Cycle dates, symptom logs, free-text notes, prediction settings, reminder preferences, and the device-local explicit rich lock-screen copy consent (never synced).',
     storageSurfaces: [
       'async-storage:lifesort-cycle',
       'secure-store:lifesort-cycle-health-key',

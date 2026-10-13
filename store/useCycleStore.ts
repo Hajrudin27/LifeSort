@@ -74,6 +74,7 @@ interface CycleState {
   lutealPhaseLength: number;
   reminderEnabled: boolean;
   reminderDaysBefore: number;
+  richNotificationCopyEnabled: boolean;
 
   // Admin-styret, globalt indhold — samme for alle brugere, ingen user_id-filter.
   healthConditions: HealthConditionRecord[];
@@ -91,6 +92,7 @@ interface CycleState {
   setLutealPhaseLength: (days: number) => void;
   setReminderEnabled: (enabled: boolean) => void;
   setReminderDaysBefore: (days: number) => void;
+  setRichNotificationCopyEnabled: (enabled: boolean) => void;
 
   fetchFromSupabase: () => Promise<void>;
   /**
@@ -109,6 +111,7 @@ export const useCycleStore = create<CycleState>()(
       lutealPhaseLength: 14,
       reminderEnabled: false,
       reminderDaysBefore: 1,
+      richNotificationCopyEnabled: false,
       healthConditions: [],
       symptomGlossary: [],
 
@@ -179,6 +182,11 @@ export const useCycleStore = create<CycleState>()(
         const accountId = initiatingAccountId();
         set({ reminderDaysBefore: days });
         void syncCycleSettings(accountId, { reminder_days_before: days });
+      },
+      // APP-073 / ADR-0060: lock-screen disclosure is a DEVICE choice. It is never written to or read from
+      // the cloud, so no fetch can enable it and one device's opt-in never reaches another.
+      setRichNotificationCopyEnabled: (enabled) => {
+        set({ richNotificationCopyEnabled: enabled });
       },
 
       fetchFromSupabase: async () => {
@@ -286,6 +294,7 @@ export const useCycleStore = create<CycleState>()(
           lutealPhaseLength: 14,
           reminderEnabled: false,
           reminderDaysBefore: 1,
+          richNotificationCopyEnabled: false,
         });
       },
     }),

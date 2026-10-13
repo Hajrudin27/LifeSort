@@ -168,6 +168,7 @@ jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
   getPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  IosAuthorizationStatus: { PROVISIONAL: 3 },
   SchedulableTriggerInputTypes: { DATE: 'date' },
 }));
 

@@ -112,6 +112,7 @@ beforeEach(async () => {
     lutealPhaseLength: 14,
     reminderEnabled: false,
     reminderDaysBefore: 1,
+    richNotificationCopyEnabled: false,
     healthConditions: [],
     symptomGlossary: [],
   });
@@ -123,6 +124,34 @@ describe('APP-072 Cycle fetch is retired with its account and dataset', () => {
     expect(store().cycles.map((c) => c.id)).toEqual(['remote-cycle']);
     expect(store().symptomLogs.map((l) => l.notes)).toEqual([SENTINEL_NOTE]);
     expect(store().avgCycleLength).toBe(31);
+    // APP-073: rich lock-screen consent is device-local; a fetch never touches it.
+    expect(store().richNotificationCopyEnabled).toBe(false);
+  });
+
+  it('never lets any server value enable rich lock-screen copy, and never reverts a local choice', async () => {
+    for (const remote of [true, 'true', 1, {}, null]) {
+      mockTables = { ...serverRows(), cycle_settings: { ...serverRows().cycle_settings, rich_notification_copy_enabled: remote } };
+      useCycleStore.setState({ richNotificationCopyEnabled: false });
+      await store().fetchFromSupabase();
+      expect(store().richNotificationCopyEnabled).toBe(false);
+    }
+    // An explicit local opt-in is likewise neither downgraded nor otherwise changed by a fetch.
+    useCycleStore.setState({ richNotificationCopyEnabled: true });
+    mockTables = serverRows();
+    await store().fetchFromSupabase();
+    expect(store().richNotificationCopyEnabled).toBe(true);
+  });
+
+  it('keeps an opt-out made while a fetch was in flight', async () => {
+    useCycleStore.setState({ richNotificationCopyEnabled: true });
+    mockTables = { ...serverRows(), cycle_settings: { ...serverRows().cycle_settings, rich_notification_copy_enabled: true } };
+    const release = gate('query');
+    const pending = store().fetchFromSupabase();
+    await settle();
+    store().setRichNotificationCopyEnabled(false);
+    release();
+    await pending;
+    expect(store().richNotificationCopyEnabled).toBe(false);
   });
 
   it('does nothing without a signed-in account', async () => {
@@ -224,6 +253,7 @@ describe('APP-072 clearLocal', () => {
       lutealPhaseLength: 11,
       reminderEnabled: true,
       reminderDaysBefore: 4,
+      richNotificationCopyEnabled: true,
       healthConditions: [condition],
       symptomGlossary: [term],
     });
@@ -237,6 +267,7 @@ describe('APP-072 clearLocal', () => {
       lutealPhaseLength: 14,
       reminderEnabled: false,
       reminderDaysBefore: 1,
+      richNotificationCopyEnabled: false,
       healthConditions: [condition],
       symptomGlossary: [term],
     });
@@ -325,6 +356,15 @@ describe('APP-072 Cycle writes are bound to the account that acted', () => {
     mockSessionUser = B; // in-memory state still says A
     store().startPeriod('2031-04-01');
     await settle();
+    expect(mockCalls).toEqual([]);
+  });
+});
+
+describe('APP-073 rich lock-screen consent is device-local', () => {
+  it('is never sent to the server, even with a live session', async () => {
+    store().setRichNotificationCopyEnabled(true);
+    await settle();
+    expect(store().richNotificationCopyEnabled).toBe(true);
     expect(mockCalls).toEqual([]);
   });
 });

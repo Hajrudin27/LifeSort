@@ -130,17 +130,16 @@ that all schedule a local notification at a date derived from an entity.
 | Guards against a past date | yes | yes | yes | yes |
 | Time of day | 09:00 | own rule | own rule | own rule |
 
-**Consequence:** `scheduleCycleReminder` never requests notification permission.
-It works today only because `scheduleIncomeReminder` runs at app start and asks
-first. Remove or defer the income reminder and cycle reminders silently stop
-being delivered — a health feature failing quietly because of an unrelated
-module's side effect. This is the accidental coupling a shared primitive
-prevents.
+**Consequence:** the Cycle adapter never requests notification permission. APP-073
+can safely cancel and refresh its stable request without a prompt, and schedules
+only when permission is already available. Central permission ownership remains
+the future shared primitive's job; Cycle must not again depend on Income asking
+first.
 
-**Plan (APP-079/APP-080):** one `core/notifications` reminder service owning
-permission, stable identifiers, timezone and DST handling, and cancellation.
-Migrate cycle first, because it is the one that is actually broken, and because
-its copy is also the one that must become privacy-safe in APP-073.
+**APP-073:** Cycle keeps a focused adapter: its stable legacy identifier is sanitized
+at startup, its copy is generic unless the user explicitly opts in on this device (device-local consent, never synced), and it schedules only for a live owning account with the Cycle module enabled. This is deliberately
+not a platform. **Plan (APP-079/APP-080):** one `core/notifications` reminder service
+owning permission, stable identifiers, timezone/DST handling, and cancellation.
 
 ## 5. `AttachmentRef` — two types, and they behave differently
 

@@ -38,6 +38,7 @@ import {
 import { clearVerification } from "@/core/auth/reauth";
 import { parseRecoveryLink } from "@/core/auth/recoveryLink";
 import { useRecordModuleVisit } from "@/core/modules/useModuleVisit";
+import { useModuleEnabled } from '@/core/modules/useModuleEnabled';
 import "@/localization/i18n";
 import i18n from "@/localization/i18n";
 import { useAppLockStore } from "@/store/useAppLockStore";
@@ -61,6 +62,8 @@ import { useTodoStore } from "@/store/useTodoStore";
 import { useTripsStore } from "@/store/useTripsStore";
 import { useWarrantiesStore } from "@/store/useWarrantiesStore";
 import { scheduleIncomeReminder } from "@/utils/expense/incomeReminder";
+import { getPredictedNextPeriod } from '@/utils/cycle/cyclePredictions';
+import { refreshCycleReminder } from '@/utils/cycle/cycleReminder';
 
 export { ErrorBoundary } from "expo-router";
 
@@ -151,6 +154,13 @@ function ReadyRootLayout() {
   const fetchEnabledModules = useEnabledModulesStore(
     (s) => s.fetchFromSupabase,
   );
+  const cycleModuleEnabled = useModuleEnabled('cycle');
+  const cycleEntries = useCycleStore((s) => s.cycles);
+  const cycleAverageLength = useCycleStore((s) => s.avgCycleLength);
+  const cycleReminderEnabled = useCycleStore((s) => s.reminderEnabled);
+  const cycleReminderDaysBefore = useCycleStore((s) => s.reminderDaysBefore);
+  const richCycleNotificationCopyEnabled = useCycleStore((s) => s.richNotificationCopyEnabled);
+  const [cycleReminderReady, setCycleReminderReady] = useState(false);
 
   const appLockHasHydrated = useAppLockStore((s) => s.hasHydrated);
   const lockEnabled = useAppLockStore((s) => s.lockEnabled);
@@ -215,6 +225,51 @@ function ReadyRootLayout() {
       fetchEnabledModules();
     }
   }, [session?.user.id]);
+
+  // APP-073: hydrate the protected Cycle surface before touching the stable OS
+  // identifier. The module choice is read through its existing contract too;
+  // absent/unreadable health activation is safely disabled by ADR-0059.
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      whenStoreHydrated(useCycleStore),
+      whenStoreHydrated(useEnabledModulesStore),
+    ]).then(
+      () => { if (active) setCycleReminderReady(true); },
+      () => undefined,
+    );
+    return () => { active = false; };
+  }, []);
+
+  const predictedCycleReminderDate = getPredictedNextPeriod(cycleEntries, cycleAverageLength);
+
+  // This is deliberately Cycle-specific, not APP-079/080's future notification
+  // platform. It runs on first updated-app start without opening Cycle, cancels
+  // legacy rich copy first, and schedules only for the live owning account.
+  useEffect(() => {
+    if (!cycleReminderReady) return;
+    const accountId = session?.user.id ?? null;
+    void refreshCycleReminder({
+      accountId,
+      isCurrentAccount: () => accountId === null
+        ? useAuthStore.getState().session === null
+        : useAuthStore.getState().session?.user.id === accountId,
+      moduleEnabled: cycleModuleEnabled,
+      reminderEnabled: cycleReminderEnabled,
+      richNotificationCopyEnabled: richCycleNotificationCopyEnabled,
+      predictedDate: predictedCycleReminderDate,
+      daysBefore: cycleReminderDaysBefore,
+    }).catch(() => undefined);
+  }, [
+    cycleReminderReady,
+    session?.user.id,
+    cycleModuleEnabled,
+    cycleReminderEnabled,
+    cycleReminderDaysBefore,
+    richCycleNotificationCopyEnabled,
+    predictedCycleReminderDate,
+    language,
+  ]);
 
   // APP-057: tidligere versioner planlagde garantipåmindelser med produktnavnet i
   // teksten, og de overlever en opdatering i OS'ets planlægger. Når den lokale,

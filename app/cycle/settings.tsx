@@ -26,9 +26,11 @@ export default function CycleSettingsScreen() {
   const lutealPhaseLength = useCycleStore((s) => s.lutealPhaseLength);
   const reminderEnabled = useCycleStore((s) => s.reminderEnabled);
   const reminderDaysBefore = useCycleStore((s) => s.reminderDaysBefore);
+  const richNotificationCopyEnabled = useCycleStore((s) => s.richNotificationCopyEnabled);
   const setLutealPhaseLength = useCycleStore((s) => s.setLutealPhaseLength);
   const setReminderEnabled = useCycleStore((s) => s.setReminderEnabled);
   const setReminderDaysBefore = useCycleStore((s) => s.setReminderDaysBefore);
+  const setRichNotificationCopyEnabled = useCycleStore((s) => s.setRichNotificationCopyEnabled);
   const showToast = useToastStore((s) => s.show);
 
   const [luteal, setLuteal] = useState(lutealPhaseLength.toString());
@@ -68,6 +70,13 @@ export default function CycleSettingsScreen() {
                 />
               ))}
             </View>
+            <Text style={sharedStyles.fieldLabel}>{t('cycle.richNotificationCopyLabel')}</Text>
+            <Text style={[styles.autoHint, { color: textMuted }]}>{t('cycle.richNotificationCopyHint')}</Text>
+            <Chip
+              label={t('cycle.richNotificationCopyLabel')}
+              active={richNotificationCopyEnabled}
+              onPress={() => setRichNotificationCopyEnabled(!richNotificationCopyEnabled)}
+            />
           </>
         )}
       </Card>

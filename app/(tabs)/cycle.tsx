@@ -29,7 +29,6 @@ import {
   getPredictedNextPeriod,
   isCurrentlyOnPeriod,
 } from "@/utils/cycle/cyclePredictions";
-import { cancelCycleReminder, scheduleCycleReminder } from "@/utils/cycle/cycleReminder";
 import { detectRecurringSymptoms } from "@/utils/cycle/symptomPatterns";
 import { toLocalIsoDate } from "@/utils/shared/localDate";
 
@@ -73,8 +72,6 @@ export default function CycleScreen() {
   const symptomLogs = useCycleStore((s) => s.symptomLogs);
   const avgCycleLength = useCycleStore((s) => s.avgCycleLength);
   const lutealPhaseLength = useCycleStore((s) => s.lutealPhaseLength);
-  const reminderEnabled = useCycleStore((s) => s.reminderEnabled);
-  const reminderDaysBefore = useCycleStore((s) => s.reminderDaysBefore);
   const startPeriod = useCycleStore((s) => s.startPeriod);
   const endPeriod = useCycleStore((s) => s.endPeriod);
   const logSymptoms = useCycleStore((s) => s.logSymptoms);
@@ -108,14 +105,6 @@ export default function CycleScreen() {
   const predictedNextLabel = predictedNext
     ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(predictedNext))
     : t("cycle.noPredictionShort");
-
-  useEffect(() => {
-    if (reminderEnabled && predictedNext) {
-      scheduleCycleReminder(predictedNext, reminderDaysBefore, t('cycle.reminderNotifTitle'), t('cycle.reminderNotifBody'));
-    } else {
-      cancelCycleReminder();
-    }
-  }, [reminderEnabled, reminderDaysBefore, predictedNext]);
 
   const todayLog = symptomLogs.find((l) => l.date === todayKey);
   const [selectedSymptoms, setSelectedSymptoms] = useState<Symptom[]>(

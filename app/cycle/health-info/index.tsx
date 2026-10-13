@@ -23,8 +23,12 @@ export default function HealthInfoScreen() {
   const borderColor = useThemeColor({}, 'border');
   const surface = useThemeColor({}, 'surface');
 
-  const conditions = useCycleStore((s) => s.healthConditions);
-  const symptoms = useCycleStore((s) => s.symptomGlossary);
+  // Gate outside the selectors: a selector that returns a fresh `[]` is an unstable snapshot and loops.
+  const clinicalContentReady = useCycleStore((s) => s.clinicalContentReady);
+  const cachedConditions = useCycleStore((s) => s.healthConditions);
+  const cachedSymptoms = useCycleStore((s) => s.symptomGlossary);
+  const conditions = clinicalContentReady ? cachedConditions : [];
+  const symptoms = clinicalContentReady ? cachedSymptoms : [];
 
   const [tab, setTab] = useState<'conditions' | 'symptoms'>('conditions');
   const [search, setSearch] = useState('');

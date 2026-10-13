@@ -10,6 +10,81 @@ import { HealthConditionRecord, SymptomGlossaryRecord } from '@/types/healthInfo
 
 let datasetEpoch = 0;
 
+type ClinicalContentRow = Record<string, unknown>;
+
+function copenhagenDate(): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Copenhagen', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((value) => value.type === type)?.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+function nonBlank(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+/** `review_due_at` is a Postgres `date`: only a real YYYY-MM-DD may be compared with the Copenhagen day. */
+function isCalendarDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+/**
+ * APP-074: database rows are untrusted network input even after RLS. A single malformed,
+ * draft, expired, duplicate, or legacy row makes the complete reference refresh ineligible.
+ */
+function decodeHealthConditions(rows: unknown, today: string): HealthConditionRecord[] | null {
+  if (!Array.isArray(rows)) return null;
+  const ids = new Set<string>();
+  const decoded: HealthConditionRecord[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') return null;
+    const value = row as ClinicalContentRow;
+    const id = value.id;
+    const version = value.content_version;
+    const dueAt = value.review_due_at;
+    const symptoms = value.common_symptoms;
+    if (!nonBlank(id) || ids.has(id) || value.status !== 'published' || !Number.isInteger(version) || (version as number) <= 0
+      || !isCalendarDate(dueAt) || dueAt < today || !Array.isArray(symptoms) || !symptoms.every(nonBlank)
+      || !nonBlank(value.name_da) || !nonBlank(value.name_en) || !nonBlank(value.summary_da) || !nonBlank(value.summary_en)
+      || !nonBlank(value.what_it_is_da) || !nonBlank(value.what_it_is_en) || !nonBlank(value.what_helps_da)
+      || !nonBlank(value.what_helps_en) || !nonBlank(value.when_to_see_doctor_da) || !nonBlank(value.when_to_see_doctor_en)) return null;
+    ids.add(id);
+    decoded.push({
+      id, contentVersion: version as number, reviewDueAt: dueAt,
+      nameDa: value.name_da, nameEn: value.name_en, summaryDa: value.summary_da, summaryEn: value.summary_en,
+      whatItIsDa: value.what_it_is_da, whatItIsEn: value.what_it_is_en, commonSymptoms: [...symptoms],
+      whatHelpsDa: value.what_helps_da, whatHelpsEn: value.what_helps_en,
+      whenToSeeDoctorDa: value.when_to_see_doctor_da, whenToSeeDoctorEn: value.when_to_see_doctor_en,
+    });
+  }
+  return decoded;
+}
+
+function decodeSymptomGlossary(rows: unknown, today: string): SymptomGlossaryRecord[] | null {
+  if (!Array.isArray(rows)) return null;
+  const ids = new Set<string>();
+  const decoded: SymptomGlossaryRecord[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') return null;
+    const value = row as ClinicalContentRow;
+    const id = value.id;
+    const version = value.content_version;
+    const dueAt = value.review_due_at;
+    if (!nonBlank(id) || ids.has(id) || value.status !== 'published' || !Number.isInteger(version) || (version as number) <= 0
+      || !isCalendarDate(dueAt) || dueAt < today || !nonBlank(value.name_da) || !nonBlank(value.name_en)
+      || !nonBlank(value.description_da) || !nonBlank(value.description_en)) return null;
+    ids.add(id);
+    decoded.push({
+      id, contentVersion: version as number, reviewDueAt: dueAt,
+      nameDa: value.name_da, nameEn: value.name_en, descriptionDa: value.description_da, descriptionEn: value.description_en,
+    });
+  }
+  return decoded;
+}
+
 /** Resolved only when an action or fetch runs, so a read-only import does not start the auth flow. */
 function initiatingAccountId(): string | null {
   const { useAuthStore } = require('@/store/useAuthStore') as typeof import('@/store/useAuthStore');
@@ -79,6 +154,8 @@ interface CycleState {
   // Admin-styret, globalt indhold — samme for alle brugere, ingen user_id-filter.
   healthConditions: HealthConditionRecord[];
   symptomGlossary: SymptomGlossaryRecord[];
+  /** Runtime only: a persisted reference cache never establishes eligibility after restart. */
+  clinicalContentReady: boolean;
 
   startPeriod: (startDate: string) => void;
   endPeriod: (id: string, endDate: string) => void;
@@ -114,6 +191,7 @@ export const useCycleStore = create<CycleState>()(
       richNotificationCopyEnabled: false,
       healthConditions: [],
       symptomGlossary: [],
+      clinicalContentReady: false,
 
       startPeriod: (startDate) => {
         const accountId = initiatingAccountId();
@@ -196,13 +274,19 @@ export const useCycleStore = create<CycleState>()(
         const stillActive = () => epoch === datasetEpoch && initiatingAccountId() === accountId;
         if (!(await sessionStillOwnedBy(accountId)) || !stillActive()) return;
 
+        // This is deliberately non-persisted. A new process/session cannot trust old encrypted
+        // reference rows, and a failed retry cannot leave a prior response renderable.
+        set({ clinicalContentReady: false });
+        const today = copenhagenDate();
+
         const [cyclesResult, logsResult, settingsResult, conditionsResult, symptomsResult] = await Promise.all([
           supabase.from('cycles').select('id, start_date, end_date, created_at').eq('user_id', accountId),
           supabase.from('symptom_logs').select('id, date, symptoms, flow, notes').eq('user_id', accountId),
           supabase.from('cycle_settings').select('avg_cycle_length, luteal_phase_length, reminder_enabled, reminder_days_before').eq('user_id', accountId).single(),
-          // Admin-styret, globalt indhold — ingen user_id-filter, alle brugere ser samme data.
-          supabase.from('health_conditions').select('*'),
-          supabase.from('symptom_glossary').select('*'),
+          // APP-074: explicit public contract; RLS is authoritative and these filters duplicate
+          // eligibility as client defence in depth.
+          supabase.from('health_conditions').select('id, content_version, review_due_at, status, name_da, name_en, summary_da, summary_en, what_it_is_da, what_it_is_en, common_symptoms, what_helps_da, what_helps_en, when_to_see_doctor_da, when_to_see_doctor_en').eq('status', 'published').gte('review_due_at', today),
+          supabase.from('symptom_glossary').select('id, content_version, review_due_at, status, name_da, name_en, description_da, description_en').eq('status', 'published').gte('review_due_at', today),
         ]);
 
         // The response belongs to the account that asked. If it logged out or another account
@@ -253,32 +337,19 @@ export const useCycleStore = create<CycleState>()(
             }
           }
 
-          // Admin-styret indhold erstattes altid helt (ikke merge-if-new-id som personlig
-          // data) — det skal altid afspejle den nyeste version fra admin-panelet.
-          if (!conditionsResult.error && conditionsResult.data) {
-            next.healthConditions = conditionsResult.data.map((row) => ({
-              id: row.id,
-              nameDa: row.name_da,
-              nameEn: row.name_en,
-              summaryDa: row.summary_da,
-              summaryEn: row.summary_en,
-              whatItIsDa: row.what_it_is_da,
-              whatItIsEn: row.what_it_is_en,
-              commonSymptoms: row.common_symptoms ?? [],
-              whatHelpsDa: row.what_helps_da,
-              whatHelpsEn: row.what_helps_en,
-              whenToSeeDoctorDa: row.when_to_see_doctor_da,
-              whenToSeeDoctorEn: row.when_to_see_doctor_en,
-            }));
-          }
-          if (!symptomsResult.error && symptomsResult.data) {
-            next.symptomGlossary = symptomsResult.data.map((row) => ({
-              id: row.id,
-              nameDa: row.name_da,
-              nameEn: row.name_en,
-              descriptionDa: row.description_da,
-              descriptionEn: row.description_en,
-            }));
+          // A refresh is all-or-nothing for the two related shared collections. A successful
+          // smaller or empty result is authoritative; a partial/error result clears runtime
+          // eligibility rather than making encrypted cached content a fallback.
+          const conditions = !conditionsResult.error ? decodeHealthConditions(conditionsResult.data, today) : null;
+          const symptoms = !symptomsResult.error ? decodeSymptomGlossary(symptomsResult.data, today) : null;
+          if (conditions && symptoms) {
+            next.healthConditions = conditions;
+            next.symptomGlossary = symptoms;
+            next.clinicalContentReady = true;
+          } else {
+            next.healthConditions = [];
+            next.symptomGlossary = [];
+            next.clinicalContentReady = false;
           }
 
           return next;
@@ -295,12 +366,24 @@ export const useCycleStore = create<CycleState>()(
           reminderEnabled: false,
           reminderDaysBefore: 1,
           richNotificationCopyEnabled: false,
+          clinicalContentReady: false,
         });
       },
     }),
     {
       name: 'lifesort-cycle',
       storage: createJSONStorage(() => migrationGatedStorage(cycleHealthEncryptedStorage)),
+      partialize: ({ clinicalContentReady: _clinicalContentReady, ...persisted }) => persisted,
+      // The disk copy of the reference rows is a stale legacy cache and is never an input: fetch is not
+      // gated on hydration, so a late hydration must neither replace a governed refresh nor grant
+      // renderability, and a persisted blob can never claim readiness. Only the runtime may set these.
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<CycleState>),
+        healthConditions: current.healthConditions,
+        symptomGlossary: current.symptomGlossary,
+        clinicalContentReady: current.clinicalContentReady,
+      }),
     }
   )
 );

@@ -22,8 +22,12 @@ export default function HealthConditionDetailScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const textMuted = useThemeColor({}, 'textMuted');
 
-  const condition = useCycleStore((s) => s.healthConditions.find((c) => c.id === id));
-  const symptomGlossary = useCycleStore((s) => s.symptomGlossary);
+  // Gate outside the selectors: a selector that returns a fresh `[]` is an unstable snapshot and loops.
+  const clinicalContentReady = useCycleStore((s) => s.clinicalContentReady);
+  const cachedConditions = useCycleStore((s) => s.healthConditions);
+  const cachedSymptoms = useCycleStore((s) => s.symptomGlossary);
+  const condition = clinicalContentReady ? cachedConditions.find((c) => c.id === id) : undefined;
+  const symptomGlossary = clinicalContentReady ? cachedSymptoms : [];
 
   if (!condition) {
     return (

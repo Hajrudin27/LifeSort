@@ -79,6 +79,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0058](./0058-ios-first-v1-release-scope.md) | LifeSort v1 is iOS-first and Android is deferred | Accepted | 2026-10-12 | Project-wide release policy |
 | [0059](./0059-health-sensitive-modules-require-explicit-activation.md) | Health-sensitive modules require explicit activation | Accepted | 2026-10-13 | APP-071 |
 | [0060](./0060-health-notifications-are-generic-unless-rich-copy-is-explicitly-enabled.md) | Health notifications are generic unless rich copy is explicitly enabled | Accepted | 2026-10-13 | APP-073 |
+| [0061](./0061-clinical-reference-content-is-versioned-and-fails-closed.md) | Clinical reference content is versioned and fails closed | Accepted | 2026-10-13 | APP-074 |
 
 ## When an ADR is required
 

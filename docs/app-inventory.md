@@ -270,7 +270,7 @@ keep the key material in SecureStore.
 | `useCVStore` | `store/useCVStore.ts` | `career` | `lifesort-cv` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/documentCacheStorage.ts` (APP-067 storage hardening only; the CV model, UX and cloud mirror are unchanged) | `cv_personal_info`, `cv_education`, `cv_experience`, `cv_languages`, `cv_versions` | personal, document | Hajrudin Kardasevic |
 | `useGiftsStore` | `store/useGiftsStore.ts` | `gifts` | `lifesort-gifts` | AsyncStorage (plain), migration-gated Z0 (APP-069: Profile A, device-local; rows decoded on hydrate) | – (local-only since it was built; no table, no outbox; included in backup format 14 through the injected participant seam in `features/backupParticipants.ts`) | personal, financial | Hajrudin Kardasevic |
 | `useSkillCategoriesStore` | `store/useSkillCategoriesStore.ts` | `career` | `lifesort-skill-categories` | AsyncStorage (plain) | – | ordinary | Hajrudin Kardasevic |
-| `useCycleStore` | `store/useCycleStore.ts` | `cycle` | `lifesort-cycle` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/cycleHealthEncryptedStorage.ts` | `cycles`, `symptom_logs`, `cycle_settings`, `health_conditions`, `symptom_glossary` | health | Hajrudin Kardasevic |
+| `useCycleStore` | `store/useCycleStore.ts` | `cycle` | `lifesort-cycle` | AsyncStorage encrypted envelope; AES key in SecureStore via `core/storage/cycleHealthEncryptedStorage.ts`; APP-074 clinical-reference readiness is runtime only | `cycles`, `symptom_logs`, `cycle_settings`, `health_conditions`, `symptom_glossary` | health | Hajrudin Kardasevic |
 
 <!-- inventory:stores:end -->
 
@@ -336,8 +336,8 @@ owned per user; it must be protected by grants rather than by user-scoped RLS.
 | `cycles` | `cycle` | `store/useCycleStore.ts` | health | Hajrudin Kardasevic |
 | `symptom_logs` | `cycle` | `store/useCycleStore.ts` | health | Hajrudin Kardasevic |
 | `cycle_settings` | `cycle` | `store/useCycleStore.ts` | health | Hajrudin Kardasevic |
-| `health_conditions` | `cycle` (shared read-only content) | `store/useCycleStore.ts` | ordinary | Hajrudin Kardasevic |
-| `symptom_glossary` | `cycle` (shared read-only content) | `store/useCycleStore.ts` | ordinary | Hajrudin Kardasevic |
+| `health_conditions` | `cycle` (APP-074 governed shared reference content) | `store/useCycleStore.ts` | ordinary | Hajrudin Kardasevic |
+| `symptom_glossary` | `cycle` (APP-074 governed shared reference content) | `store/useCycleStore.ts` | ordinary | Hajrudin Kardasevic |
 
 <!-- inventory:tables:end -->
 

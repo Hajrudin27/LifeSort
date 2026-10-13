@@ -3,6 +3,10 @@
 // kan redigeres fra admin-panelet uden en app-udgivelse.
 export interface HealthConditionRecord {
   id: string;
+  /** Immutable editorial version; route identity remains `id`. */
+  contentVersion: number;
+  /** Copenhagen-calendar expiry used as a client-side defence in depth. */
+  reviewDueAt: string;
   nameDa: string;
   nameEn: string;
   summaryDa: string;
@@ -18,6 +22,8 @@ export interface HealthConditionRecord {
 
 export interface SymptomGlossaryRecord {
   id: string;
+  contentVersion: number;
+  reviewDueAt: string;
   nameDa: string;
   nameEn: string;
   descriptionDa: string;

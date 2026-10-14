@@ -83,6 +83,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0062](./0062-pregnancy-is-an-isolated-encrypted-health-domain.md) | Pregnancy is an isolated encrypted health domain | Accepted | 2026-10-13 | APP-076 Phase A |
 | [0063](./0063-pregnancy-state-and-sync-intent-share-one-encrypted-commit-boundary.md) | Pregnancy state and sync intent share one encrypted commit boundary | Accepted | 2026-10-14 | APP-076 Phase B1 |
 | [0064](./0064-sync-coordinator-is-backend-neutral-and-pregnancy-success-requires-reconciliation.md) | Sync coordinator is backend-neutral and Pregnancy success requires reconciliation | Accepted | 2026-10-14 | APP-076 Phase B2A |
+| [0065](./0065-pregnancy-sync-reconciles-canonical-state-before-acknowledgement.md) | Pregnancy sync reconciles canonical state before acknowledgement | Accepted | 2026-10-14 | APP-076 Phase B2B1 |
 
 ## When an ADR is required
 

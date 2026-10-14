@@ -12,7 +12,7 @@ export type PregnancyMutationSuccess = {
   readonly changeSeq?: number;
 };
 export type PregnancyMutationFailureReason =
-  | 'consent-required' | 'revision-conflict' | 'mutation-id-conflict'
+  | 'consent-required' | 'revision-conflict' | 'parent-unavailable' | 'mutation-id-conflict'
   | 'validation' | 'authorization' | 'rate-limited' | 'unavailable' | 'unknown-conflict';
 export type PregnancyMutationFailure = { readonly ok: false; readonly reason: PregnancyMutationFailureReason; readonly attempted: boolean };
 export type PregnancyMutationResult = PregnancyMutationSuccess | PregnancyMutationFailure;
@@ -21,7 +21,6 @@ function entityType(value: unknown): value is PregnancyEntityType {
   return value === 'pregnancy' || value === 'log' || value === 'appointment' || value === 'settings';
 }
 function safePositiveInteger(value: unknown): value is number { return Number.isSafeInteger(value) && (value as number) > 0; }
-function safeNonnegativeInteger(value: unknown): value is number { return Number.isSafeInteger(value) && (value as number) >= 0; }
 function record(value: unknown): value is Record<string, unknown> { return !!value && typeof value === 'object' && !Array.isArray(value); }
 
 function classify(error: unknown, statusCode: unknown): PregnancyMutationFailureReason {
@@ -31,6 +30,7 @@ function classify(error: unknown, statusCode: unknown): PregnancyMutationFailure
   const status = typeof statusCode === 'number' ? statusCode : 0;
   if (code === 'PT428' && message === 'consent_required') return 'consent-required';
   if (code === 'PT409' && message === 'revision_conflict') return 'revision-conflict';
+  if (code === 'PT409' && message === 'parent_unavailable') return 'parent-unavailable';
   if (code === 'PT409' && message === 'mutation_id_conflict') return 'mutation-id-conflict';
   if (code === 'PT409' || status === 409) return 'unknown-conflict';
   if (code === 'PT400' || code === 'PT422' || status === 400 || status === 422) return 'validation';
@@ -59,24 +59,34 @@ export async function sendPregnancyMutation(
       p_consent_id: mutation.operation === 'upsert' ? mutation.consentId : null,
     };
   } catch { return { ok: false, reason: 'validation', attempted: false }; }
+  // A session that cannot even be read is a failure before any request exists: the
+  // RPC was never dispatched, so it must not be counted as a completed attempt.
+  let session: { user: { id: string }; access_token: string } | null;
   try {
     const { data, error: sessionError } = await supabase.auth.getSession();
-    const session = data.session;
-    if (!isActive() || sessionError || !session || session.user.id !== accountId) return { ok: false, reason: 'authorization', attempted: false };
+    if (sessionError) return { ok: false, reason: 'authorization', attempted: false };
+    session = data.session;
+  } catch { return { ok: false, reason: 'unavailable', attempted: false }; }
+  if (!isActive() || !session || session.user.id !== accountId) return { ok: false, reason: 'authorization', attempted: false };
+  try {
     const { data: response, error, status } = await supabase.rpc(PREGNANCY_SYNC_RPCS.apply, args)
       .setHeader('Authorization', `Bearer ${session.access_token}`).retry(false);
     if (!isActive()) return { ok: false, reason: 'authorization', attempted: true };
     if (error) return { ok: false, reason: classify(error, status), attempted: true };
+    // The server's success must describe exactly the mutation that was sent: an
+    // upsert never reports a deletion and a delete always does. `changeSeq` is a
+    // positive ledger position on a first application and absent on a replay.
     if (!record(response) || (response.status !== 'applied' && response.status !== 'replayed') ||
         !entityType(response.entityType) || typeof response.entityId !== 'string' || !response.entityId ||
         !safePositiveInteger(response.revision) || typeof response.deleted !== 'boolean' ||
         response.entityType !== mutation.entityType || response.entityId !== mutation.entityId ||
-        (response.changeSeq !== undefined && (!safeNonnegativeInteger(response.changeSeq) || response.status !== 'applied'))) {
+        response.deleted !== (mutation.operation === 'delete') ||
+        (response.status === 'applied' ? !safePositiveInteger(response.changeSeq) : response.changeSeq !== undefined)) {
       return { ok: false, reason: 'unknown-conflict', attempted: true };
     }
     return { ok: true, status: response.status, entityType: response.entityType, entityId: response.entityId,
       revision: response.revision, deleted: response.deleted,
-      ...(response.changeSeq === undefined ? {} : { changeSeq: response.changeSeq }) };
+      ...(response.changeSeq === undefined ? {} : { changeSeq: response.changeSeq as number }) };
   } catch {
     return { ok: false, reason: 'unavailable', attempted: true };
   }

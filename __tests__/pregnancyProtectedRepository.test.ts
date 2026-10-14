@@ -234,7 +234,10 @@ describe('APP-076 Phase B1 protected Pregnancy substrate', () => {
     const repo = await initialized(); const queued = await repo.commitLocalMutation((domain) => { domain.pregnancies[pregnancy.id] = pregnancy; return domain; }, mutation);
     await repo.updateMetadata(queued.mutationId, { status: 'failed', attempts: 2, nextRetryAt: '2026-10-02T00:00:00.000Z' });
     expect((await createPregnancyProtectedRepository({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT }).list())[0]).toMatchObject({ attempts: 2, status: 'failed', nextRetryAt: '2026-10-02T00:00:00.000Z' });
-    await repo.acknowledge(queued.mutationId); expect(await createPregnancyProtectedRepository({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT }).list()).toEqual([]);
+    // The only way a mutation leaves the queue on success is a verified proof in a reconciliation commit.
+    await expect(repo.commitRemoteReconciliation({ fromCursor: 0, toCursor: 1, caughtUp: false, snapshots: [], proofs: [{ mutationId: queued.mutationId, entityType: 'pregnancy', entityId: 'pregnancy-1', serverRevision: 1, deleted: false }] }))
+      .resolves.toEqual({ cursor: 1, acknowledged: [queued.mutationId], terminalized: 0, halted: false });
+    expect(await createPregnancyProtectedRepository({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT }).list()).toEqual([]);
     await writeEncryptedPregnancyPayload(JSON.stringify({ ...createInitialPregnancyProtectedState(ACCOUNT), datasetEpoch: -1 }));
     await expect(createPregnancyProtectedRepository({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT }).hydrate()).rejects.toMatchObject({ code: 'invalid-protected-state' });
   });
@@ -248,7 +251,7 @@ describe('APP-076 Phase B1 protected Pregnancy substrate', () => {
 
   it('cleanup revokes active handles and removes ciphertext, key, queue, cursor and tombstones together', async () => {
     const seed = createInitialPregnancyProtectedState(ACCOUNT);
-    seed.sync.nextChangeSeq = 9; seed.tombstones.deleted = { entityType: 'log', entityId: 'log-1', revision: 2 };
+    seed.sync.nextChangeSeq = 9; seed.tombstones['log:log-1'] = { entityType: 'log', entityId: 'log-1', revision: 2 };
     const repo = createPregnancyProtectedRepository({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT }); await repo.initialize(seed);
     await repo.commitLocalMutation((domain) => { domain.pregnancies[pregnancy.id] = pregnancy; return domain; }, mutation);
     await withPregnancyHealthEncryptedStorageCleanup(async () => { await AsyncStorage.removeItem(key); await clearPregnancyHealthEncryptionKey(); });
@@ -358,7 +361,7 @@ describe('APP-076 B1 hostile review: serialization, atomicity and publication', 
   });
 
   it('gives local callbacks only a domain draft, preserving every protected metadata field and queued mutation', async () => {
-    const seed = initial(); seed.sync.nextChangeSeq = 7; seed.sync.consent.activeConsentIdsByPurpose.health = 'consent-old'; seed.tombstones.old = { entityType: 'log', entityId: 'old', revision: 1 };
+    const seed = initial(); seed.sync.nextChangeSeq = 7; seed.sync.consent.activeConsentIdsByPurpose.health = 'consent-old'; seed.tombstones['log:old'] = { entityType: 'log', entityId: 'old', revision: 1 };
     seed.sync.mutations = [{ mutationId: 'old-mutation', ...mutation, createdAt: '2026-10-02T00:00:00.000Z', status: 'pending', attempts: 0 }];
     const repo = createPregnancyProtectedRepository({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT }); await repo.initialize(seed);
     await repo.commitLocalMutation((domain) => {
@@ -378,7 +381,7 @@ describe('APP-076 B1 hostile review: serialization, atomicity and publication', 
       return domain;
     }, mutation);
     const persisted = await repo.hydrate();
-    expect(persisted).toMatchObject({ accountId: ACCOUNT, datasetEpoch: 0, sync: { nextChangeSeq: 7, consent: { activeConsentIdsByPurpose: { health: 'consent-old' } } }, tombstones: { old: { entityId: 'old' } } });
+    expect(persisted).toMatchObject({ accountId: ACCOUNT, datasetEpoch: 0, sync: { nextChangeSeq: 7, consent: { activeConsentIdsByPurpose: { health: 'consent-old' } } }, tombstones: { 'log:old': { entityId: 'old' } } });
     expect(persisted!.sync.mutations.map((item) => item.mutationId)).toEqual(['old-mutation', expect.any(String)]);
   });
 
@@ -441,7 +444,7 @@ describe('APP-076 B1 hostile review: key and ciphertext lifecycle', () => {
     const before = await AsyncStorage.getItem(key); mockSecure.delete(PREGNANCY_HEALTH_STORAGE.secureStoreKey); const generated = mockGenerated;
     const handle = createPregnancyProtectedRepository({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT });
     const operations = [() => handle.hydrate(), () => handle.list(), () => handle.initialize(initial()), () => handle.rebaseline(), () => handle.commitLocalMutation(add, mutation),
-      () => handle.withdrawConsent('c'), () => handle.acknowledge('x'), () => handle.updateMetadata('x', {})];
+      () => handle.withdrawConsent('c'), () => handle.commitRemoteReconciliation({ fromCursor: 0, toCursor: 0, caughtUp: true, snapshots: [], proofs: [] }), () => handle.readSyncView(), () => handle.updateMetadata('x', {})];
     for (const operation of operations) await expect(operation()).rejects.toMatchObject({ code: 'key-missing' });
     expect(await AsyncStorage.getItem(key)).toBe(before); expect(mockGenerated).toBe(generated); expect(mockSecure.has(PREGNANCY_HEALTH_STORAGE.secureStoreKey)).toBe(false);
   });
@@ -538,12 +541,12 @@ describe('APP-076 B1 hostile review: the decrypted state is validated as a whole
     state.domain.appointments.a1 = { id: 'a1', pregnancyId: 'p1', startsAt: '2026-11-01T10:00:00.000Z', timeZone: 'Europe/Copenhagen', title: 'Scan', completed: false, reminderEnabled: false, revision: 1, updatedAt: '2026-10-02T00:00:00.000Z' };
     state.domain.settings = { recoveryDisplayDays: 42, privacyMode: false, revision: 1, updatedAt: '2026-10-02T00:00:00.000Z' };
     state.sync.mutations = [{ mutationId: 'm1', entityType: 'pregnancy', entityId: 'p1', operation: 'upsert', payload: { x: 1 }, consentId: 'c1', createdAt: '2026-10-02T00:00:00.000Z', status: 'pending', attempts: 0 }];
-    state.tombstones.t1 = { entityType: 'log', entityId: 'l9', revision: 2 };
+    state.tombstones['log:l9'] = { entityType: 'log', entityId: 'l9', revision: 2 };
     return state;
   };
   const first = (state: any) => state.sync.mutations[0];
   const cases: Array<[string, (state: any) => void]> = [
-    ['version 2', (s) => { s.version = 2; }], ['missing version', (s) => { delete s.version; }], ['blank accountId', (s) => { s.accountId = '  '; }], ['numeric accountId', (s) => { s.accountId = 5; }],
+    ['future version 3', (s) => { s.version = 3; }], ['version 0', (s) => { s.version = 0; }], ['missing version', (s) => { delete s.version; }], ['blank accountId', (s) => { s.accountId = '  '; }], ['numeric accountId', (s) => { s.accountId = 5; }],
     ['negative epoch', (s) => { s.datasetEpoch = -1; }], ['fractional epoch', (s) => { s.datasetEpoch = 1.5; }], ['string epoch', (s) => { s.datasetEpoch = '1'; }], ['unsafe epoch', (s) => { s.datasetEpoch = 2 ** 53; }],
     ['array pregnancies', (s) => { s.domain.pregnancies = []; }], ['bad pregnancy method', (s) => { s.domain.pregnancies.p1.method = 'x'; }], ['pregnancy revision 0', (s) => { s.domain.pregnancies.p1.revision = 0; }],
     ['pregnancy key/id mismatch', (s) => { s.domain.pregnancies.other = s.domain.pregnancies.p1; }], ['bad pregnancy outcome', (s) => { s.domain.pregnancies.p1.outcome = 'x'; }], ['bad pregnancy updatedAt', (s) => { s.domain.pregnancies.p1.updatedAt = 'nope'; }],
@@ -557,7 +560,7 @@ describe('APP-076 B1 hostile review: the decrypted state is validated as a whole
     ['unknown entityType', (s) => { first(s).entityType = 'consent'; }], ['negative baseRevision', (s) => { first(s).baseRevision = -1; }], ['bad createdAt', (s) => { first(s).createdAt = 'x'; }], ['duplicate mutation id', (s) => { s.sync.mutations.push({ ...first(s) }); }],
     ['settings delete', (s) => { first(s).entityType = 'settings'; first(s).operation = 'delete'; delete first(s).consentId; delete first(s).payload; }],
     ['blank active consent', (s) => { s.sync.consent.activeConsentIdsByPurpose.p = ''; }], ['withdrawn flag false', (s) => { s.sync.consent.withdrawnConsentIds.c = false; }], ['missing consent', (s) => { delete s.sync.consent; }],
-    ['settings tombstone', (s) => { s.tombstones.t1.entityType = 'settings'; }], ['tombstone revision 0', (s) => { s.tombstones.t1.revision = 0; }], ['negative tombstone changeSeq', (s) => { s.tombstones.t1.changeSeq = -1; }], ['tombstone without entityId', (s) => { delete s.tombstones.t1.entityId; }], ['tombstone carrying a health payload field', (s) => { s.tombstones.t1.notes = 'private'; }], ['array tombstones', (s) => { s.tombstones = []; }],
+    ['settings tombstone', (s) => { s.tombstones['log:l9'].entityType = 'settings'; }], ['tombstone revision 0', (s) => { s.tombstones['log:l9'].revision = 0; }], ['negative tombstone changeSeq', (s) => { s.tombstones['log:l9'].changeSeq = -1; }], ['tombstone without entityId', (s) => { delete s.tombstones['log:l9'].entityId; }], ['tombstone carrying a health payload field', (s) => { s.tombstones['log:l9'].notes = 'private'; }], ['array tombstones', (s) => { s.tombstones = []; }],
   ];
   it('control: the fixture itself is a valid dataset', async () => {
     await seedRaw(valid()); await expect(createPregnancyProtectedRepository({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT }).hydrate()).resolves.toMatchObject({ accountId: ACCOUNT });
@@ -608,7 +611,7 @@ describe('APP-076 B2A queue metadata events', () => {
       events.length = 0;
       const queued = await repo.commitLocalMutation(add, mutation);
       await repo.updateMetadata(queued.mutationId, { status: 'failed', attempts: 1, nextRetryAt: null });
-      await repo.acknowledge(queued.mutationId);
+      await repo.commitRemoteReconciliation({ fromCursor: 0, toCursor: 1, caughtUp: false, snapshots: [], proofs: [{ mutationId: queued.mutationId, entityType: 'pregnancy', entityId: 'pregnancy-1', serverRevision: 1, deleted: false }] });
       expect(events).toEqual([
         { kind: 'changed', accountId: ACCOUNT },
         { kind: 'changed', accountId: ACCOUNT },
@@ -657,11 +660,11 @@ describe('APP-076 B2A queue metadata events', () => {
     const repo = await initialized();
     const queued = await repo.commitLocalMutation(add, mutation);
     await expect(recordPregnancySyncFailure(repo, queued, 'unavailable', true, 0, () => 1))
-      .resolves.toEqual({ recorded: true, recoveryRequired: false });
+      .resolves.toEqual({ recorded: true, recoveryRequired: false, needsInbound: false });
     const [afterTransient] = await repo.list();
     expect(afterTransient).toMatchObject({ status: 'failed', attempts: 1, nextRetryAt: new Date(5_000).toISOString() });
     await expect(recordPregnancySyncFailure(repo, afterTransient, 'consent-required', true, 10_000))
-      .resolves.toEqual({ recorded: true, recoveryRequired: false });
+      .resolves.toEqual({ recorded: true, recoveryRequired: false, needsInbound: false });
     const [terminal] = await repo.list();
     expect(terminal).toMatchObject({ status: 'failed', attempts: 2, terminalReason: 'consent-required' });
     expect(terminal.nextRetryAt).toBeUndefined();
@@ -686,7 +689,7 @@ describe('APP-076 B2A queue metadata events', () => {
     const repo = await initialized();
     const queued = await repo.commitLocalMutation(add, mutation);
     invalidatePregnancyProtectedRepositories();
-    await expect(recordPregnancySyncFailure(repo, queued, 'unavailable', true, 0)).resolves.toEqual({ recorded: false, recoveryRequired: false });
+    await expect(recordPregnancySyncFailure(repo, queued, 'unavailable', true, 0)).resolves.toEqual({ recorded: false, recoveryRequired: false, needsInbound: false });
   });
 
   it('pins the sync adapter to its account and dataset epoch, makes it inert after rebaseline, cleanup or another account, and gives it no ACK', async () => {
@@ -699,11 +702,11 @@ describe('APP-076 B2A queue metadata events', () => {
     // The epoch pin is checked against stored state too, not only against the in-process generation.
     await writeEncryptedPregnancyPayload(JSON.stringify(createInitialPregnancyProtectedState(ACCOUNT, 5)));
     await expect(adapter.list()).rejects.toMatchObject({ code: 'dataset-epoch-mismatch' });
-    await writeEncryptedPregnancyPayload(JSON.stringify({ ...createInitialPregnancyProtectedState(ACCOUNT, 0), sync: { nextChangeSeq: 0, consent: { activeConsentIdsByPurpose: {}, withdrawnConsentIds: {} }, mutations: [queued] } }));
+    await writeEncryptedPregnancyPayload(JSON.stringify({ ...createInitialPregnancyProtectedState(ACCOUNT, 0), sync: { nextChangeSeq: 0, consent: { activeConsentIdsByPurpose: {}, withdrawnConsentIds: {} }, mutations: [queued], halt: null } }));
     await repo.rebaseline();
     expect(adapter.isActive()).toBe(false);
     await expect(adapter.list()).rejects.toBeDefined();
-    await expect(adapter.recordFailure(queued, 'unavailable', true, 0)).resolves.toEqual({ recorded: false, recoveryRequired: false });
+    await expect(adapter.recordFailure(queued, 'unavailable', true, 0)).resolves.toEqual({ recorded: false, recoveryRequired: false, needsInbound: false });
     const fresh = await openPregnancySyncQueue({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT });
     expect(fresh.datasetEpoch).toBe(1);
     await expect(fresh.list()).resolves.toEqual([]);

@@ -3,14 +3,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isMutationClaimed, releaseAllMutationClaims } from '@/core/sync/mutationClaims';
 import { createOutbox, withOutboxCleanup } from '@/core/sync/outbox';
 import { createSyncCoordinator } from '@/core/sync/syncCoordinator';
-import { createSyncCoordinatorEngine, type SyncBackendEvent, type SyncCoordinatorBackend, type SyncCoordinatorBackendSession } from '@/core/sync/syncCoordinatorEngine';
+import { createSyncCoordinatorEngine, type SyncBackendEvent, type SyncCoordinatorBackend, type SyncCoordinatorBackendSession, type SyncSuccessResolution } from '@/core/sync/syncCoordinatorEngine';
 
 function signal<T>() {
   const listeners = new Set<(value: T) => void>();
   return { subscribe: (listener: (value: T) => void) => { listeners.add(listener); return () => listeners.delete(listener); }, emit: (value: T) => listeners.forEach((listener) => listener(value)) };
 }
 
-function backend(id: string, mutations: Array<{ mutationId: string }>, trace: string[], resolveSuccess = true): SyncCoordinatorBackend {
+function backend(id: string, mutations: Array<{ mutationId: string }>, trace: string[], resolveSuccess: SyncSuccessResolution = { outcome: 'resolved' }): SyncCoordinatorBackend {
   const events = signal<{ kind: 'changed'; accountId: string }>();
   const session: SyncCoordinatorBackendSession = {
     isActive: () => true,
@@ -53,7 +53,7 @@ describe('APP-076 B2A backend-neutral coordinator engine', () => {
       connectivity: { getState: () => 'online', subscribe: connectivity.subscribe },
       foreground: { isForeground: () => true, subscribe: foreground.subscribe },
       getActiveAccount: () => 'account-a',
-      backends: [backend('sealed', [{ mutationId: 'p1' }], trace, false)],
+      backends: [backend('sealed', [{ mutationId: 'p1' }], trace, { outcome: 'not-success' })],
     });
     coordinator.setAccount('account-a');
     await coordinator.settle();
@@ -88,7 +88,7 @@ function queueBackend(id: string, items: Item[], hooks: Partial<SyncCoordinatorB
     resolveSuccess: async (item) => {
       log.push(`ok:${id}:${(item as Item).mutationId}`);
       items.splice(items.findIndex((entry) => entry.mutationId === (item as Item).mutationId), 1);
-      return true;
+      return { outcome: 'resolved' };
     },
     resolveFailure: async (item) => { log.push(`fail:${id}:${(item as Item).mutationId}`); return { recorded: true, permanent: true }; },
     ...hooks,
@@ -172,7 +172,7 @@ describe('APP-076 B2A engine: multi-backend lifecycle', () => {
         plan: (list) => ({ due: list as Item[], nextRetryAtMs: null }),
         mutationId: (item) => (item as Item).mutationId,
         send: async () => { log.push(`send:${accountId}:${id}`); await gate; return { ok: true }; },
-        resolveSuccess: async () => { log.push(`ok:${accountId}:${id}`); return true; },
+        resolveSuccess: async () => { log.push(`ok:${accountId}:${id}`); return { outcome: 'resolved' }; },
         resolveFailure: async () => { log.push(`fail:${accountId}:${id}`); return { recorded: true, permanent: true }; },
       }) };
     };
@@ -188,7 +188,7 @@ describe('APP-076 B2A engine: multi-backend lifecycle', () => {
     coordinator.dispose();
   });
 
-  it('rereads durable state after the bound account\'s epoch invalidation, ignores another account\'s, and stops after cleanup', async () => {
+  it('rereads durable state after the bound account\'s backend invalidation, ignores another account\'s, and stops after cleanup', async () => {
     const log: string[] = [];
     const items: Item[] = [];
     const sealed = queueBackend('sealed', items, { log });
@@ -196,10 +196,10 @@ describe('APP-076 B2A engine: multi-backend lifecycle', () => {
     coordinator.setAccount('account-a');
     await coordinator.settle();
     items.push({ mutationId: 'pending-work' });
-    sealed.events.emit({ kind: 'epoch-invalidated', accountId: 'account-b' });
+    sealed.events.emit({ kind: 'backend-invalidated', backendId: 'sealed', accountId: 'account-b' });
     await coordinator.settle();
     expect(log).toEqual([]);
-    sealed.events.emit({ kind: 'epoch-invalidated', accountId: 'account-a' });
+    sealed.events.emit({ kind: 'backend-invalidated', backendId: 'sealed', accountId: 'account-a' });
     await coordinator.settle();
     expect(log).toEqual(['send:sealed:pending-work', 'ok:sealed:pending-work']);
     sealed.events.emit({ kind: 'cleanup' });

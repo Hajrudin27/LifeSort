@@ -1,5 +1,5 @@
 import { createPregnancyProtectedRepository, pregnancyMutationIsAutomaticallyEligible, subscribePregnancyQueue, type PregnancyQueuedMutation, type PregnancyTerminalReason } from '@/core/pregnancy/protectedRepository';
-import { planFailedAttempt } from '@/core/sync/retryPolicy';
+import { planFailedAttempt, retryDelayMs } from '@/core/sync/retryPolicy';
 
 export type PregnancySyncWorkPlan = { readonly due: readonly PregnancyQueuedMutation[]; readonly nextRetryAtMs: number | null };
 
@@ -37,12 +37,28 @@ export function planPregnancySyncWork(
 }
 
 export type PregnancyFailureReason =
-  | 'consent-required' | 'revision-conflict' | 'mutation-id-conflict'
+  | 'consent-required' | 'revision-conflict' | 'parent-unavailable' | 'mutation-id-conflict'
   | 'validation' | 'authorization' | 'rate-limited' | 'unavailable' | 'unknown-conflict';
 
-export type PregnancyFailureRecord = { readonly recorded: boolean; readonly recoveryRequired: boolean };
+export type PregnancyFailureRecord = {
+  readonly recorded: boolean;
+  /** A durable backend-wide halt was persisted together with the failure. */
+  readonly recoveryRequired: boolean;
+  /** The refusal can only be settled by an inbound pass: ask for one promptly. */
+  readonly needsInbound: boolean;
+};
 
-/** Durable, encrypted-only consequence of a completed Pregnancy send attempt. */
+/**
+ * Durable, encrypted-only consequence of a completed Pregnancy send attempt.
+ *
+ * - transient (`unavailable`, `rate-limited`): the APP-037 backoff. A request that was never dispatched
+ *   (`attempted: false`) still waits one base interval but does not count as a completed attempt.
+ * - `consent-required`: terminal evidence, never retried, never rebound.
+ * - `revision-conflict` / `parent-unavailable`: blocked and flagged as awaiting an inbound pass, which
+ *   alone decides whether remote state explains them. They are not finalised from the RPC error.
+ * - `mutation-id-conflict` / `unknown-conflict`: blocked, plus one payload-free backend-wide halt in the
+ *   same commit. There is no replacement mutation id and no automatic retry.
+ */
 export async function recordPregnancySyncFailure(
   repository: ReturnType<typeof createPregnancyProtectedRepository>,
   mutation: PregnancyQueuedMutation,
@@ -51,17 +67,23 @@ export async function recordPregnancySyncFailure(
   nowMs: number,
   random?: () => number,
 ): Promise<PregnancyFailureRecord> {
-  if (!repository.isActive()) return { recorded: false, recoveryRequired: false };
-  const retryCode = reason === 'rate-limited' ? 'unavailable' : reason === 'unavailable' ? 'unavailable' : 'validation';
+  if (!repository.isActive()) return { recorded: false, recoveryRequired: false, needsInbound: false };
+  const transient = reason === 'unavailable' || reason === 'rate-limited';
+  const retryCode = transient ? 'unavailable' : 'validation';
   const planned = attempted
     ? planFailedAttempt(mutation.attempts, retryCode, nowMs, random)
-    : { status: 'failed' as const, attempts: mutation.attempts, nextRetryAt: null };
-  const terminalReason: PregnancyTerminalReason | undefined = reason === 'consent-required' ? 'consent-required' : undefined;
-  // Both `unavailable` and rate-limit use the established APP-037 schedule.
-  const transient = reason === 'unavailable' || reason === 'rate-limited';
+    : {
+      status: 'failed' as const, attempts: mutation.attempts,
+      nextRetryAt: transient ? new Date(nowMs + retryDelayMs(mutation.attempts + 1, random)).toISOString() : null,
+    };
   const patch = transient ? planned : { status: 'failed' as const, attempts: planned.attempts, nextRetryAt: null };
-  const recorded = await repository.recordFailure(mutation.mutationId, patch, terminalReason);
-  return { recorded, recoveryRequired: reason === 'mutation-id-conflict' || reason === 'unknown-conflict' };
+  const terminalReason: PregnancyTerminalReason | undefined = reason === 'consent-required' ? 'consent-required' : undefined;
+  const awaiting = reason === 'revision-conflict' || reason === 'parent-unavailable' ? reason : undefined;
+  const halt = reason === 'mutation-id-conflict' || reason === 'unknown-conflict'
+    ? { kind: 'recovery-required' as const, cause: reason }
+    : undefined;
+  const recorded = await repository.recordFailure(mutation.mutationId, patch, terminalReason, { awaiting, halt });
+  return { recorded, recoveryRequired: recorded && halt !== undefined, needsInbound: recorded && awaiting !== undefined };
 }
 
 /** Opens an epoch-pinned encrypted queue handle for future B2B engine wiring. */

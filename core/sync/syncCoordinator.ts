@@ -49,10 +49,11 @@ function createOrdinaryBackend(options: SyncCoordinatorOptions): SyncCoordinator
         mutationId: (mutation) => (mutation as OutboxMutation).mutationId,
         send: (mutation, active) => send(accountId, mutation as OutboxMutation, active),
         async resolveSuccess(mutation, result) {
-          if (!(result as { ok?: boolean }).ok) return false;
-          // The durable write, not acknowledge's boolean, records the ACK attempt.
+          if (!(result as { ok?: boolean }).ok) return { outcome: 'not-success' };
+          // The durable write, not acknowledge's boolean, records the ACK attempt. The
+          // ordinary outbox never defers: a thrown write is the engine's `unresolved`.
           await outbox.acknowledge((mutation as OutboxMutation).mutationId);
-          return true;
+          return { outcome: 'resolved' };
         },
         async resolveFailure(mutation, result, thrown, isActive) {
           const item = mutation as OutboxMutation;
@@ -76,7 +77,8 @@ function createOrdinaryBackend(options: SyncCoordinatorOptions): SyncCoordinator
 
 /**
  * APP-037 public ordinary wrapper. Pregnancy is deliberately not supplied here:
- * B2B must first provide its canonical-reconciliation success resolver.
+ * its backend exists (core/pregnancy/syncBackend.ts) but production registration
+ * waits for protected recovery (B2B2) and the consent UX (B3).
  */
 export function createSyncCoordinator(options: SyncCoordinatorOptions) {
   const engineOptions: SyncCoordinatorEngineOptions = {

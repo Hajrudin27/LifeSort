@@ -37,6 +37,11 @@ jest.mock('@/core/storage/cycleHealthEncryptedStorage', () => ({
   withCycleHealthEncryptedStorageCleanup: jest.fn((cleanup: () => Promise<unknown>) => cleanup()),
 }));
 
+jest.mock('@/core/storage/pregnancyHealthEncryptedStorage', () => ({
+  clearPregnancyHealthEncryptionKey: jest.fn(() => Promise.resolve()),
+  withPregnancyHealthEncryptedStorageCleanup: jest.fn((cleanup: () => Promise<unknown>) => cleanup()),
+}));
+
 jest.mock('@/core/storage/documentCacheStorage', () => ({
   clearDocumentCacheEncryptionKey: jest.fn(() => Promise.resolve()),
   clearPersistentAttachmentCache: jest.fn(() => Promise.resolve()),
@@ -211,6 +216,12 @@ describe('log ud rydder faktisk op', () => {
     expect(clearCycleHealthEncryptionKey).toHaveBeenCalled();
   });
 
+  it('sletter graviditetslagerets krypteringsnøgle', async () => {
+    const { clearPregnancyHealthEncryptionKey } = require('@/core/storage/pregnancyHealthEncryptedStorage');
+    await clearLocalUserData([]);
+    expect(clearPregnancyHealthEncryptionKey).toHaveBeenCalled();
+  });
+
   it('sletter dokumentcache-lagerets krypteringsnøgle', async () => {
     const { clearDocumentCacheEncryptionKey } = require('@/core/storage/documentCacheStorage');
     await clearLocalUserData([]);
@@ -227,7 +238,7 @@ describe('log ud rydder faktisk op', () => {
     expect(clearDocumentSignedUrlCache).toHaveBeenCalled();
   });
 
-  it('holder cykluslagerets oprydningsvindue rundt om nulstilling, diskfejning og nøglesletning', async () => {
+  it('holder de krypterede lagres oprydningsvinduer rundt om nulstilling, diskfejning og nøglesletning', async () => {
     const events: string[] = [];
     const {
       clearCycleHealthEncryptionKey,
@@ -237,6 +248,22 @@ describe('log ud rydder faktisk op', () => {
       clearDocumentCacheEncryptionKey,
       withDocumentCacheCleanup,
     } = require('@/core/storage/documentCacheStorage');
+    const {
+      clearPregnancyHealthEncryptionKey,
+      withPregnancyHealthEncryptedStorageCleanup,
+    } = require('@/core/storage/pregnancyHealthEncryptedStorage');
+
+    withPregnancyHealthEncryptedStorageCleanup.mockImplementationOnce(async (cleanup: () => Promise<unknown>) => {
+      events.push('begin-pregnancy-cleanup');
+      try {
+        return await cleanup();
+      } finally {
+        events.push('finish-pregnancy-cleanup');
+      }
+    });
+    clearPregnancyHealthEncryptionKey.mockImplementationOnce(async () => {
+      events.push('clear-pregnancy-key');
+    });
 
     withCycleHealthEncryptedStorageCleanup.mockImplementationOnce(async (cleanup: () => Promise<unknown>) => {
       events.push('begin-cycle-cleanup');
@@ -280,6 +307,7 @@ describe('log ud rydder faktisk op', () => {
     (AsyncStorage.multiRemove as jest.Mock).mockImplementation(originalMultiRemove!);
 
     expect(events).toEqual([
+      'begin-pregnancy-cleanup',
       'begin-cycle-cleanup',
       'begin-document-cleanup',
       'remove-outbox-storage',
@@ -287,8 +315,10 @@ describe('log ud rydder faktisk op', () => {
       'remove-user-storage',
       'clear-document-key',
       'clear-cycle-key',
+      'clear-pregnancy-key',
       'finish-document-cleanup',
       'finish-cycle-cleanup',
+      'finish-pregnancy-cleanup',
     ]);
   });
 
@@ -316,49 +346,58 @@ describe('log ud rydder faktisk op', () => {
   });
 });
 
-describe('APP-072 the two encryption keys are independent mandatory cleanups', () => {
+describe('APP-072 and APP-076 encryption keys are independent mandatory cleanups', () => {
   const docKey = () => require('@/core/storage/documentCacheStorage').clearDocumentCacheEncryptionKey as jest.Mock;
   const cycleKey = () => require('@/core/storage/cycleHealthEncryptedStorage').clearCycleHealthEncryptionKey as jest.Mock;
+  const pregnancyKey = () => require('@/core/storage/pregnancyHealthEncryptedStorage').clearPregnancyHealthEncryptionKey as jest.Mock;
   const pin = () => require('@/utils/auth/pinAuth').clearLocalPin as jest.Mock;
 
   beforeEach(() => {
     docKey().mockClear();
     cycleKey().mockClear();
+    pregnancyKey().mockClear();
     pin().mockClear();
   });
 
-  it('still deletes the Cycle key when the document-cache key deletion rejects', async () => {
+  it('still deletes the Cycle and Pregnancy keys when the document-cache key deletion rejects', async () => {
     docKey().mockRejectedValueOnce(new Error('document key delete failed'));
     await expect(clearLocalUserData([])).rejects.toThrow('document key delete failed');
     expect(docKey()).toHaveBeenCalled();
     expect(cycleKey()).toHaveBeenCalled();
+    expect(pregnancyKey()).toHaveBeenCalled();
   });
 
-  it('still attempts the document-cache key when the Cycle key deletion rejects', async () => {
+  it('still attempts the document-cache and Pregnancy keys when the Cycle key deletion rejects', async () => {
     cycleKey().mockRejectedValueOnce(new Error('cycle key delete failed'));
     await expect(clearLocalUserData([])).rejects.toThrow('cycle key delete failed');
     expect(docKey()).toHaveBeenCalled();
     expect(cycleKey()).toHaveBeenCalled();
+    expect(pregnancyKey()).toHaveBeenCalled();
   });
 
   it('attempts both keys when an earlier cleanup step failed, and reports that earlier failure', async () => {
     pin().mockRejectedValueOnce(new Error('pin cleanup failed'));
     docKey().mockRejectedValueOnce(new Error('document key delete failed'));
     cycleKey().mockRejectedValueOnce(new Error('cycle key delete failed'));
+    pregnancyKey().mockRejectedValueOnce(new Error('pregnancy key delete failed'));
     await expect(clearLocalUserData([])).rejects.toThrow('pin cleanup failed');
     expect(docKey()).toHaveBeenCalledTimes(1);
     expect(cycleKey()).toHaveBeenCalledTimes(1);
+    expect(pregnancyKey()).toHaveBeenCalledTimes(1);
   });
 
   it('reports the first key failure deterministically when both key deletions fail', async () => {
     docKey().mockRejectedValueOnce(new Error('document key delete failed'));
     cycleKey().mockRejectedValueOnce(new Error('cycle key delete failed'));
+    pregnancyKey().mockRejectedValueOnce(new Error('pregnancy key delete failed'));
     await expect(clearLocalUserData([])).rejects.toThrow('document key delete failed');
     expect(cycleKey()).toHaveBeenCalledTimes(1);
+    expect(pregnancyKey()).toHaveBeenCalledTimes(1);
   });
 
-  it('releases both cleanup windows even when a key deletion fails', async () => {
+  it('releases all cleanup windows even when a key deletion fails', async () => {
     const { withCycleHealthEncryptedStorageCleanup } = require('@/core/storage/cycleHealthEncryptedStorage');
+    const { withPregnancyHealthEncryptedStorageCleanup } = require('@/core/storage/pregnancyHealthEncryptedStorage');
     const events: string[] = [];
     withCycleHealthEncryptedStorageCleanup.mockImplementationOnce(async (cleanup: () => Promise<unknown>) => {
       try {
@@ -367,14 +406,22 @@ describe('APP-072 the two encryption keys are independent mandatory cleanups', (
         events.push('finish-cycle-cleanup');
       }
     });
+    withPregnancyHealthEncryptedStorageCleanup.mockImplementationOnce(async (cleanup: () => Promise<unknown>) => {
+      try {
+        return await cleanup();
+      } finally {
+        events.push('finish-pregnancy-cleanup');
+      }
+    });
     docKey().mockRejectedValueOnce(new Error('document key delete failed'));
     await expect(clearLocalUserData([])).rejects.toThrow();
-    expect(events).toEqual(['finish-cycle-cleanup']);
+    expect(events).toEqual(['finish-cycle-cleanup', 'finish-pregnancy-cleanup']);
   });
 
-  it('resolves normally, deleting both keys, when nothing fails', async () => {
+  it('resolves normally, deleting every key, when nothing fails', async () => {
     await expect(clearLocalUserData([])).resolves.toBeUndefined();
     expect(docKey()).toHaveBeenCalledTimes(1);
     expect(cycleKey()).toHaveBeenCalledTimes(1);
+    expect(pregnancyKey()).toHaveBeenCalledTimes(1);
   });
 });

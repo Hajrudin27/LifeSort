@@ -242,7 +242,7 @@ describe('APP-027 physical persistence surfaces', () => {
     const registeredZustandKeys = PERSISTENCE_SURFACES
       .filter((surface) => surface.kind === 'async-storage' && surface.lifecycle !== 'planned')
       .map((surface) => surface.id.replace(/^async-storage:/, ''))
-      .filter((key) => !['lifesort-verification-last-sent', 'supabase-session-web-or-legacy', 'lifesort-outbox', 'sync-status'].includes(key))
+      .filter((key) => !['lifesort-verification-last-sent', 'supabase-session-web-or-legacy', 'lifesort-outbox', 'sync-status', 'lifesort-pregnancy'].includes(key))
       .sort();
 
     expect(registeredZustandKeys).toEqual(persistKeysInStores());
@@ -255,6 +255,8 @@ describe('APP-027 physical persistence surfaces', () => {
     expect(sourceText('core/auth/emailVerification.ts')).toContain("const LAST_SENT_KEY = 'lifesort-verification-last-sent'");
     expect(getPersistenceSurface('async-storage:supabase-session-web-or-legacy')).toBeTruthy();
     expect(sourceText('utils/auth/secureSessionStorage.ts')).toContain('migrateFromAsyncStorage');
+    expect(getPersistenceSurface('async-storage:lifesort-pregnancy')).toBeTruthy();
+    expect(sourceText('core/storage/pregnancyHealthEncryptedStorage.ts')).toContain("PREGNANCY_HEALTH_STORAGE.asyncStorageKey");
   });
 
   it('accounts for every client-referenced Supabase table', () => {

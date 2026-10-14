@@ -1,8 +1,9 @@
-/** Queue persistence seam: semantics remain shared; Profile B requires an encrypted backend. */
-export interface QueuePersistenceBackend<TEnvelope> {
-  read(): Promise<TEnvelope | null>; write(envelope: TEnvelope): Promise<void>; clear(): Promise<void>;
-  readonly protection: 'plaintext-allowed' | 'encrypted-required';
-}
+/**
+ * Phase B1 truthfulness boundary: Pregnancy state and mutation intent share one
+ * encrypted repository transaction. A separate read/write queue backend cannot
+ * provide the required commit property and is intentionally not exposed.
+ */
 export const PREGNANCY_QUEUE_REQUIREMENT = {
-  dataDomain: 'pregnancy.user-health', protection: 'encrypted-required', accountBound: true, datasetEpochRequired: true,
+  dataDomain: 'pregnancy.user-health', protection: 'encrypted-required', accountBound: true,
+  datasetEpochRequired: true, atomicStateAndIntentCommit: true,
 } as const;

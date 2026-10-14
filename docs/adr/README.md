@@ -81,6 +81,7 @@ alternatives section is the part that stops a decision being relitigated.
 | [0060](./0060-health-notifications-are-generic-unless-rich-copy-is-explicitly-enabled.md) | Health notifications are generic unless rich copy is explicitly enabled | Accepted | 2026-10-13 | APP-073 |
 | [0061](./0061-clinical-reference-content-is-versioned-and-fails-closed.md) | Clinical reference content is versioned and fails closed | Accepted | 2026-10-13 | APP-074 |
 | [0062](./0062-pregnancy-is-an-isolated-encrypted-health-domain.md) | Pregnancy is an isolated encrypted health domain | Accepted | 2026-10-13 | APP-076 Phase A |
+| [0063](./0063-pregnancy-state-and-sync-intent-share-one-encrypted-commit-boundary.md) | Pregnancy state and sync intent share one encrypted commit boundary | Accepted | 2026-10-14 | APP-076 Phase B1 |
 
 ## When an ADR is required
 

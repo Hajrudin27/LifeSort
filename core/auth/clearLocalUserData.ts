@@ -8,6 +8,10 @@ import {
   withCycleHealthEncryptedStorageCleanup,
 } from '@/core/storage/cycleHealthEncryptedStorage';
 import {
+  clearPregnancyHealthEncryptionKey,
+  withPregnancyHealthEncryptedStorageCleanup,
+} from '@/core/storage/pregnancyHealthEncryptedStorage';
+import {
   clearDocumentCacheEncryptionKey,
   withDocumentCacheCleanup,
 } from '@/core/storage/documentCacheStorage';
@@ -50,13 +54,13 @@ export type LocalStoreReset = {
 };
 
 /**
- * Both encryption keys are mandatory cleanups and independent of each other and of everything
+ * Every encryption key is a mandatory cleanup and independent of the other keys and of everything
  * before them (APP-072, ADR-0017): a SecureStore failure deleting one must never leave the other
  * behind. Every attempt is made; the first failure is returned so the caller can still report it.
  */
 async function deleteEncryptionKeys(): Promise<{ failed: boolean; error?: unknown }> {
   let result: { failed: boolean; error?: unknown } = { failed: false };
-  for (const deleteKey of [clearDocumentCacheEncryptionKey, clearCycleHealthEncryptionKey]) {
+  for (const deleteKey of [clearDocumentCacheEncryptionKey, clearCycleHealthEncryptionKey, clearPregnancyHealthEncryptionKey]) {
     try {
       await deleteKey();
     } catch (error) {
@@ -71,7 +75,7 @@ export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Pr
   clearAttachmentViewerSources();
   let pendingFailure: { failed: boolean; error?: unknown } = { failed: false };
 
-  await withMigrationStorageCleanup(async () => withCycleHealthEncryptedStorageCleanup(async () => withDocumentCacheCleanup(async () => withOutboxCleanup(async () => {
+  await withMigrationStorageCleanup(async () => withPregnancyHealthEncryptedStorageCleanup(async () => withCycleHealthEncryptedStorageCleanup(async () => withDocumentCacheCleanup(async () => withOutboxCleanup(async () => {
     try {
       // 1. Hukommelsen.
       for (const store of resets) {
@@ -118,5 +122,5 @@ export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Pr
     }
 
     if (pendingFailure.failed) throw pendingFailure.error;
-  }))));
+  })))));
 }

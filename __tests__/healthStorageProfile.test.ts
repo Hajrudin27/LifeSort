@@ -16,10 +16,8 @@ import {
 /**
  * APP-072 - health storage profile.
  *
- * 1. The binding rule for every health-sensitive module, today Cycle and Pregnancy (APP-076 Phase A): it must own at
- *    least one Profile B domain and every device surface carrying that domain must require encryption. Pregnancy's
- *    device surfaces are only PLANNED (no store, key or bytes exist), so they satisfy the rule only while the module is
- *    `internal`; promoting it beyond internal fails here until a surface is implemented.
+ * 1. The binding rule for every health-sensitive module, today Cycle and Pregnancy: it must own at
+ *    least one Profile B domain and every device surface carrying that domain must require encryption.
  * 2. iOS device-backup posture: the encrypted Cycle store is relied on to stay out of iOS backup.
  */
 
@@ -131,13 +129,13 @@ describe('APP-072 every health-sensitive module has a Profile B encrypted local 
     });
   });
 
-  it('registers only the Phase A Pregnancy boundary, not a product store or route', () => {
+  it('registers the Phase B1 protected substrate, not a product store or route', () => {
     expect(MODULE_REGISTRY.pregnancy).toMatchObject({ availability: 'internal', sensitivity: ['health'], routeRoots: [] });
     expect(getDataDomain('pregnancy.user-health')).toMatchObject({ profile: 'B', plaintextLocalPersistenceAllowed: false });
     for (const id of ['async-storage:lifesort-pregnancy', 'secure-store:lifesort-pregnancy-health-key']) {
       expect(localStorageProtectionForSurface(id)).toBe('encrypted-required');
       expect(localPlaintextPersistenceAllowedForSurface(id)).toBe(false);
-      expect(PERSISTENCE_SURFACES.find((surface) => surface.id === id)?.lifecycle).toBe('planned');
+      expect(PERSISTENCE_SURFACES.find((surface) => surface.id === id)?.lifecycle).toBe('implemented');
     }
     expect(fs.existsSync(path.join(REPO_ROOT, 'store', 'usePregnancyStore.ts'))).toBe(false);
     expect(fs.existsSync(path.join(REPO_ROOT, 'app', 'pregnancy'))).toBe(false);

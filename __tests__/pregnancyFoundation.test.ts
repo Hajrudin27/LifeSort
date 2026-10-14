@@ -4,12 +4,12 @@ import { PREGNANCY_QUEUE_REQUIREMENT } from '@/core/sync/queuePersistence';
 import { defaultModuleEnabled } from '@/core/modules/moduleEnablement';
 import { moduleAccess } from '@/core/modules/moduleRegistry';
 
-describe('APP-076 Phase A boundary', () => {
+describe('APP-076 Pregnancy foundation boundary', () => {
   it('inherits health activation and remains non-public', () => {
     expect(defaultModuleEnabled('pregnancy')).toBe(false);
     expect(moduleAccess('pregnancy')).toMatchObject({ showInNavigation: false, canOpenModule: false, canCreate: false });
   });
-  it('uses separate planned encryption identities and an encrypted-only queue requirement', () => {
+  it('uses separate encrypted identities and an encrypted-only queue requirement', () => {
     expect(PREGNANCY_HEALTH_STORAGE).toMatchObject({ asyncStorageKey: 'lifesort-pregnancy', secureStoreKey: 'lifesort-pregnancy-health-key', aad: 'lifesort-pregnancy:v1', envelopeVersion: 1 });
     expect(PREGNANCY_QUEUE_REQUIREMENT).toMatchObject({ protection: 'encrypted-required', accountBound: true, datasetEpochRequired: true });
   });
@@ -46,7 +46,7 @@ describe('APP-076 Phase A isolation', () => {
     expect(cycleSurfaces.some((id) => /pregnan/.test(id))).toBe(false);
     for (const surfaceId of ['async-storage:lifesort-pregnancy', 'secure-store:lifesort-pregnancy-health-key']) {
       expect(DATA_DOMAINS.filter((domain) => (domain.storageSurfaces as readonly string[]).includes(surfaceId)).map((domain) => domain.id)).toEqual(['pregnancy.user-health']);
-      expect(PERSISTENCE_SURFACES.find((surface) => surface.id === surfaceId)?.lifecycle).toBe('planned');
+      expect(PERSISTENCE_SURFACES.find((surface) => surface.id === surfaceId)?.lifecycle).toBe('implemented');
     }
   });
 

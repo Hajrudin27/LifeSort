@@ -16,25 +16,25 @@ const claims = new Set<string>();
  * this file stays reviewable text — git treats a source file containing NUL as
  * binary and stops showing its diff. The runtime value is unchanged.
  */
-function claimKey(accountId: string, mutationId: string): string {
-  return `${accountId}\u0000${mutationId}`;
+function claimKey(accountId: string, mutationId: string, namespace = 'ordinary'): string {
+  return `${accountId}\u0000${namespace}\u0000${mutationId}`;
 }
 
 /** True if this caller now owns the send. False means someone else already does. */
-export function claimMutation(accountId: string, mutationId: string): boolean {
-  const key = claimKey(accountId, mutationId);
+export function claimMutation(accountId: string, mutationId: string, namespace = 'ordinary'): boolean {
+  const key = claimKey(accountId, mutationId, namespace);
   if (claims.has(key)) return false;
   claims.add(key);
   return true;
 }
 
 /** Always from a finally block, including when the sender threw. */
-export function releaseMutation(accountId: string, mutationId: string): void {
-  claims.delete(claimKey(accountId, mutationId));
+export function releaseMutation(accountId: string, mutationId: string, namespace = 'ordinary'): void {
+  claims.delete(claimKey(accountId, mutationId, namespace));
 }
 
-export function isMutationClaimed(accountId: string, mutationId: string): boolean {
-  return claims.has(claimKey(accountId, mutationId));
+export function isMutationClaimed(accountId: string, mutationId: string, namespace = 'ordinary'): boolean {
+  return claims.has(claimKey(accountId, mutationId, namespace));
 }
 
 /** Test seam. Production releases every claim through its own finally block. */

@@ -4,6 +4,9 @@ const mockSecure = new Map<string, string>();
 let mockFailSecureRead = false;
 let mockFailSecureWrite = false;
 let mockGenerated = 0;
+const mockPregnancyTransportSession = jest.fn();
+const mockPregnancyTransportRpc = jest.fn();
+const mockPregnancyTransportRetry = jest.fn();
 
 jest.mock('expo-secure-store', () => ({
   WHEN_UNLOCKED_THIS_DEVICE_ONLY: 1,
@@ -49,10 +52,19 @@ jest.mock('expo-crypto', () => {
   };
 });
 
+jest.mock('@/lib/supabase', () => ({
+  supabase: {
+    auth: { getSession: (...args: unknown[]) => mockPregnancyTransportSession(...args) },
+    rpc: (...args: unknown[]) => mockPregnancyTransportRpc(...args),
+  },
+}));
+
 import { Platform } from 'react-native';
 
 import { clearPregnancyHealthEncryptionKey, readEncryptedPregnancyPayload, withPregnancyHealthEncryptedStorageCleanup, writeEncryptedPregnancyPayload } from '@/core/storage/pregnancyHealthEncryptedStorage';
-import { createInitialPregnancyProtectedState, createPregnancyProtectedRepository, pregnancyMutationIsAutomaticallyEligible, PregnancyProtectedRepositoryError } from '@/core/pregnancy/protectedRepository';
+import { createInitialPregnancyProtectedState, createPregnancyProtectedRepository, invalidatePregnancyProtectedRepositories, pregnancyMutationIsAutomaticallyEligible, PregnancyProtectedRepositoryError, subscribePregnancyQueue } from '@/core/pregnancy/protectedRepository';
+import { openPregnancySyncQueue, recordPregnancySyncFailure } from '@/core/pregnancy/syncQueue';
+import { sendPregnancyMutation } from '@/core/pregnancy/syncTransport';
 import { PREGNANCY_HEALTH_STORAGE } from '@/core/storage/pregnancyHealthStorageContract';
 
 const ACCOUNT = 'account-a';
@@ -63,6 +75,9 @@ const pregnancy = { id: 'pregnancy-1', method: 'lmp' as const, lmpDate: '2026-10
 beforeEach(async () => {
   jest.restoreAllMocks(); jest.clearAllMocks(); mockSecure.clear(); mockFailSecureRead = false; mockFailSecureWrite = false; mockGenerated = 0;
   await withPregnancyHealthEncryptedStorageCleanup(async () => { await AsyncStorage.clear(); await clearPregnancyHealthEncryptionKey(); });
+  mockPregnancyTransportSession.mockResolvedValue({ data: { session: { user: { id: ACCOUNT }, access_token: 'test-token' } }, error: null });
+  mockPregnancyTransportRpc.mockReturnValue({ setHeader: () => ({ retry: mockPregnancyTransportRetry }) });
+  mockPregnancyTransportRetry.mockResolvedValue({ data: { status: 'applied', entityType: 'pregnancy', entityId: 'pregnancy-1', revision: 1, deleted: false, changeSeq: 1 }, error: null, status: 200 });
 });
 
 async function initialized() {
@@ -581,5 +596,119 @@ describe('APP-076 B1 hostile review: restart truth and reads racing cleanup', ()
     held.release();
     await expect(hydration).rejects.toBeDefined(); await cleanup;
     expect(await AsyncStorage.getItem(key)).toBeNull(); expect(mockSecure.has(PREGNANCY_HEALTH_STORAGE.secureStoreKey)).toBe(false);
+  });
+});
+
+describe('APP-076 B2A queue metadata events', () => {
+  it('publishes metadata-only changed notifications after durable queue changes, including ACK', async () => {
+    const events: unknown[] = [];
+    const unsubscribe = subscribePregnancyQueue((event) => events.push(event));
+    try {
+      const repo = await initialized();
+      events.length = 0;
+      const queued = await repo.commitLocalMutation(add, mutation);
+      await repo.updateMetadata(queued.mutationId, { status: 'failed', attempts: 1, nextRetryAt: null });
+      await repo.acknowledge(queued.mutationId);
+      expect(events).toEqual([
+        { kind: 'changed', accountId: ACCOUNT },
+        { kind: 'changed', accountId: ACCOUNT },
+        { kind: 'changed', accountId: ACCOUNT },
+      ]);
+      expect(JSON.stringify(events)).not.toContain('private pregnancy note');
+      expect(JSON.stringify(events)).not.toContain('pregnancy-1');
+    } finally { unsubscribe(); }
+  });
+
+  it('isolates throwing listeners and stops notifying an unsubscribed listener', async () => {
+    const observed: unknown[] = [];
+    const stopThrowing = subscribePregnancyQueue(() => { throw new Error('observer must not affect encrypted persistence'); });
+    const stopObserved = subscribePregnancyQueue((event) => observed.push(event));
+    try {
+      const repo = await initialized();
+      expect(observed).toEqual([{ kind: 'changed', accountId: ACCOUNT }]);
+      stopObserved();
+      await repo.commitLocalMutation(add, mutation);
+      expect(observed).toEqual([{ kind: 'changed', accountId: ACCOUNT }]);
+      expect(await repo.list()).toHaveLength(1);
+    } finally { stopThrowing(); stopObserved(); }
+  });
+
+  it('does not publish a change when durable persistence fails, and signals cleanup/epoch invalidation without payloads', async () => {
+    const events: unknown[] = [];
+    const unsubscribe = subscribePregnancyQueue((event) => events.push(event));
+    try {
+      const repo = await initialized();
+      events.length = 0;
+      jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('storage unavailable'));
+      await expect(repo.commitLocalMutation(add, mutation)).rejects.toBeDefined();
+      expect(events).toEqual([]);
+      await repo.rebaseline();
+      expect(events).toEqual([
+        { kind: 'epoch-invalidated', accountId: ACCOUNT },
+        { kind: 'changed', accountId: ACCOUNT },
+      ]);
+      events.length = 0;
+      invalidatePregnancyProtectedRepositories();
+      expect(events).toEqual([{ kind: 'cleanup' }]);
+    } finally { unsubscribe(); }
+  });
+
+  it('records a completed transient send attempt with the shared backoff, and terminalizes consent refusal atomically', async () => {
+    const repo = await initialized();
+    const queued = await repo.commitLocalMutation(add, mutation);
+    await expect(recordPregnancySyncFailure(repo, queued, 'unavailable', true, 0, () => 1))
+      .resolves.toEqual({ recorded: true, recoveryRequired: false });
+    const [afterTransient] = await repo.list();
+    expect(afterTransient).toMatchObject({ status: 'failed', attempts: 1, nextRetryAt: new Date(5_000).toISOString() });
+    await expect(recordPregnancySyncFailure(repo, afterTransient, 'consent-required', true, 10_000))
+      .resolves.toEqual({ recorded: true, recoveryRequired: false });
+    const [terminal] = await repo.list();
+    expect(terminal).toMatchObject({ status: 'failed', attempts: 2, terminalReason: 'consent-required' });
+    expect(terminal.nextRetryAt).toBeUndefined();
+    expect(pregnancyMutationIsAutomaticallyEligible(terminal)).toBe(false);
+  });
+
+  it('uses the same shared retry schedule for a completed rate-limited attempt', async () => {
+    const repo = await initialized();
+    const queued = await repo.commitLocalMutation(add, mutation);
+    await recordPregnancySyncFailure(repo, queued, 'rate-limited', true, 0, () => 0);
+    expect(await repo.list()).toEqual([expect.objectContaining({ attempts: 1, status: 'failed', nextRetryAt: new Date(2_500).toISOString() })]);
+  });
+
+  it('keeps a durable Pregnancy mutation after a validated transport success: B2A has no ACK path', async () => {
+    const repo = await initialized();
+    const queued = await repo.commitLocalMutation(add, mutation);
+    await expect(sendPregnancyMutation(ACCOUNT, queued, repo.isActive)).resolves.toMatchObject({ ok: true, status: 'applied' });
+    expect(await repo.list()).toEqual([queued]);
+  });
+
+  it('refuses to record a late transport result once cleanup has invalidated the pinned repository epoch', async () => {
+    const repo = await initialized();
+    const queued = await repo.commitLocalMutation(add, mutation);
+    invalidatePregnancyProtectedRepositories();
+    await expect(recordPregnancySyncFailure(repo, queued, 'unavailable', true, 0)).resolves.toEqual({ recorded: false, recoveryRequired: false });
+  });
+
+  it('pins the sync adapter to its account and dataset epoch, makes it inert after rebaseline, cleanup or another account, and gives it no ACK', async () => {
+    const repo = await initialized();
+    const queued = await repo.commitLocalMutation(add, mutation);
+    const adapter = await openPregnancySyncQueue({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT });
+    expect(adapter.datasetEpoch).toBe(0);
+    expect(Object.keys(adapter).sort()).toEqual(['accountId', 'datasetEpoch', 'isActive', 'list', 'plan', 'recordFailure', 'subscribe']);
+    await expect(adapter.list()).resolves.toEqual([queued]);
+    // The epoch pin is checked against stored state too, not only against the in-process generation.
+    await writeEncryptedPregnancyPayload(JSON.stringify(createInitialPregnancyProtectedState(ACCOUNT, 5)));
+    await expect(adapter.list()).rejects.toMatchObject({ code: 'dataset-epoch-mismatch' });
+    await writeEncryptedPregnancyPayload(JSON.stringify({ ...createInitialPregnancyProtectedState(ACCOUNT, 0), sync: { nextChangeSeq: 0, consent: { activeConsentIdsByPurpose: {}, withdrawnConsentIds: {} }, mutations: [queued] } }));
+    await repo.rebaseline();
+    expect(adapter.isActive()).toBe(false);
+    await expect(adapter.list()).rejects.toBeDefined();
+    await expect(adapter.recordFailure(queued, 'unavailable', true, 0)).resolves.toEqual({ recorded: false, recoveryRequired: false });
+    const fresh = await openPregnancySyncQueue({ accountId: ACCOUNT, getActiveAccount: () => ACCOUNT });
+    expect(fresh.datasetEpoch).toBe(1);
+    await expect(fresh.list()).resolves.toEqual([]);
+    await expect(openPregnancySyncQueue({ accountId: ACCOUNT, getActiveAccount: () => 'account-b' })).rejects.toBeDefined();
+    invalidatePregnancyProtectedRepositories();
+    expect(fresh.isActive()).toBe(false);
   });
 });

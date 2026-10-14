@@ -6,10 +6,11 @@ import type { PregnancyAppointment, PregnancyEntry, PregnancySettings, Pregnancy
 export type PregnancyEntityType = 'pregnancy' | 'log' | 'appointment' | 'settings';
 export type PregnancyLocalTombstone = { entityType: Exclude<PregnancyEntityType, 'settings'>; entityId: string; revision: number; changeSeq?: number };
 export type PregnancyQueueStatus = 'pending' | 'failed';
+export type PregnancyTerminalReason = 'consent-withdrawn' | 'consent-required';
 export type PregnancyQueuedMutation = {
   mutationId: string; entityType: PregnancyEntityType; entityId: string; operation: 'upsert' | 'delete';
   payload?: Record<string, unknown>; baseRevision?: number; consentId?: string; createdAt: string;
-  status: PregnancyQueueStatus; attempts: number; nextRetryAt?: string; terminalReason?: 'consent-withdrawn';
+  status: PregnancyQueueStatus; attempts: number; nextRetryAt?: string; terminalReason?: PregnancyTerminalReason;
 };
 export type PregnancyProtectedStateV1 = {
   version: 1; accountId: string; datasetEpoch: number;
@@ -28,6 +29,17 @@ export class PregnancyProtectedRepositoryError extends Error {
 
 let tail: Promise<unknown> = Promise.resolve();
 let runtimeGeneration = 0;
+export type PregnancyQueueEvent =
+  | { readonly kind: 'changed'; readonly accountId: string }
+  | { readonly kind: 'cleanup' }
+  | { readonly kind: 'epoch-invalidated'; readonly accountId?: string };
+const listeners = new Set<(event: PregnancyQueueEvent) => void>();
+export function subscribePregnancyQueue(listener: (event: PregnancyQueueEvent) => void): () => void {
+  listeners.add(listener); return () => { listeners.delete(listener); };
+}
+function notify(event: PregnancyQueueEvent): void {
+  for (const listener of listeners) try { listener(event); } catch { /* Metadata listeners never fault persistence. */ }
+}
 function serialize<T>(operation: () => Promise<T>): Promise<T> { const result = tail.then(operation); tail = result.catch(() => undefined); return result; }
 function invalid(): never { throw new PregnancyProtectedRepositoryError('invalid-protected-state', 'Pregnancy protected state is invalid.'); }
 function record(v: unknown): v is Record<string, unknown> { return typeof v === 'object' && v !== null && !Array.isArray(v); }
@@ -58,7 +70,7 @@ function validMutation(v: unknown): v is PregnancyQueuedMutation {
   if (v.payload !== undefined && (!record(v.payload) || !json(v.payload))) return false;
   if (v.baseRevision !== undefined && !integer(v.baseRevision)) return false;
   if (v.nextRetryAt !== undefined && !timestamp(v.nextRetryAt)) return false;
-  if (v.terminalReason !== undefined && v.terminalReason !== 'consent-withdrawn') return false;
+  if (v.terminalReason !== undefined && (typeof v.terminalReason !== 'string' || !['consent-withdrawn', 'consent-required'].includes(v.terminalReason))) return false;
   // A terminal quarantine is a failed upsert with no retry time; anything else could look sendable to a later planner.
   if (v.terminalReason !== undefined && (v.status !== 'failed' || v.nextRetryAt !== undefined || v.operation !== 'upsert')) return false;
   // Settings are one upsert-only row per account (ADR-0062); a delete would be a permanent server refusal.
@@ -84,7 +96,7 @@ export function createInitialPregnancyProtectedState(accountId: string, datasetE
   if (!text(accountId) || !integer(datasetEpoch)) invalid();
   return { version: 1, accountId, datasetEpoch, domain: { pregnancies: {}, symptomLogs: {}, appointments: {}, settings: null }, sync: { nextChangeSeq: 0, mutations: [], consent: { activeConsentIdsByPurpose: {}, withdrawnConsentIds: {} } }, tombstones: {} };
 }
-export function pregnancyMutationIsAutomaticallyEligible(mutation: PregnancyQueuedMutation): boolean { return mutation.terminalReason !== 'consent-withdrawn' && (mutation.status === 'pending' || mutation.nextRetryAt !== undefined); }
+export function pregnancyMutationIsAutomaticallyEligible(mutation: PregnancyQueuedMutation): boolean { return mutation.terminalReason === undefined && (mutation.status === 'pending' || mutation.nextRetryAt !== undefined); }
 function mutationHasCanonicalState(state: PregnancyProtectedStateV1, mutation: PregnancyQueuedMutation): boolean {
   if (mutation.operation === 'delete') return true;
   if (mutation.entityType === 'pregnancy') return state.domain.pregnancies[mutation.entityId]?.id === mutation.entityId;
@@ -95,7 +107,7 @@ function mutationHasCanonicalState(state: PregnancyProtectedStateV1, mutation: P
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
 function handleError(code: 'account-mismatch' | 'dataset-epoch-mismatch'): never { throw new PregnancyProtectedRepositoryError(code, code === 'account-mismatch' ? 'Pregnancy account handle is no longer active.' : 'Pregnancy dataset handle is no longer active.'); }
 
-export function invalidatePregnancyProtectedRepositories(): void { runtimeGeneration += 1; }
+export function invalidatePregnancyProtectedRepositories(): void { runtimeGeneration += 1; notify({ kind: 'cleanup' }); }
 
 // getActiveAccount is mandatory: without a live-session check a stale continuation from a logged-out session could create a fresh
 // handle after cleanup and recreate ciphertext and key for the departed account.
@@ -130,6 +142,7 @@ export function createPregnancyProtectedRepository(options: { accountId: string;
       const serialized = JSON.stringify(next);
       await writeEncryptedPregnancyPayload(serialized);
       const committed = JSON.parse(serialized) as PregnancyProtectedStateV1; assertActive(committed);
+      notify({ kind: 'changed', accountId });
       return committed;
     });
   }
@@ -169,7 +182,19 @@ export function createPregnancyProtectedRepository(options: { accountId: string;
       let changed = false; await commitProtectedState((current) => { if (!current) invalid(); const next = clone(current); const before = next.sync.mutations.length; next.sync.mutations = next.sync.mutations.filter((item) => item.mutationId !== mutationId); changed = next.sync.mutations.length !== before; return next; }); return changed;
     },
     updateMetadata: async (mutationId: string, patch: { status?: PregnancyQueueStatus; attempts?: number; nextRetryAt?: string | null }) => {
-      let changed = false; await commitProtectedState((current) => { if (!current) invalid(); const next = clone(current); const item = next.sync.mutations.find((entry) => entry.mutationId === mutationId); if (!item) return next; if (item.terminalReason === 'consent-withdrawn') return next; if (patch.status !== undefined) item.status = patch.status; if (patch.attempts !== undefined) item.attempts = patch.attempts; if (patch.nextRetryAt === null) delete item.nextRetryAt; else if (patch.nextRetryAt !== undefined) item.nextRetryAt = patch.nextRetryAt; if (!validMutation(item)) invalid(); changed = true; return next; }); return changed;
+      let changed = false; await commitProtectedState((current) => { if (!current) invalid(); const next = clone(current); const item = next.sync.mutations.find((entry) => entry.mutationId === mutationId); if (!item) return next; if (item.terminalReason !== undefined) return next; if (patch.status !== undefined) item.status = patch.status; if (patch.attempts !== undefined) item.attempts = patch.attempts; if (patch.nextRetryAt === null) delete item.nextRetryAt; else if (patch.nextRetryAt !== undefined) item.nextRetryAt = patch.nextRetryAt; if (!validMutation(item)) invalid(); changed = true; return next; }); return changed;
+    },
+    recordFailure: async (mutationId: string, patch: { status: 'failed'; attempts: number; nextRetryAt: string | null }, terminalReason?: PregnancyTerminalReason) => {
+      let changed = false;
+      await commitProtectedState((current) => {
+        if (!current) invalid(); const next = clone(current); const item = next.sync.mutations.find((entry) => entry.mutationId === mutationId);
+        if (!item || item.terminalReason !== undefined) return next;
+        item.status = patch.status; item.attempts = patch.attempts;
+        if (patch.nextRetryAt === null) delete item.nextRetryAt; else item.nextRetryAt = patch.nextRetryAt;
+        if (terminalReason !== undefined) item.terminalReason = terminalReason;
+        if (!validMutation(item)) invalid(); changed = true; return next;
+      });
+      return changed;
     },
     withdrawConsent: async (consentId: string) => commitProtectedState((current) => {
       if (!current || !text(consentId)) invalid(); const next = clone(current); next.sync.consent.withdrawnConsentIds[consentId] = true;
@@ -180,11 +205,19 @@ export function createPregnancyProtectedRepository(options: { accountId: string;
       const current = await load();
       const next = createInitialPregnancyProtectedState(accountId, (current?.datasetEpoch ?? -1) + 1);
       assertPregnancyProtectedState(next);
-      await writeEncryptedPregnancyPayload(JSON.stringify(next));
-      assertActive();
+      // Stop stale consumers before replacement; B2B will wait for its own
+      // authenticated baseline before invoking this destructive primitive.
       runtimeGeneration += 1;
+      notify({ kind: 'epoch-invalidated', accountId });
+      await writeEncryptedPregnancyPayload(JSON.stringify(next));
+      if (active() !== accountId) handleError('account-mismatch');
+      notify({ kind: 'changed', accountId });
       // The calling handle intentionally becomes stale at this commit boundary.
       return clone(next);
     }),
+    /** Synchronous stale-work guard; it exposes no protected state. */
+    isActive: () => {
+      try { assertActive(); return true; } catch { return false; }
+    },
   };
 }

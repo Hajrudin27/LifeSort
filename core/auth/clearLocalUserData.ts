@@ -17,6 +17,7 @@ import {
 } from '@/core/storage/documentCacheStorage';
 import { userDataKeys } from '@/core/storage/localDataScopes';
 import { withOutboxCleanup } from '@/core/sync/outbox';
+import { invalidatePregnancyProtectedRepositories } from '@/core/pregnancy/protectedRepository';
 import { clearLocalPin } from '@/utils/auth/pinAuth';
 import { clearAttachmentCache } from '@/utils/shared/attachmentStorage';
 import { clearSignedUrlCache } from '@/utils/shared/attachmentSync';
@@ -73,6 +74,9 @@ async function deleteEncryptionKeys(): Promise<{ failed: boolean; error?: unknow
 export async function clearLocalUserData(resets: readonly LocalStoreReset[]): Promise<void> {
   // Drop sensitive navigation handoffs before waiting on any storage cleanup.
   clearAttachmentViewerSources();
+  // Synchronously revoke repository handles and notify metadata-only observers
+  // before any destructive storage work begins.
+  invalidatePregnancyProtectedRepositories();
   let pendingFailure: { failed: boolean; error?: unknown } = { failed: false };
 
   await withMigrationStorageCleanup(async () => withPregnancyHealthEncryptedStorageCleanup(async () => withCycleHealthEncryptedStorageCleanup(async () => withDocumentCacheCleanup(async () => withOutboxCleanup(async () => {
